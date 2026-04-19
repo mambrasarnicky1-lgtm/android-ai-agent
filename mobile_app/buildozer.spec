@@ -24,16 +24,7 @@ android.accept_sdk_license = True
 android.archs = arm64-v8a
 
 # --- Izin Sistem (Sovereign Control) ---
-android.permissions = \
-    INTERNET, \
-    ACCESS_NETWORK_STATE, \
-    WAKE_LOCK, \
-    FOREGROUND_SERVICE, \
-    READ_EXTERNAL_STORAGE, \
-    WRITE_EXTERNAL_STORAGE, \
-    CAMERA, \
-    RECEIVE_BOOT_COMPLETED, \
-    SYSTEM_ALERT_WINDOW
+android.permissions = INTERNET,ACCESS_NETWORK_STATE,WAKE_LOCK,FOREGROUND_SERVICE,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE,CAMERA,RECEIVE_BOOT_COMPLETED,SYSTEM_ALERT_WINDOW
 
 # --- Orientasi ---
 orientation = portrait
