@@ -20,7 +20,7 @@ def setup_vps():
     subprocess.run("docker-compose up -d --build", shell=True)
     
     print("\n✅ VPS Brain is now ACTIVE.")
-    print("🔗 Dashboard accessible at: http://YOUR_VPS_IP:8765")
+    print("🔗 Dashboard accessible at: http://YOUR_VPS_IP:80")
 
 if __name__ == "__main__":
     setup_vps()
