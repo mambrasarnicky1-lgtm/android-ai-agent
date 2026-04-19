@@ -18,8 +18,7 @@ requirements = python3,kivy==2.3.0,requests,urllib3,certifi,idna,charset-normali
 # --- Target Platform ---
 android.api = 33
 android.minapi = 24
-android.ndk = 25b
-android.sdk = 33
+android.accept_sdk_license = True
 
 # --- Arsitektur (arm64-v8a adalah target utama Redmi Note 14) ---
 android.archs = arm64-v8a
