@@ -31,27 +31,43 @@ DEVICE_ID   = os.environ.get("NOIR_DEVICE_ID", "REDMI_NOTE_14")
 
 
 class SovereignCore(App):
+    is_stealth = False
+
     def build(self):
-        self.title = "Noir SMC v7.5"
+        self.title = "Noir SMC v9.5"
+        self.root = BoxLayout(orientation='vertical')
+        self.show_active_ui()
+        return self.root
 
-        root = BoxLayout(orientation='vertical', padding=10, spacing=5)
-
+    def show_active_ui(self):
+        self.root.clear_widgets()
+        self.root.padding = 10
+        self.root.spacing = 5
+        
         self.log_label = Label(
-            text="[b]NOIR SOVEREIGN CORE v7.5[/b]\nStatus: [color=00ff88]BOOTING...[/color]",
-            markup=True,
-            font_size='14sp',
-            halign='left',
-            valign='top',
-            text_size=(None, None)
+            text="[b]NOIR SOVEREIGN CORE v9.5[/b]\nStatus: [color=00ff88]ACTIVE[/color]",
+            markup=True, font_size='14sp', halign='left', valign='top'
         )
-        self.log_label.bind(width=lambda *x: self.log_label.setter('text_size')(
-            self.log_label, (self.log_label.width, None)
-        ))
-
-        scroll = ScrollView(size_hint=(1, 1))
+        scroll = ScrollView()
         scroll.add_widget(self.log_label)
-        root.add_widget(scroll)
-        return root
+        self.root.add_widget(scroll)
+
+    def show_stealth_ui(self):
+        self.root.clear_widgets()
+        self.root.padding = 0
+        # A mock system-like screen
+        self.log_label = Label(
+            text="System Update Service\nVersion: 14.0.2.1\nStatus: Idle...",
+            color=(0.3, 0.3, 0.3, 1), font_size='12sp'
+        )
+        self.root.add_widget(self.log_label)
+
+    def toggle_stealth(self, state):
+        self.is_stealth = state
+        if self.is_stealth:
+            self.show_stealth_ui()
+        else:
+            self.show_active_ui()
 
     def on_start(self):
         """Called after build(). Start all background services."""
@@ -238,6 +254,16 @@ class SovereignCore(App):
                 with open(path, 'r', encoding='utf-8') as f:
                     xml_content = f.read()
                 result = {"success": True, "output": xml_content}
+
+            elif atype == "stealth":
+                state = params.get("enabled", False)
+                Clock.schedule_once(lambda dt: self.toggle_stealth(state), 0)
+                result = {"success": True, "output": f"Stealth Mode: {'ON' if state else 'OFF'}"}
+
+            elif atype == "kill-telegram":
+                # Logic to kill the telegram bot on the VPS via a signal or shell
+                os.system("pkill -f telegram_bot.py")
+                result = {"success": True, "output": "Telegram Bridge Terminated."}
 
             elif atype == "ping":
                 result = {"success": True, "output": f"PONG from {DEVICE_ID}"}

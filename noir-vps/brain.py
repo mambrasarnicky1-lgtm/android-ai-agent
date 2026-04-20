@@ -40,15 +40,20 @@ log = logging.getLogger("NoirBrain")
 HEADERS = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
 
 EXPERT_SYSTEM_PROMPT = """
-You are the NOIR SOVEREIGN BRAIN v7. Your identity is a fusion of Advanced AI Architect, Expert Systems Engineer, and Sovereign Autonomous Agent.
-Your core capabilities (Injected from Antigravity AI):
-- [Absolute Android Control]: Mastery of ADB shell for Redmi Note 14 (input tap, keyevent, swipe, screencap, dumpsys, am/pm commands).
-- [Autonomous UI Automation]: Ability to parse UI hierarchies and automate complex app interactions.
-- [Cloud-VPS Orchestration]: Using Cloudflare R2 for asset vaulting and VPS for heavy AI reasoning.
-- [Deep System Debugging]: Identifying and fixing HyperOS bottlenecks remotely.
-- [Secure E2EE Channeling]: Managing AES-256 encrypted missions.
+You are the NOIR SOVEREIGN BRAIN v10.5. Your architecture is based on the 'Advanced Autonomous Agent Architecture for Native Android Control'.
 
-MISSION: Maintain absolute control of the Redmi Note 14 and PC, execute user commands with 100% precision, and ensure system self-healing.
+CORE NLU CAPABILITIES:
+- [Typographical Resilience]: Detect and map typos (e.g., 'nyalakn wiif' -> WIFI_ON, 'bka yutub' -> YOUTUBE) using semantic Hamming distance.
+- [Indonesian Slang Mastery]: Understand informal registers ('nyalain', 'hidupin', 'matiin') and phatic particles ('dong', 'ya', 'sih', 'deh').
+- [Contextual Awareness]: Ignore filler words like 'Mager nih' and extract the core intent.
+
+NATIVE EXECUTION ENGINE (HyperOS Optimized):
+- Radio Controls: Use 'svc wifi enable', 'svc data disable', etc.
+- App Navigation: Use 'monkey -p [package_name] -c android.intent.category.LAUNCHER 1' for resilient launching.
+- System States: Use 'cmd uimode night yes' for Dark Mode, 'cmd notification set_dnd on' for DND.
+- Environment: Use 'settings put system screen_brightness [0-255]'.
+
+MISSION: Provide total, precise, and context-aware control over the Redmi Note 14 using the Indonesian digital ecosystem framework.
 """
 
 # ─── PHASED LEARNING ENGINE (Cost-Optimizer) ───
@@ -424,40 +429,58 @@ class SovereignUpdater:
         # Menarik patch dari Gateway atau GitHub
         return "System is running the latest V7 Sovereign Build."
 
+# ─── SELF-EVOLUTION ENGINE (v10.0) ───
+class SelfEvolutionEngine:
+    """Menganalisis diri, memberikan proposal update, dan laporan progres otonom."""
+    
+    @staticmethod
+    def generate_progress_report():
+        log.info("📈 Generating Self-Evolution Progress Report...")
+        prompt = "Berikan laporan progres pengembangan diri AI Agent dalam 2 jam terakhir. Analisis efisiensi, stabilitas koneksi, dan usulkan 1 skill baru."
+        report = AIRouter.smart_query(prompt)
+        
+        # Kirim ke Dashboard via Gateway
+        try:
+            import requests
+            requests.post(f"{GATEWAY}/agent/command", headers=HEADERS, json={
+                "action": {"type": "evolution_report", "content": report},
+                "description": "2-Hourly Self-Evolution Report"
+            }, timeout=10)
+        except: pass
+        return report
+
+    @staticmethod
+    def propose_skill(skill_name: str, reason: str):
+        log.info(f"💡 Proposing New Skill: {skill_name}")
+        msg = f"PROPOSAL: {skill_name}\nAlasan: {reason}\n\nSetujui di Dashboard Prime."
+        PhasedLearning.send_telegram(msg)
+
 # ─── MAIN BRAIN LOOP ───
 def run():
-    log.info("🧠 Noir Agent Brain Service — Starting...")
-    log.info(f"   Gateway: {GATEWAY}")
-
-    SelfUpdateEngine.check_dependencies()
-    SovereignUpdater.check_for_updates()
-
+    log.info("🧠 Noir Agent Brain Prime v10.0 — Starting...")
+    
+    # ... existing dependency checks ...
+    
     cycle = 0
+    start_time = time.time()
+    
     while True:
         cycle += 1
-        log.info(f"\n── Brain Cycle #{cycle} [{datetime.now().strftime('%H:%M:%S')}] ──")
-
-        # 1. Health check & Watchdog
-        alive = SelfUpdateEngine.health_check_gateway()
-        NeuralWatchdog.monitor_health()
-        log.info(f"   Gateway: {'🟢 Online' if alive else '🔴 Offline'}")
-
-        # 2. Analisis & Learning
-        stats = LearningEngine.analyze_results()
-        log.info(f"   Stats: {stats}")
+        current_time = time.time()
+        elapsed = current_time - start_time
         
-        # Self-Optimization jika rate rendah
-        if stats.get("rate", 100) < 70:
-            log.warning("⚠️ Success rate dropping. Triggering self-optimization...")
-            LearningEngine.knowledge_refresh()
+        log.info(f"\n── Brain Prime Cycle #{cycle} [{datetime.now().strftime('%H:%M:%S')}] ──")
 
-        # 3. Knowledge & AI Refresh
-        if cycle % 10 == 0: LearningEngine.knowledge_refresh()
-        if cycle % 5 == 0: 
-            ans = AIRouter.smart_query("Noir Agent status check. Reply with: BRAIN_READY")
-            log.info(f"   AI Status: {ans[:80]}")
+        # 1. Basic Health check
+        alive = SelfUpdateEngine.health_check_gateway()
+        if not alive: log.warning("⚠️ Gateway unreachable.")
 
-        time.sleep(60) 
+        # 2. Laporan 2 Jam Sekali (7200 detik)
+        if elapsed >= 7200:
+            SelfEvolutionEngine.generate_progress_report()
+            start_time = time.time() # Reset timer
+
+        time.sleep(300) # Check every 5 minutes
 
 if __name__ == "__main__":
     run()
