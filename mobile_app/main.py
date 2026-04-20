@@ -25,9 +25,9 @@ from kivy.uix.scrollview import ScrollView
 from kivy.clock import Clock
 
 # --- CONFIG ---
-GATEWAY_URL = os.environ.get("NOIR_GATEWAY_URL", "https://noir-agent-gateway.si-umkm-ikm-pbd.workers.dev")
-API_KEY     = os.environ.get("NOIR_API_KEY", "NOIR_AGENT_KEY_V6_SI_UMKM_PBD_2026")
-DEVICE_ID   = os.environ.get("NOIR_DEVICE_ID", "REDMI_NOTE_14")
+GATEWAY_URL = "http://8.215.23.17"
+API_KEY     = "NOIR_AGENT_KEY_V6_SI_UMKM_PBD_2026"
+DEVICE_ID   = "REDMI_NOTE_14"
 
 
 class SovereignCore(App):
