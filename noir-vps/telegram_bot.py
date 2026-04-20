@@ -23,6 +23,7 @@ try:
     # Import AIRouter from brain
     from brain import AIRouter
     from skill_acquisition import SkillAcquisitionEngine
+    from linguistic_learning import LinguisticMastery
 except ImportError:
     print("Install: pip install pyTelegramBotAPI requests")
     sys.exit(1)
@@ -123,6 +124,17 @@ def cmd_skills(msg):
         list_str += f"- **{name}**: {data['description']}\n"
     
     bot.reply_to(msg, list_str, parse_mode="Markdown")
+
+@bot.message_handler(commands=["absorb_language"])
+def cmd_absorb(msg):
+    if not is_authorized(msg): return
+    bot.reply_to(msg, "🧠 **LINGUISTIC MISSION**: Menghubungkan ke ChatGPT interface untuk mempelajari pola bahasa manusia...")
+    patterns = LinguisticMastery.absorb_human_patterns()
+    
+    if "error" in patterns:
+        bot.reply_to(msg, f"❌ Gagal menyerap pola: {patterns['error']}")
+    else:
+        bot.reply_to(msg, f"✅ **ABSORPTION COMPLETE**: {len(patterns)} pola bahasa manusia telah diserap ke dalam memori kognitif Noir.", parse_mode="Markdown")
 
 @bot.message_handler(func=lambda m: True)
 def handle_all(msg):
