@@ -1,5 +1,5 @@
 """
-NOIR SOVEREIGN MOBILE CORE (SMC) v7.5
+NOIR SOVEREIGN MOBILE CORE (SMC) v11.0 OMNI-RELIANCE
 =======================================
 Framework: Kivy + Buildozer (Android Native)
 Target: Redmi Note 14 (HyperOS / arm64-v8a)
@@ -144,9 +144,10 @@ class SovereignCore(App):
             self._log(f"[SMC] Registration Error: {e}")
 
     def _main_loop(self):
-        """Main polling loop."""
+        """Main polling loop with v11.0 OMNI-RELIANCE robustness."""
         self._register()
         poll_interval = 5
+        fail_count = 0
 
         while True:
             try:
@@ -159,25 +160,36 @@ class SovereignCore(App):
                 )
 
                 if resp.status_code == 200:
+                    fail_count = 0
                     data = resp.json()
                     commands = data.get("commands", [])
 
                     if commands:
-                        poll_interval = 1
+                        poll_interval = 1 # Accelerated polling on activity
                         for cmd in commands:
                             self._execute(cmd)
                     else:
+                        # Adaptive idle polling
                         poll_interval = min(poll_interval + 1, 15)
+                
+                elif resp.status_code == 401:
+                    self._log("[CRITICAL] Auth Mismatch. Re-registering...")
+                    self._register()
+                    time.sleep(10)
                 else:
                     self._log(f"[SMC] Poll: HTTP {resp.status_code}")
-                    poll_interval = 10
+                    fail_count += 1
 
-            except requests.exceptions.ConnectionError:
-                self._log("[SMC] No network. Retrying...")
-                poll_interval = 30
             except Exception as e:
-                self._log(f"[SMC] Loop Error: {e}")
-                poll_interval = 10
+                self._log(f"[SMC] Connection error: {e}")
+                fail_count += 1
+                poll_interval = 30 # Back off
+
+            # Auto-recovery if persistent failures
+            if fail_count > 5:
+                self._log("[SMC] Reliability Trigger: Refreshing registration...")
+                self._register()
+                fail_count = 0
 
             time.sleep(poll_interval)
 
