@@ -17,7 +17,8 @@ CREATE TABLE IF NOT EXISTS agents (
     device_id       TEXT PRIMARY KEY,
     name            TEXT,
     last_seen       TEXT DEFAULT CURRENT_TIMESTAMP,
-    last_screenshot TEXT
+    last_screenshot TEXT,
+    stats           TEXT -- JSON string for CPU, RAM, Temp
 );
 
 -- Tabel: Memori Agen (Key-Value)
