@@ -26,6 +26,15 @@ services:
     networks:
       - noir-net
 
+  noir-telegram:
+    build: .
+    container_name: noir-telegram
+    restart: always
+    env_file: .env
+    command: python telegram_bot.py
+    networks:
+      - noir-net
+
 networks:
   noir-net:
     driver: bridge

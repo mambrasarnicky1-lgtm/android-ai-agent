@@ -94,38 +94,54 @@ def handle_all(msg):
         bot.reply_to(msg, "⛔ Akses ditolak.")
         return
 
-    text = msg.text.strip()
+    text = msg.text.strip().lower()
     bot.send_chat_action(msg.chat.id, "typing")
 
-    # 1. Hardcoded Shortcuts (Fast Response)
-    if text in ["📸 Screenshot", "screenshot"]:
-        r = cloud_cmd("screenshot", desc="Telegram Shortcut")
-        bot.reply_to(msg, f"📸 Perintah dikirim: `{r.get('command_id', 'QUEUED')}`", parse_mode="Markdown")
-        return
-    
-    if text in ["🔋 Baterai", "battery"]:
-        r = cloud_cmd("battery", desc="Telegram Shortcut")
-        bot.reply_to(msg, f"🔋 Perintah dikirim: `{r.get('command_id', 'QUEUED')}`", parse_mode="Markdown")
+    # 1. Rule-Based Intent Mapping (Instant & Zero Token Cost)
+    mapping = {
+        "screenshot": "screenshot", "foto": "screenshot", "ss": "screenshot", "layar": "screenshot",
+        "battery": "battery", "baterai": "battery", "power": "battery", "persen": "battery",
+        "info": "info", "status": "info", "manifest": "info",
+        "reboot": "shell", "restart": "shell"
+    }
+
+    found_action = None
+    for key, action in mapping.items():
+        if key in text:
+            found_action = action
+            break
+
+    if found_action:
+        params = {"cmd": "reboot"} if found_action == "shell" and "reboot" in text else {}
+        r = cloud_cmd(found_action, params=params, desc=f"Telegram Quick: {text}")
+        bot.reply_to(msg, f"💠 **ELITE EXECUTION**: `{found_action.upper()}`\nStatus: `{r.get('status', 'QUEUED')}`", parse_mode="Markdown")
         return
 
-    # 2. AI Processing (Brain Integration)
+    # 2. AI Processing (Brain Integration v13.0)
     log.info(f"🧠 Querying Brain for: {text}")
-    ai_resp = AIRouter.smart_query(f"{SYSTEM_PROMPT}\n\nUSER: {text}")
-    
-    # Check for Actions in AI Response
-    actions_found = re.findall(r'\[ACTION:(.*?)\]', ai_resp)
-    
-    for action_str in actions_found:
-        if "screenshot" in action_str: cloud_cmd("screenshot", desc=f"AI: {text}")
-        elif "battery" in action_str: cloud_cmd("battery", desc=f"AI: {text}")
-        elif "shell" in action_str:
-            cmd_match = re.search(r'cmd="(.*?)"', action_str)
-            if cmd_match: cloud_cmd("shell", {"cmd": cmd_match.group(1)}, desc=f"AI Shell: {text}")
-        elif "info" in action_str: cloud_cmd("info", desc=f"AI: {text}")
+    try:
+        # We don't need to re-add SYSTEM_PROMPT if brain.py already has EXPERT_SYSTEM_PROMPT
+        # But we want to ensure the tags are used.
+        ai_resp = AIRouter.smart_query(f"USER COMMAND: {text}\n\nINSTRUCTION: Respond in Indonesian as Noir Sovereign. Use [ACTION:type] if needed.")
+        
+        # Check for Actions in AI Response
+        actions_found = re.findall(r'\[ACTION:(.*?)\]', ai_resp)
+        for action_str in actions_found:
+            parts = action_str.split(",")
+            a_type = parts[0].strip()
+            a_params = {}
+            if "cmd=" in action_str:
+                cmd_match = re.search(r'cmd="(.*?)"', action_str)
+                if cmd_match: a_params["cmd"] = cmd_match.group(1)
+            
+            cloud_cmd(a_type, params=a_params, desc=f"AI Autonomous: {text}")
 
-    # Clean the response from tags
-    clean_resp = re.sub(r'\[ACTION:.*?\]', '', ai_resp).strip()
-    bot.reply_to(msg, clean_resp or "Perintah dipahami dan sedang dieksekusi.")
+        # Clean the response from tags
+        clean_resp = re.sub(r'\[ACTION:.*?\]', '', ai_resp).strip()
+        bot.reply_to(msg, clean_resp or "Perintah diproses secara otonom.")
+    except Exception as e:
+        log.error(f"Brain Sync Error: {e}")
+        bot.reply_to(msg, "⚠️ Brain Sync Error. Menggunakan mode darurat...")
 
 if __name__ == "__main__":
     log.info("🖤 Noir Sovereign Telegram Bot — Starting...")
