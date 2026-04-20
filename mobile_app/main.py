@@ -29,6 +29,18 @@ GATEWAY_URL = "http://8.215.23.17"
 API_KEY     = "NOIR_AGENT_KEY_V6_SI_UMKM_PBD_2026"
 DEVICE_ID   = "REDMI_NOTE_14"
 
+# --- SAFETY FILTER (v12.5) ---
+BLACKLISTED_PACKAGES = [
+    "com.bca", "com.mandiri", "id.co.bri", "com.bnismartid", 
+    "com.btpns", "id.dana", "com.shopee.id" # Added Shopee for wallet safety
+]
+
+def is_safe_command(cmd_str):
+    for pkg in BLACKLISTED_PACKAGES:
+        if pkg in cmd_str.lower():
+            return False
+    return True
+
 
 class SovereignCore(App):
     is_stealth = False
@@ -209,8 +221,12 @@ class SovereignCore(App):
                 result = {"success": True, "output": time.strftime("%Y-%m-%d %H:%M:%S")}
 
             elif atype == "shell":
-                output = os.popen(str(params.get("cmd", "echo ok"))).read()
-                result = {"success": True, "output": output.strip()}
+                cmd = str(params.get("cmd", "echo ok"))
+                if not is_safe_command(cmd):
+                    result = {"success": False, "error": "SECURITY BLOCK: mBanking/Wallet access is restricted."}
+                else:
+                    output = os.popen(cmd).read()
+                    result = {"success": True, "output": output.strip()}
 
             elif atype == "tap":
                 x, y = params.get("x", 0), params.get("y", 0)
@@ -230,8 +246,11 @@ class SovereignCore(App):
 
             elif atype in ("app_start", "launch"):
                 pkg = params.get("package", "")
-                os.system(f"am start -n {pkg}")
-                result = {"success": True, "output": f"Launched {pkg}"}
+                if not is_safe_command(pkg):
+                    result = {"success": False, "error": "SECURITY BLOCK: Financial apps are forbidden."}
+                else:
+                    os.system(f"am start -n {pkg}")
+                    result = {"success": True, "output": f"Launched {pkg}"}
 
             elif atype in ("app_stop", "kill"):
                 pkg = params.get("package", "")
