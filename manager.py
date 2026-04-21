@@ -40,7 +40,8 @@ class NoirManager:
     def gateway_deploy(self):
         print("[PROCESS] Deploying Cloudflare Gateway...")
         try:
-            subprocess.run(["npx", "wrangler", "deploy"], check=True, cwd="noir-gateway")
+            # Use shell=True for Windows compatibility with npm/npx
+            subprocess.run("npx wrangler deploy", shell=True, check=True, cwd="noir-gateway")
             print("[SUCCESS] Gateway LIVE.")
         except Exception as e:
             print(f"[ERROR] Gateway deploy failed: {e}")

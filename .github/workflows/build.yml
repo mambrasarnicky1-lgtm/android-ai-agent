@@ -1,83 +1,29 @@
-# NOIR SOVEREIGN COMMANDER v14.0.7
+# NOIR SOVEREIGN COMMANDER v14.0.9 - Android Build Pipeline
 name: Build Noir SMC Android APK
-
 on:
   push:
     branches: [ "main", "master" ]
   workflow_dispatch:
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   build:
-    runs-on: ubuntu-22.04
-    timeout-minutes: 90
-
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Cache Buildozer global directory
-        uses: actions/cache@v4
+      - name: Build with Buildozer Action
+        uses: kivy/buildozer-action@master
         with:
-          path: ~/.buildozer
-          key: buildozer-global-${{ hashFiles('mobile_app/buildozer.spec') }}
+          workdir: mobile_app
+          buildozer_version: master
+          # Inject secrets as environment variables for buildozer.spec interpolation
+        env:
+          NOIR_GATEWAY_URL: "https://noir-agent-gateway.si-umkm-ikm-pbd.workers.dev"
+          NOIR_API_KEY: "NOIR_AGENT_KEY_V6_SI_UMKM_PBD_2026"
+          NOIR_DEVICE_ID: "REDMI_NOTE_14"
 
-      - name: Cache Buildozer local directory
-        uses: actions/cache@v4
-        with:
-          path: mobile_app/.buildozer
-          key: buildozer-local-${{ hashFiles('mobile_app/buildozer.spec') }}-${{ hashFiles('mobile_app/main.py') }}
-          restore-keys: |
-            buildozer-local-${{ hashFiles('mobile_app/buildozer.spec') }}-
-
-      - name: Build Release AAB with Buildozer Docker
-        run: |
-          docker run --rm \
-            -v ${{ github.workspace }}/mobile_app:/home/user/hostcwd \
-            -v ~/.buildozer:/home/user/.buildozer \
-            -e P4A_RELEASE_KEYSTORE=/home/user/hostcwd/noir_smc_release.keystore \
-            -e P4A_RELEASE_KEYSTORE_PASSWD=noir1234 \
-            -e P4A_RELEASE_KEYALIAS_PASSWD=noir1234 \
-            -e P4A_RELEASE_KEYALIAS=noirk \
-            -e NOIR_GATEWAY_URL="https://noir-agent-gateway.si-umkm-ikm-pbd.workers.dev" \
-            -e NOIR_API_KEY="NOIR_AGENT_KEY_V6_SI_UMKM_PBD_2026" \
-            -e NOIR_DEVICE_ID="REDMI_NOTE_14" \
-            kivy/buildozer:latest \
-            android release
-
-      - name: Convert AAB to APK using bundletool
-        run: |
-          # Download bundletool
-          wget -q https://github.com/google/bundletool/releases/download/1.15.6/bundletool-all-1.15.6.jar -O bundletool.jar
-
-          # Find the AAB file
-          AAB_FILE=$(find ${{ github.workspace }}/mobile_app/bin -name "*.aab" | head -1)
-          echo "Found AAB: $AAB_FILE"
-
-          # Convert AAB to universal APKs
-          java -jar bundletool.jar build-apks \
-            --bundle="$AAB_FILE" \
-            --output=${{ github.workspace }}/mobile_app/bin/noirsmc.apks \
-            --mode=universal \
-            --ks=${{ github.workspace }}/mobile_app/noir_smc_release.keystore \
-            --ks-pass=pass:noir1234 \
-            --ks-key-alias=noirk \
-            --key-pass=pass:noir1234
-
-          # Extract the universal APK from the .apks zip
-          cd ${{ github.workspace }}/mobile_app/bin
-          unzip -o noirsmc.apks -d apks_extracted
-          mv apks_extracted/universal.apk noirsmc-v14-release.apk
-          echo "APK created: noirsmc-v14-release.apk"
-          ls -la *.apk *.aab
-
-      - name: Upload APK artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: SovereignCore-APK
-          path: |
-            mobile_app/bin/*.apk
-            mobile_app/bin/*.aab
-          retention-days: 30
+          name: Noir-SMC-v14-APK
+          path: mobile_app/bin/*.apk
