@@ -145,6 +145,21 @@ app.post('/agent/log', async (c) => {
   return c.json({ ok: true });
 });
 
+app.get('/brain/poll', async (c) => {
+  const cmds = await c.env.DB.prepare(
+    "SELECT id, action, description FROM commands WHERE status = 'pending' AND description LIKE '%Priority Social Media%' LIMIT 5"
+  ).all();
+  
+  if (cmds.results.length > 0) {
+    const ids = cmds.results.map(r => r.id);
+    await c.env.DB.prepare(
+      `UPDATE commands SET status = 'done' WHERE id IN (${ids.map(() => '?').join(',')})`
+    ).bind(...ids).run();
+  }
+  
+  return c.json({ alerts: cmds.results.map(r => ({ alert_id: r.id, action: JSON.parse(r.action as string), desc: r.description })) });
+});
+
 app.post('/agent/command', async (c) => {
   const data = await c.req.json();
   const { action, description } = data;

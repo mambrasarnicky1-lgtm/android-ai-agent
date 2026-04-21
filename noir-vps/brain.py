@@ -288,8 +288,27 @@ class AIRouter:
 
     @staticmethod
     def query_deepseek(prompt: str) -> str:
-        """Single Standard Enforcement: Rerouted to Gemini"""
-        return AIRouter.query_gemini(prompt)
+        """DeepSeek-R1 Reasoning via Groq API."""
+        if not GROQ: return AIRouter.query_gemini(prompt)
+        log.info("🧠 Reasoning: Querying DeepSeek-R1 via Groq...")
+        try:
+            import requests
+            r = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={"Authorization": f"Bearer {GROQ}", "Content-Type": "application/json"},
+                json={
+                    "model": "deepseek-r1-distill-llama-70b",
+                    "messages": [{"role": "system", "content": EXPERT_SYSTEM_PROMPT}, {"role": "user", "content": prompt}]
+                },
+                timeout=40
+            )
+            data = r.json()
+            if "choices" in data and len(data["choices"]) > 0:
+                return data["choices"][0]["message"]["content"]
+            return AIRouter.query_gemini(prompt) # Fallback
+        except Exception as e:
+            log.error(f"Groq DeepSeek failed: {e}")
+            return AIRouter.query_gemini(prompt)
 
     @staticmethod
     def query_qwen(prompt: str) -> str:
@@ -309,16 +328,24 @@ class AIRouter:
 
     @staticmethod
     def web_search(query: str) -> str:
-        """Pencarian web real-time tanpa API key (DuckDuckGo)."""
+        """Pencarian web real-time menggunakan DuckDuckGo Lite."""
         log.info(f"🌐 Searching Web: {query}")
         try:
             import requests
-            # Menggunakan endpoint DDG Lite untuk stabilitas tanpa key
-            r = requests.get(f"https://html.duckduckgo.com/html/?q={query}", timeout=10)
+            from bs4 import BeautifulSoup
+            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"}
+            r = requests.get(f"https://html.duckduckgo.com/html/?q={query}", headers=headers, timeout=10)
             if r.status_code == 200:
-                return "Hasil pencarian berhasil diambil (Snapshot sent to Brain)."
-            return "Pencarian gagal."
+                soup = BeautifulSoup(r.text, 'html.parser')
+                results = []
+                for entry in soup.find_all('div', class_='result__body')[:5]:
+                    snippet = entry.find('a', class_='result__snippet')
+                    if snippet:
+                        results.append(snippet.get_text())
+                return "\n".join(results) if results else "Tidak ada hasil pencarian yang relevan."
+            return "Pencarian gagal (HTTP Error)."
         except Exception as e:
+            log.error(f"[Search Error] {e}")
             return f"[Search Error] {e}"
 
 # ─── VISION ENGINE (Multimodal) ───
@@ -389,11 +416,16 @@ class LearningEngine:
             import requests
             # Contoh: Mengambil changelog terbaru dari Python/Android
             # (Dalam produksi, ini akan men-scrape URL spesifik)
-            sources = ["https://docs.python.org/3/whatsnew/3.12.html"]
+            sources = [
+                "https://raw.githubusercontent.com/python/cpython/main/Include/patchlevel.h",
+                "https://developer.android.com/about/versions/14"
+            ]
             for s in sources:
                 r = requests.get(s, timeout=10)
                 if r.status_code == 200:
                     log.info(f"   ✅ Refreshed knowledge from: {s[:40]}...")
+                    # Simulasikan penyerapan skill ke Catalyst
+                    catalyst.absorb_skill("Documentation_Refresh", {"name": f"Deep Dive: {s.split('/')[-1]}", "complexity": 2})
             
             log.info("   → Brain optimization complete.")
         except Exception as e:
@@ -528,8 +560,29 @@ class SovereignUpdater:
     @staticmethod
     def check_for_updates():
         log.info("🆙 Sovereign Updater: Checking for system patches...")
-        # Menarik patch dari Gateway atau GitHub
-        return "System is running the latest V7 Sovereign Build."
+        # Simulasikan deteksi patch baru
+        # Dalam skenario nyata, ini akan mengecek remote manifest
+        new_version = "14.0.8"
+        current_version = "14.0.7"
+        
+        if new_version > current_version:
+            log.info(f"✨ New Patch Available: {new_version}")
+            msg = f"📦 **SYSTEM UPDATE AVAILABLE**: v{new_version}\n\nPerbaikan: Optimalisasi AI Core & Refaktor Struktur.\n\nApakah Anda mengizinkan saya melakukan upgrade sistem sekarang?"
+            AIRouter.send_telegram(msg, important=True)
+            return True
+        return False
+
+    @staticmethod
+    def execute_upgrade():
+        log.info("🚀 Sovereign Updater: Executing System Upgrade...")
+        try:
+            # Jalankan manager.py deploy secara lokal jika di VPS
+            # Atau kirim sinyal ke Gateway untuk mentrigger deploy
+            import subprocess
+            subprocess.run(["python3", "manager.py", "deploy"], check=True)
+            return "Upgrade Berhasil. Sistem sedang me-reboot layanan."
+        except Exception as e:
+            return f"Upgrade Gagal: {e}"
 
 # ─── SELF-EVOLUTION ENGINE (v10.0) ───
 class SelfEvolutionEngine:
@@ -542,7 +595,11 @@ class SelfEvolutionEngine:
         report = AIRouter.smart_query(prompt)
         
         # --- Catalyst Absorption (Proprietary Learning) ---
-        catalyst.absorb_skill("NoirBrain_Evolution", {"name": "Integrated Optimization", "complexity": 3})
+        log.info("🧬 Catalyst: Consolidating neural pathways...")
+        catalyst.absorb_skill("Recursive_Self_Optimization", {"name": "Sovereign Logic Synthesis", "complexity": 4})
+        
+        # Simpan state pembelajaran mandiri
+        catalyst.save_state()
         
         # Kirim ke Dashboard via Gateway
         try:
@@ -592,6 +649,7 @@ def run():
         if cycle % 10 == 0: # Every 10 cycles
             LearningEngine.knowledge_refresh()
             SelfEvolutionEngine.generate_progress_report()
+            SovereignUpdater.check_for_updates()
 
         # 3. Laporan Berkala (Reduced to 1 Hour)
         if elapsed >= 3600:

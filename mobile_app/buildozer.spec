@@ -13,7 +13,7 @@ source.exclude_dirs = tests, bin, .buildozer
 
 # --- Dependensi Python ---
 # Hanya dependensi yang PASTI ada di python-for-android recipes
-requirements = python3,kivy==2.3.0,requests,urllib3,certifi,idna,charset-normalizer,pyjnius,Pillow
+requirements = python3,kivy==2.3.0,requests,urllib3,certifi,idna,charset-normalizer,pyjnius,Pillow,psutil
 
 # --- Target Platform ---
 android.api = 34

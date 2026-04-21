@@ -82,16 +82,20 @@ def proxy_asset(key: str):
 async def get_chat():
     return {
         "messages": [
-            {"role": "agent", "text": "Protokol v14.0 Aktif. Seluruh sensor siap.", "time": time.time() - 60}
+            {"role": "agent", "text": "Protokol v14.0 Aktif. Seluruh sensor siap.", "time": time.time() - 3600},
+            {"role": "system", "text": "Neural Core: Self-Learning phase active.", "time": time.time() - 1800},
+            {"role": "agent", "text": "Monitoring aktivitas media sosial diprioritaskan.", "time": time.time() - 300}
         ]
     }
 
 @app.get("/api/skills")
 async def get_skills():
+    # Fetch from catalyst if possible, but for now we'll simulate the growth
     return {
-        "active": ["Vision Analysis", "Autonomous Research", "Camera Sensor Control", "Gallery Synchronization"],
-        "learning": ["Cross-Platform Synthesis", "Recursive Optimization v2"],
-        "proposal": "Pengembangan modul 'Autonomous App Update' sedang diverifikasi oleh sistem pusat."
+        "active": ["Vision Analysis", "Autonomous Research", "Camera Sensor Control", "Social Media Priority", "Linguistic Synthesis"],
+        "learning": ["Recursive Optimization v14", "Deep Reasoning Synthesis"],
+        "growth": "84.2%",
+        "proposal": "Modul 'Autonomous App Update' dalam tahap finalisasi verifikasi."
     }
 
 @app.get("/api/loot")

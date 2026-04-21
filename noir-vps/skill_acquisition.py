@@ -3,7 +3,7 @@ from brain import AIRouter, ResearchEngine
 
 log = logging.getLogger("SkillAcquisition")
 
-SKILL_LIBRARY_PATH = os.path.join(os.path.dirname(__file__), "skill_library.json")
+SKILL_LIBRARY_PATH = os.path.join(os.path.dirname(__file__), "..", "knowledge", "skill_library.json")
 
 class SkillAcquisitionEngine:
     """Engine untuk menemukan dan mengintegrasikan alat AI baru secara otonom."""

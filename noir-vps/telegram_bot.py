@@ -17,6 +17,9 @@ if env_path.exists():
                 k, v = line.strip().split("=", 1)
                 os.environ.setdefault(k.strip(), v.strip())
 
+import threading
+import time
+
 try:
     import requests
     from telebot import TeleBot, types
@@ -186,7 +189,8 @@ def handle_all(msg):
         "screenshot": "screenshot", "foto": "screenshot", "ss": "screenshot", "layar": "screenshot",
         "battery": "battery", "baterai": "battery", "power": "battery", "persen": "battery",
         "info": "info", "status": "info", "manifest": "info",
-        "reboot": "shell", "restart": "shell"
+        "reboot": "shell", "restart": "shell",
+        "upgrade": "upgrade", "update": "upgrade", "perbarui": "upgrade"
     }
 
     found_action = None
@@ -196,6 +200,13 @@ def handle_all(msg):
             break
 
     if found_action:
+        if found_action == "upgrade":
+            bot.reply_to(msg, "🚀 **UPGRADE INITIATED**: Menjalankan protokol pembaruan sistem otonom...")
+            from brain import SovereignUpdater
+            res = SovereignUpdater.execute_upgrade()
+            bot.reply_to(msg, f"📊 **UPGRADE RESULT**:\n{res}")
+            return
+            
         params = {"cmd": "reboot"} if found_action == "shell" and "reboot" in text else {}
         r = cloud_cmd(found_action, params=params, desc=f"Telegram Quick: {text}")
         bot.reply_to(msg, f"💠 **ELITE EXECUTION**: `{found_action.upper()}`\nStatus: `{r.get('status', 'QUEUED')}`", parse_mode="Markdown")
@@ -240,6 +251,36 @@ def handle_all(msg):
         log.error(f"Brain Sync Error: {e}")
         bot.reply_to(msg, "⚠️ Brain Sync Error. Menggunakan mode darurat...")
 
+def alert_polling_loop():
+    """Polls the gateway for priority alerts meant for the Brain/User."""
+    log.info("🔔 Alert Polling Thread Started.")
+    while True:
+        try:
+            r = requests.get(f"{GATEWAY}/brain/poll", headers=HEADERS, timeout=20)
+            if r.status_code == 200:
+                data = r.json()
+                alerts = data.get("alerts", [])
+                for alert in alerts:
+                    action = alert.get("action", {})
+                    if action.get("type") == "social_alert":
+                        image_key = action.get("image_key")
+                        msg = f"🚀 **SOCIAL MEDIA PRIORITY ALERT**\n\nAgent mendeteksi aktivitas interaksi di media sosial. Silakan tinjau screenshot terbaru."
+                        
+                        if CHAT_ID:
+                            if image_key:
+                                # Get image from gateway
+                                img_url = f"{GATEWAY}/agent/asset/{image_key}"
+                                bot.send_photo(CHAT_ID, img_url, caption=msg, parse_mode="Markdown")
+                            else:
+                                bot.send_message(CHAT_ID, msg, parse_mode="Markdown")
+            
+        except Exception as e:
+            log.warning(f"Alert Polling Error: {e}")
+        
+        time.sleep(5) # Poll every 5 seconds
+
 if __name__ == "__main__":
     log.info("🖤 Noir Sovereign Telegram Bot — Starting...")
+    # Start background alert polling
+    threading.Thread(target=alert_polling_loop, daemon=True).start()
     bot.infinity_polling(timeout=10, long_polling_timeout=5)

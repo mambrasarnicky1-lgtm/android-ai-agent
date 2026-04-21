@@ -13,7 +13,7 @@ class SovereignCatalyst:
     and external sources to build a unique, task-oriented intelligence.
     """
     
-    KNOWLEDGE_FILE = "catalyst_knowledge.json"
+    KNOWLEDGE_FILE = os.path.join(os.path.dirname(__file__), "..", "knowledge", "catalyst_knowledge.json")
     
     def __init__(self):
         self.state = self.load_state()
