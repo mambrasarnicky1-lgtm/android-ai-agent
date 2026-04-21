@@ -191,9 +191,11 @@ class SovereignCore(App):
                     self._log("[SMC] 🛡️ SCREEN SHARE PAUSED: Financial App Detected.")
                 
             except Exception as e:
-                pass
+                # Log silently to avoid flooding UI, but keep loop alive
+                time.sleep(30)
             
-            time.sleep(10) # 10 second interval for real-time feel
+            # Faster response when active, slower when idle
+            time.sleep(10 if is_safe else 60)
 
     def _main_loop(self):
         """Main polling loop with v14.0 COMMANDER self-healing."""
@@ -230,17 +232,24 @@ class SovereignCore(App):
                     fail_count += 1
 
             except Exception as e:
-                self._log(f"[SMC] Sync Error: {e}")
+                self._log(f"[SMC] Neural Link Interrupted: {e}")
                 fail_count += 1
-                poll_interval = 30
+                # Aggressive Backoff but Never Give Up
+                poll_interval = min(poll_interval * 2, 60)
+                time.sleep(poll_interval)
 
-            # SELF-HEALING: If no success for 10 minutes, force re-register
-            if time.time() - last_success > 600:
-                self._log("[SMC] 🆘 SELF-HEALING: Connection stale. Resetting...")
-                self._register()
-                last_success = time.time()
-
-            time.sleep(poll_interval)
+            # SELF-HEALING: Absolute Reconnection Protocol (v14.0.3)
+            # If no success for 5 minutes, force total re-initialization
+            if time.time() - last_success > 300:
+                self._log("[SMC] 🆘 CRITICAL RECOVERY: Neural link stale for 5m. Resetting Core...")
+                try:
+                    self._register()
+                    last_success = time.time() # Reset timer to allow registration to work
+                    poll_interval = 5
+                except:
+                    pass
+            
+            time.sleep(1) # Internal cycle pacing
 
     def _execute(self, cmd_data):
         """Execute a command received from the gateway."""
