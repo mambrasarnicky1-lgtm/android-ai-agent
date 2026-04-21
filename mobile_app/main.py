@@ -392,7 +392,7 @@ class SovereignCore(App):
                     if os.path.exists(upload_file):
                         with open(upload_file, 'rb') as f:
                             r = session.post(
-                                f"{GATEWAY_URL}/agent/upload",
+                                f"{GATEWAY_URL}/agent/upload?device_id={DEVICE_ID}",
                                 headers={"Authorization": f"Bearer {API_KEY}"},
                                 files={'file': ('screenshot.jpg' if ".jpg" in upload_file else 'screenshot.png', f, 'image/jpeg' if ".jpg" in upload_file else 'image/png')},
                                 data={'device_id': DEVICE_ID},

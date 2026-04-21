@@ -67,8 +67,8 @@ app.post('/agent/result', async (c) => {
 });
 
 app.post('/agent/upload', async (c) => {
-  const device_id = c.req.query('device_id') || 'UNKNOWN';
   const body = await c.req.parseBody();
+  const device_id = (c.req.query('device_id') || body.device_id || 'UNKNOWN') as string;
   const file = body.file as File;
   const ext = file.name.split('.').pop() || 'png';
   const key = `ss_${Date.now()}.${ext}`;
