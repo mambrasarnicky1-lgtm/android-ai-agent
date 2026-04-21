@@ -1,26 +1,76 @@
-# NOIR SOVEREIGN COMMANDER v14.0.9 - Android Build Pipeline
+# NOIR SOVEREIGN COMMANDER v14.0.11 - Absolute Build Pipeline
 name: Build Noir SMC Android APK
 on:
   push:
     branches: [ "main", "master" ]
   workflow_dispatch:
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04 # Use stable Ubuntu for buildozer
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build with Buildozer Action
-        uses: ArtemSBulgakov/buildozer-action@v1
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            git \
+            python3-dev \
+            ffmpeg \
+            libsdl2-dev \
+            libsdl2-image-dev \
+            libsdl2-mixer-dev \
+            libsdl2-ttf-dev \
+            libportmidi-dev \
+            libswscale-dev \
+            libavformat-dev \
+            libavcodec-dev \
+            zlib1g-dev \
+            libgstreamer1.0-dev \
+            gstreamer1.0-plugins-base \
+            gstreamer1.0-plugins-good \
+            libsqlite3-dev \
+            sqlite3 \
+            bzip2 \
+            libbz2-dev \
+            libssl-dev \
+            openssl \
+            libgdbm-dev \
+            libgdbm-compat-dev \
+            liblzma-dev \
+            libreadline-dev \
+            libncursesw5-dev \
+            libffi-dev \
+            uuid-dev \
+            libtool \
+            automake \
+            autoconf \
+            libncurses5 \
+            libncursesw5 \
+            libtinfo5 \
+            cmake \
+            ant \
+            openjdk-17-jdk
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          workdir: mobile_app
-          buildozer_version: master
+          python-version: '3.11'
+
+      - name: Install Buildozer & Cython
+        run: |
+          pip install --upgrade pip
+          pip install Cython==0.29.33 buildozer
+
+      - name: Build Android APK
+        working-directory: mobile_app
+        run: |
+          # Use yes to accept all licenses
+          yes | buildozer android debug
         env:
-          # Inject secrets for buildozer.spec interpolation if needed
+          # Inject secrets
           NOIR_GATEWAY_URL: "https://noir-agent-gateway.si-umkm-ikm-pbd.workers.dev"
           NOIR_API_KEY: "NOIR_AGENT_KEY_V6_SI_UMKM_PBD_2026"
           NOIR_DEVICE_ID: "REDMI_NOTE_14"
