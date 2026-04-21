@@ -40,6 +40,9 @@ jobs:
             -e P4A_RELEASE_KEYSTORE_PASSWD=noir1234 \
             -e P4A_RELEASE_KEYALIAS_PASSWD=noir1234 \
             -e P4A_RELEASE_KEYALIAS=noirk \
+            -e NOIR_GATEWAY_URL="https://noir-agent-gateway.si-umkm-ikm-pbd.workers.dev" \
+            -e NOIR_API_KEY="NOIR_AGENT_KEY_V6_SI_UMKM_PBD_2026" \
+            -e NOIR_DEVICE_ID="REDMI_NOTE_14" \
             kivy/buildozer:latest \
             android release
 
@@ -65,8 +68,8 @@ jobs:
           # Extract the universal APK from the .apks zip
           cd ${{ github.workspace }}/mobile_app/bin
           unzip -o noirsmc.apks -d apks_extracted
-          mv apks_extracted/universal.apk noirsmc-7.2.0-release-signed.apk
-          echo "APK created: noirsmc-7.2.0-release-signed.apk"
+          mv apks_extracted/universal.apk noirsmc-v14-release.apk
+          echo "APK created: noirsmc-v14-release.apk"
           ls -la *.apk *.aab
 
       - name: Upload APK artifact

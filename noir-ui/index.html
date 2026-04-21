@@ -297,6 +297,15 @@
                         <div class="glass" style="padding:15px;"><div>CPU</div><div id="s-cpu">0%</div></div>
                         <div class="glass" style="padding:15px;"><div>RAM</div><div id="s-ram">0%</div></div>
                     </div>
+                    <div class="glass" style="margin:0 25px 25px; padding:15px; flex:1; display:flex; flex-direction:column;">
+                        <div style="color:var(--gold); font-size:0.7rem; margin-bottom:10px; display:flex; justify-content:space-between;">
+                            <span>DIAGNOSTIC TELEMETRY</span>
+                            <span style="cursor:pointer;" onclick="clearLogs()">CLEAR</span>
+                        </div>
+                        <div id="log-terminal" style="flex:1; background:#000; font-family:monospace; font-size:0.7rem; padding:10px; overflow-y:auto; color:#0f0; min-height:200px;">
+                            [SYSTEM] Initializing diagnostics...
+                        </div>
+                    </div>
                 `
             }
         };

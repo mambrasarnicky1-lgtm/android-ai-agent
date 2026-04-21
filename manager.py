@@ -26,10 +26,14 @@ class NoirManager:
             print(f"[ERROR] Deployment failed: {e}")
 
     def clean_vps(self):
-        print("[PROCESS] Purging VPS Cache...")
+        print("[PROCESS] Purging VPS Cache & Residual Data...")
         try:
+            # Purge Docker cache
             subprocess.run(self.ssh_base + ["docker system prune -af --volumes"], check=True)
-            print("[SUCCESS] Cache Purged.")
+            # Purge Python cache and logs
+            subprocess.run(self.ssh_base + [f"cd {self.remote_path} && find . -type d -name '__pycache__' -exec rm -rf {{}} +"])
+            subprocess.run(self.ssh_base + [f"cd {self.remote_path} && find . -name '*.log' -delete"])
+            print("[SUCCESS] Full System Purge Complete.")
         except Exception as e:
             print(f"[ERROR] Cleanup failed: {e}")
 

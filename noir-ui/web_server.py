@@ -25,9 +25,9 @@ app.add_middleware(
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# --- PROXY CONFIG ---
+# --- PROXY CONFIG (Unified Standard v14) ---
 CF_GATEWAY = os.environ.get("NOIR_GATEWAY_URL", "https://noir-agent-gateway.si-umkm-ikm-pbd.workers.dev").rstrip("/")
-CF_KEY     = os.environ.get("NOIR_API_KEY", "")
+CF_KEY     = os.environ.get("NOIR_API_KEY", "NOIR_AGENT_KEY_V6_SI_UMKM_PBD_2026")
 CF_HEADERS = {"Authorization": f"Bearer {CF_KEY}", "Content-Type": "application/json"}
 
 @app.get("/api/status")

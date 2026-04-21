@@ -122,6 +122,14 @@ app.get('/agent/asset/:key', async (c) => {
   return new Response(object.body, { headers });
 });
 
+app.post('/agent/log', async (c) => {
+  const data = await c.req.json();
+  const { device_id, level, message } = data;
+  console.log(`[${device_id}] [${level}] ${message}`);
+  // We can store logs in a separate D1 table if needed, but for now console is enough for wrangler logs
+  return c.json({ ok: true });
+});
+
 app.post('/agent/command', async (c) => {
   const data = await c.req.json();
   const { action, description } = data;

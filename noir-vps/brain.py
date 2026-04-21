@@ -16,8 +16,8 @@ from dotenv import load_dotenv
 env_path = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(env_path)
 
-GATEWAY  = os.environ.get("NOIR_GATEWAY_URL", "").rstrip("/")
-API_KEY  = os.environ.get("NOIR_API_KEY", "")
+GATEWAY  = os.environ.get("NOIR_GATEWAY_URL", "https://noir-agent-gateway.si-umkm-ikm-pbd.workers.dev").rstrip("/")
+API_KEY  = os.environ.get("NOIR_API_KEY", "NOIR_AGENT_KEY_V6_SI_UMKM_PBD_2026")
 GEMINI   = os.environ.get("GEMINI_API_KEY", "")
 GROQ     = os.environ.get("GROQ_API_KEY", "")
 TG_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
