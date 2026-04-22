@@ -65,7 +65,10 @@ android.release_artifact = apk
 android.gradle_args = --stacktrace --info
 
 # (list) gradle dependencies
-android.gradle_dependencies = 'com.android.tools.build:gradle:7.3.0'
+android.gradle_dependencies = 'com.android.tools.build:gradle:7.4.2'
+
+# (str) gradle version
+android.gradle_version = 7.5.1
 
 [buildozer]
 
