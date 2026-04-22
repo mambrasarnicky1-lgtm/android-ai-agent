@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04 # Newer runner for better Node 20/24 compatibility
+    runs-on: ubuntu-20.04 # Reverting to 20.04 for peak toolchain stability
     steps:
       - uses: actions/checkout@v4
 
