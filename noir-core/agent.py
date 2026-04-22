@@ -37,7 +37,7 @@ def load_env():
 load_env()
 
 # ─────────────────────────────────────────
-# CONFIG
+# CONFIG & VALIDATION
 # ─────────────────────────────────────────
 GATEWAY_URL = os.environ.get("NOIR_GATEWAY_URL", "").rstrip("/")
 API_KEY     = os.environ.get("NOIR_API_KEY", "")
@@ -45,8 +45,9 @@ DEVICE_ID   = os.environ.get("NOIR_DEVICE_ID", "REDMI_NOTE_14")
 AGENT_NAME  = "Noir Agent v14.0 COMMANDER"
 
 if not GATEWAY_URL or not API_KEY:
-    print("⚠️  FATAL: NOIR_GATEWAY_URL dan NOIR_API_KEY belum dikonfigurasi.")
-    print("   Buat file .env di root proyek. Lihat .env.example")
+    log.error("❌ FATAL: NOIR_GATEWAY_URL or NOIR_API_KEY missing.")
+    print("\n[!] Setup Error: Environment variables not found.")
+    print("    Ensure your .env file is present in the project root.")
     sys.exit(1)
 
 # ─────────────────────────────────────────

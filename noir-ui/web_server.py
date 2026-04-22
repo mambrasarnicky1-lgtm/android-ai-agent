@@ -26,8 +26,14 @@ app.add_middleware(
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # --- PROXY CONFIG (Unified Standard v14) ---
-CF_GATEWAY = os.environ.get("NOIR_GATEWAY_URL", "https://noir-agent-gateway.si-umkm-ikm-pbd.workers.dev").rstrip("/")
-CF_KEY     = os.environ.get("NOIR_API_KEY", "NOIR_AGENT_KEY_V6_SI_UMKM_PBD_2026")
+CF_GATEWAY = os.environ.get("NOIR_GATEWAY_URL")
+CF_KEY     = os.environ.get("NOIR_API_KEY")
+
+if not CF_GATEWAY or not CF_KEY:
+    print("❌ FATAL: NOIR_GATEWAY_URL or NOIR_API_KEY not found in environment.")
+    sys.exit(1)
+
+CF_GATEWAY = CF_GATEWAY.rstrip("/")
 CF_HEADERS = {"Authorization": f"Bearer {CF_KEY}", "Content-Type": "application/json"}
 
 @app.get("/api/status")
@@ -109,21 +115,30 @@ def get_loot():
 
 @app.get("/download-apk")
 async def download_apk():
-    # Direct path to the latest build artifact on the VPS
-    # Base dir is /app/noir-ui, we need /app/mobile_app/bin
-    apk_path = os.path.join(os.path.dirname(BASE_DIR), "mobile_app", "bin", "noirsmc-v14-release.apk")
+    # Primary path: specific release name
+    # Base dir is /app/noir-ui, we look in /app/bin or /app/mobile_app/bin
+    search_dirs = [
+        os.path.join(os.path.dirname(BASE_DIR), "bin"),
+        os.path.join(os.path.dirname(BASE_DIR), "mobile_app", "bin"),
+        os.path.join(BASE_DIR, "bin")
+    ]
     
-    # Fallback to general scan if name differs
-    if not os.path.exists(apk_path):
-        import glob
-        apks = glob.glob(os.path.join(os.path.dirname(BASE_DIR), "mobile_app", "bin", "*.apk"))
-        if apks:
-            apk_path = apks[0]
+    apk_path = None
+    for d in search_dirs:
+        if os.path.exists(d):
+            import glob
+            apks = glob.glob(os.path.join(d, "*.apk"))
+            if apks:
+                # Sort by newest
+                apks.sort(key=os.path.getmtime, reverse=True)
+                apk_path = apks[0]
+                break
     
-    if os.path.exists(apk_path):
+    if apk_path and os.path.exists(apk_path):
         from fastapi.responses import FileResponse
-        return FileResponse(apk_path, media_type="application/vnd.android.package-archive", filename="NoirSovereign_v14_6.apk")
-    return Response(content="Build Artifact Not Ready on VPS yet. Please wait for CI/CD synchronization.", status_code=404)
+        return FileResponse(apk_path, media_type="application/vnd.android.package-archive", filename=os.path.basename(apk_path))
+    
+    return Response(content="⚠️ Build Artifact Not Ready. Please trigger a new build on the VPS.", status_code=404)
 
 @app.get("/")
 async def get_index():

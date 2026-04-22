@@ -28,6 +28,12 @@ Noir Agent v14.0 is an industrial-grade, autonomous AI ecosystem designed for ab
 ## 🎯 Global Mission
 To provide the USER with an undetectable, self-healing, and extremely powerful remote intelligence presence that bridges the gap between human thought and automated machine execution.
 
+## 🛡️ Hardening Measures (v14.0.15)
+- **Zero-Hardcode Policy**: All credentials moved to E2EE `.env`.
+- **Persistent Core**: Background Service (`service.py`) integrated for anti-kill resilience.
+- **Adaptive Neural Link**: Self-healing polling with DNS/Network backoff.
+- **Privacy Shield**: Dynamic intent filter for mBanking protection.
+
 ---
-**Build State:** 💠 V14.0 COMMANDER ACTIVE
+**Build State:** 💠 V14.0.15 COMMANDER ACTIVE [HARDENED]
 **Authority:** ABSOLUTE SOVEREIGN (USER)

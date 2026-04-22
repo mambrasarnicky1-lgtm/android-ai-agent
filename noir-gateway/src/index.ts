@@ -59,10 +59,20 @@ app.get('/agent/poll', async (c) => {
 
 app.post('/agent/result', async (c) => {
   const data = await c.req.json();
-  const { command_id } = data;
+  const { command_id, device_id, telemetry } = data;
+  
+  // Update command status
   await c.env.DB.prepare(
     "UPDATE commands SET status = 'done', result = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
   ).bind(JSON.stringify(data), command_id).run();
+
+  // If telemetry is present, update agent stats for real-time monitoring
+  if (telemetry && device_id) {
+    await c.env.DB.prepare(
+      "UPDATE agents SET stats = ?, last_seen = datetime('now') WHERE device_id = ?"
+    ).bind(JSON.stringify(telemetry), device_id).run();
+  }
+  
   return c.json({ status: 'ok' });
 });
 
