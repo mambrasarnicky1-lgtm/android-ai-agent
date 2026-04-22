@@ -61,6 +61,9 @@ android.accept_sdk_license = True
 # (str) The format used to package the app for release mode (apk or aab)
 android.release_artifact = apk
 
+# (str) extra gradle arguments
+android.gradle_args = --stacktrace --info
+
 [buildozer]
 
 # (int) Log level (0 = error only, 1 = info, 2 = debug (with command output))
