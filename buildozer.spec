@@ -49,7 +49,7 @@ android.private_storage = True
 
 # (list) Services to run
 # Use this for background processing
-services = NoirService:mobile_app/service.py
+services = NoirService:service.py
 
 # (list) Android additionnal libraries to copy into libs/armeabi
 #android.add_libs_armeabi = lib/armeabi/libcrypto.so, lib/armeabi/libssl.so
