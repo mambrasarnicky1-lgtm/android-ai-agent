@@ -65,7 +65,7 @@ android.release_artifact = apk
 android.gradle_args = --stacktrace --info -Dorg.gradle.jvmargs=-Xmx2048m
 
 # (list) gradle dependencies
-android.gradle_dependencies = 'com.android.tools.build:gradle:7.3.0', 'org.jetbrains.kotlin:kotlin-stdlib:1.8.0'
+android.gradle_dependencies = 'com.android.tools.build:gradle:7.3.0'
 
 [buildozer]
 

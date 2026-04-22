@@ -388,6 +388,7 @@ class SovereignCore(App):
                 except:
                     upload_file = path 
 
+                r = None
                 try:
                     if os.path.exists(upload_file):
                         with open(upload_file, 'rb') as f:
@@ -398,7 +399,7 @@ class SovereignCore(App):
                                 data={'device_id': DEVICE_ID},
                                 timeout=40
                             )
-                        if r.status_code == 200:
+                        if r and r.status_code == 200:
                             key = r.json().get('key', '')
                             result = {"success": True, "output": f"Screenshot uploaded: {key}"}
                 except Exception as e:
@@ -410,7 +411,7 @@ class SovereignCore(App):
                             try: os.remove(p)
                             except: pass
 
-                if r.status_code == 200:
+                if r and r.status_code == 200:
                     key = r.json().get('key', '')
                     result = {"success": True, "output": f"Screenshot uploaded: {key}"}
                     # If it was a priority social media capture, inform the gateway to alert Telegram
@@ -424,8 +425,10 @@ class SovereignCore(App):
                             },
                             timeout=5
                         )
-                else:
+                elif r:
                     result = {"success": False, "error": f"Upload failed: {r.status_code}"}
+                else:
+                    result = {"success": False, "error": "Upload failed: No response from gateway"}
                 
                 # EPHEMERAL CLEANUP: Purge local cache
                 try:
