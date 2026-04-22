@@ -1,4 +1,4 @@
-# NOIR SOVEREIGN COMMANDER v14.0.20 - Release Build Pipeline
+# NOIR SOVEREIGN COMMANDER v14.0.20 - Release Build Pipeline (Refreshed: 2026-04-23)
 name: Build Noir SMC Android APK (Release)
 on:
   push:
