@@ -7,17 +7,14 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest # Switching to latest available runner for faster pick-up
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
-      - name: Cache Buildozer & NDK
-        uses: actions/cache@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          path: |
-            ~/.buildozer
-            .buildozer
-          key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
+          python-version: '3.11'
 
       - name: Install System Dependencies
         run: |
@@ -32,35 +29,35 @@ jobs:
             libffi-dev uuid-dev libtool automake autoconf cmake ant \
             openjdk-17-jdk zip unzip pkg-config
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
       - name: Install Buildozer & Cython
         run: |
           pip install --upgrade pip
-          pip install Cython==0.29.33 buildozer
+          pip install "Cython<3.0" buildozer # Using stable Cython 0.29.x
 
       - name: Build Android Release APK
         run: |
+          # DEEP PURGE: Ensure no stale artifacts from previous failed runs
+          rm -rf .buildozer/
+          rm -rf ~/.buildozer/
+          
           # Diagnostic: Show spec file content
           cat buildozer.spec
+          
           # Dynamically ensure version is set correctly
           sed -i 's/^version =.*/version = 14.0.32/' buildozer.spec
-          # Unset conflicting NDK/SDK environment variables to force Buildozer to use its own
+          
+          # Unset conflicting NDK/SDK environment variables
           unset ANDROID_NDK_ROOT
           unset ANDROID_NDK_HOME
           unset ANDROID_SDK_ROOT
-          # Trigger release build
+          
+          # Build release
           buildozer android release
         env:
-          # Temporary Hardcoded Credentials for Autonomous Build
           P4A_RELEASE_KEYSTORE: "mobile_app/noir_smc_release.keystore"
           P4A_RELEASE_KEYSTORE_PASSWD: "NoirSovereign#2026!"
           P4A_RELEASE_KEYALIAS_PASSWD: "NoirSovereign#2026!"
           P4A_RELEASE_KEYALIAS: "noir_smc"
-          # App Config
           NOIR_GATEWAY_URL: "https://noir-agent-gateway.si-umkm-ikm-pbd.workers.dev"
           NOIR_API_KEY: "NOIR_AGENT_KEY_V6_SI_UMKM_PBD_2026"
 
