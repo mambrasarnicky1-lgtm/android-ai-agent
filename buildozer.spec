@@ -46,6 +46,9 @@ android.archs = arm64-v8a
 # (bool) use posix to build the android app
 android.private_storage = True
 
+# (bool) enable AndroidX
+android.enable_androidx = True
+
 # (list) List of service to declare
 services = NoirService:service.py
 
