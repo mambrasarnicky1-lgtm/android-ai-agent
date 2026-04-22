@@ -64,9 +64,6 @@ android.release_artifact = apk
 # (str) extra gradle arguments
 android.gradle_args = --stacktrace --info -Dorg.gradle.jvmargs=-Xmx2048m
 
-# (list) gradle dependencies
-android.gradle_dependencies = 'com.android.tools.build:gradle:7.3.0'
-
 [buildozer]
 
 # (int) Log level (0 = error only, 1 = info, 2 = debug (with command output))

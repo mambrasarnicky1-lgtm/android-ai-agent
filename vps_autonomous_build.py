@@ -34,7 +34,6 @@ android.skip_update = False
 android.accept_sdk_license = True
 android.release_artifact = apk
 android.gradle_args = --stacktrace --info -Dorg.gradle.jvmargs=-Xmx2048m
-android.gradle_dependencies = 'com.android.tools.build:gradle:7.3.0'
 
 [buildozer]
 log_level = 2
