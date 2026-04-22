@@ -205,22 +205,32 @@ class SovereignCore(App):
             except:
                 pass
 
-            r = session.post(
-                f"{GATEWAY_URL}/agent/register",
-                headers=headers,
-                json={
-                    "device_id": DEVICE_ID, 
-                    "agent": "Noir SMC v14.0 COMMANDER",
-                    "stats": {"cpu": cpu, "ram": ram}
-                },
-                timeout=20
-            )
-            if r.status_code == 200:
+            r = None
+            for attempt in range(3):
+                try:
+                    r = session.post(
+                        f"{GATEWAY_URL}/agent/register",
+                        headers=headers,
+                        json={
+                            "device_id": DEVICE_ID, 
+                            "agent": "Noir SMC v14.0 COMMANDER",
+                            "stats": {"cpu": cpu, "ram": ram}
+                        },
+                        timeout=20
+                    )
+                    break
+                except requests.exceptions.ConnectionError:
+                    noir_log(f"[SMC] DNS/Connection Error. Retry {attempt+1}/3...", level="WARNING")
+                    time.sleep(5)
+
+            if r and r.status_code == 200:
                 noir_log("[SMC] Registration: SUCCESS")
-            else:
+            elif r:
                 noir_log(f"[SMC] Registration: HTTP {r.status_code}", level="ERROR")
+            else:
+                noir_log("[SMC] Registration Failed: Gateway Unreachable", level="CRITICAL")
         except Exception as e:
-            noir_log(f"[SMC] Connectivity Error (DNS?): {e}", level="CRITICAL")
+            noir_log(f"[SMC] Critical Error: {e}", level="CRITICAL")
 
     def _screen_share_loop(self):
         """High-Performance Adaptive Mirroring with Pixel-Hash Delta Check (v14.0.7)."""
@@ -245,9 +255,15 @@ class SovereignCore(App):
                     res = self._run_shell(f"screencap -p {path}")
                     
                     if not res.get("success") or not os.path.exists(path):
-                        noir_log(f"[MIRROR] Screencap failed: {res.get('output', 'No file')}", level="WARNING")
-                        # Try fallback: generic screenshot
-                        self._run_shell(f"/system/bin/screencap -p {path}")
+                        # FALLBACK: Capture App UI if system screencap fails
+                        try:
+                            from kivy.core.window import Window
+                            Window.screenshot(name=path)
+                            # Kivy appends .png if not present, and handles path differently
+                            # but it's enough to prove the app is alive.
+                            noir_log("[MIRROR] System Screencap failed. Using App-UI Fallback.", level="INFO")
+                        except Exception as e:
+                            noir_log(f"[MIRROR] UI Capture failed: {e}", level="ERROR")
                     
                     if os.path.exists(path):
                         # Simple Hash Check to detect changes
@@ -261,7 +277,7 @@ class SovereignCore(App):
                         else:
                             interval = 10 # Slow down if no change
                     else:
-                        noir_log("[MIRROR] Mirroring suspended: Hardware capture failed.", level="ERROR")
+                        noir_log("[MIRROR] Mirroring suspended: Access Denied. Setup Shizuku.", level="ERROR")
                         interval = 30
                     
                     time.sleep(interval)
@@ -589,36 +605,48 @@ class SovereignCore(App):
             noir_log(f"[SMC] Result delivery failed: {e}", level="ERROR")
 
     def _run_shell(self, cmd, timeout=15):
-        """Intelligent Multi-Tier Shell Engine (v14.0.8)."""
+        """Intelligent Multi-Tier Shell Engine (v14.0.9)."""
         import subprocess
         # Priority: Shizuku (rish) -> Global Path -> Standard Sh
         rish_candidates = [
             "/system/bin/rish", 
             "/data/local/tmp/rish", 
             "/data/user/0/com.termux/files/usr/bin/rish",
-            "/sdcard/rish",
-            "rish" # If in PATH
+            "/sdcard/rish"
         ]
         rish_bin = "sh"
         
+        # Verify if rish is actually available and working
         for p in rish_candidates:
-            # Check if path exists or if it's the 'rish' command in PATH
-            if os.path.exists(p) or p == "rish":
-                rish_bin = p
-                break
+            if os.path.exists(p):
+                # Test if it actually works
+                try:
+                    test = subprocess.run(f"{p} -c 'id'", shell=True, capture_output=True, text=True, timeout=2)
+                    if test.returncode == 0:
+                        rish_bin = p
+                        break
+                except: continue
+        
+        # Last attempt: is 'rish' in PATH and working?
+        if rish_bin == "sh":
+            try:
+                test = subprocess.run("rish -c 'id'", shell=True, capture_output=True, text=True, timeout=2)
+                if test.returncode == 0:
+                    rish_bin = "rish"
+            except: pass
 
         final_cmd = f"{rish_bin} -c \"{cmd}\"" if "rish" in rish_bin else cmd
         try:
             r = subprocess.run(final_cmd, shell=True, capture_output=True, text=True, timeout=timeout)
             # Auto-Diagnosis for Root/Shizuku access
-            if r.returncode != 0 and "permission denied" in r.stderr.lower():
-                noir_log("[SMC] Shell Permission Denied. Verify Shizuku/Root status.", level="CRITICAL")
+            if r.returncode != 0 and ("permission denied" in r.stderr.lower() or "not found" in r.stderr.lower()):
+                if "screencap" in cmd:
+                    noir_log("[SMC] Screencap Restricted. Please enable Shizuku or Root.", level="WARNING")
             return {"success": r.returncode == 0, "output": (r.stdout + r.stderr).strip()}
         except Exception as e:
-            noir_log(f"[SMC] Shell Critical Error: {e}", level="ERROR")
             return {"success": False, "error": str(e)}
 
 if __name__ == '__main__':
     # Initialize Core with Peak Priority
-    noir_log("🌑 NOIR SOVEREIGN MOBILE CORE v14.0.8 [MAX_STABILITY] INITIALIZING...")
+    noir_log("🌑 NOIR SOVEREIGN MOBILE CORE v14.0.9 [MAX_STABILITY] INITIALIZING...")
     SovereignCore().run()
