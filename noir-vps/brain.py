@@ -241,11 +241,11 @@ class AIRouter:
                     if response_json:
                         payload["generationConfig"] = {"responseMimeType": "application/json"}
                     
-                    r = requests.post(
-                        f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GEMINI}",
-                        json=payload,
-                        timeout=30
-                    )
+                    # Dynamic Versioning: v1beta for 2.0 (experimental), v1 for 1.5 (stable)
+                    api_ver = "v1beta" if "2.0" in model_name else "v1"
+                    url = f"https://generativelanguage.googleapis.com/{api_ver}/models/{model_name}:generateContent?key={GEMINI}"
+                    
+                    r = requests.post(url, json=payload, timeout=30)
                     data = r.json()
                     
                     # Handle Quota 429
@@ -398,7 +398,7 @@ class VisionEngine:
             img_data = base64.b64encode(img_resp.content).decode('utf-8')
             
             r = requests.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI}",
+                f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={GEMINI}",
                 json={
                     "contents": [{
                         "parts": [

@@ -8,52 +8,43 @@ class NLUProcessor:
     
     @staticmethod
     def normalize_input(text: str) -> dict:
-        """
-        Menormalisasi input: memperbaiki typo, mengubah slang, dan mengekstrak struktur.
-        Returns: {
-            "original": str,
-            "normalized": str,
-            "intent": str,
-            "entities": dict,
-            "slang_detected": bool
-        }
-        """
-        log.info(f"🧠 NLU: Normalizing input -> {text}")
+        """Menormalisasi input dengan pendekatan hybrid (Local Mapping + AI)."""
+        raw_text = text.lower().strip()
         
+        # 1. LOCAL FAST-MAPPING (Indonesian Context)
+        local_mapping = {
+            "ss": "TAKE_SCREENSHOT", "screenshot": "TAKE_SCREENSHOT", "foto": "TAKE_SCREENSHOT",
+            "baterai": "GET_BATTERY", "batere": "GET_BATTERY", "battery": "GET_BATTERY",
+            "info": "GET_STATUS", "status": "GET_STATUS", "noir": "GET_STATUS",
+            "matiin": "SYSTEM_ACTION", "nyalain": "SYSTEM_ACTION", "hidupkan": "SYSTEM_ACTION",
+            "wifi": "WIFI_TOGGLE", "data": "DATA_TOGGLE", "bluetooth": "BT_TOGGLE"
+        }
+        
+        for key, intent in local_mapping.items():
+            if key in raw_text:
+                log.info(f"⚡ NLU: Local Match Found -> {intent}")
+                return {
+                    "original": text,
+                    "normalized": raw_text,
+                    "intent": intent,
+                    "entities": {},
+                    "slang_detected": True
+                }
+
+        # 2. AI DEEP NORMALIZATION (Fallback)
+        log.info(f"🧠 NLU: AI Normalization Required -> {text}")
         prompt = f"""
         Analyze this Indonesian user input: "{text}"
-        
-        TASKS:
-        1. Fix any typos.
-        2. Convert Indonesian slang to standard Indonesian (Formal/Semi-Formal).
-        3. Extract the core INTENT (e.g., GET_BATTERY, TAKE_SCREENSHOT, GENERAL_QUERY).
-        4. Extract entities (e.g., app name, brightness level).
-        
-        RETURN ONLY JSON in this format:
-        {{
-            "normalized": "standard text here",
-            "intent": "INTENT_NAME",
-            "entities": {{}},
-            "slang_detected": true/false
-        }}
+        Convert slang to formal and extract INTENT.
+        RETURN ONLY JSON: {{"normalized": "...", "intent": "...", "entities": {}, "slang_detected": true/false}}
         """
-        
         try:
-            # Memanfaatkan native JSON MimeType dari Gemini 2.0 Flash
             response = AIRouter.query_gemini(prompt, response_json=True)
             result = json.loads(response)
             result["original"] = text
             return result
         except Exception as e:
-            log.error(f"NLU Normalization Failed: {e}")
-            # Fallback jika AI gagal
-            return {
-                "original": text,
-                "normalized": text,
-                "intent": "UNKNOWN",
-                "entities": {},
-                "slang_detected": False
-            }
+            return {"original": text, "normalized": text, "intent": "UNKNOWN", "entities": {}, "slang_detected": False}
 
     @staticmethod
     def extract_pattern(normalized_text: str):

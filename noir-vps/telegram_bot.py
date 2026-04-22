@@ -232,7 +232,10 @@ def handle_all(msg):
             f"USER INPUT (Normalized): {text}\n"
             f"INTENT: {intent}\n"
             f"ENTITIES: {json.dumps(nlu_result['entities'])}\n\n"
-            f"INSTRUCTION: Respond in Indonesian as Noir Sovereign. Be efficient."
+            f"INSTRUCTION: Respond in Indonesian as Noir Sovereign. Be efficient.\n"
+            f"If the user wants a system action (screenshot, battery, wifi, etc.), you MUST include the action tag at the BEGINNING of your response in this format: [ACTION:type,cmd=\"optional_cmd\"].\n"
+            f"Supported Actions: screenshot, battery, info, wifi_on, wifi_off, reboot.\n"
+            f"Example: [ACTION:screenshot] Baik, saya ambilkan cuplikan layar sekarang."
         )
         
         # Check for Actions in AI Response

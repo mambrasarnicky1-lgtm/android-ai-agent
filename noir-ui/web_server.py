@@ -107,6 +107,24 @@ def get_loot():
     except:
         return []
 
+@app.get("/download-apk")
+async def download_apk():
+    # Direct path to the latest build artifact on the VPS
+    # Base dir is /app/noir-ui, we need /app/mobile_app/bin
+    apk_path = os.path.join(os.path.dirname(BASE_DIR), "mobile_app", "bin", "noirsmc-v14-release.apk")
+    
+    # Fallback to general scan if name differs
+    if not os.path.exists(apk_path):
+        import glob
+        apks = glob.glob(os.path.join(os.path.dirname(BASE_DIR), "mobile_app", "bin", "*.apk"))
+        if apks:
+            apk_path = apks[0]
+    
+    if os.path.exists(apk_path):
+        from fastapi.responses import FileResponse
+        return FileResponse(apk_path, media_type="application/vnd.android.package-archive", filename="NoirSovereign_v14_6.apk")
+    return Response(content="Build Artifact Not Ready on VPS yet. Please wait for CI/CD synchronization.", status_code=404)
+
 @app.get("/")
 async def get_index():
     # Force read latest index.html

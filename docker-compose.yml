@@ -7,6 +7,8 @@ services:
     restart: always
     env_file: .env
     volumes:
+      - ./.env:/app/.env
+      - ./noir-vps:/app/noir-vps
       - ./knowledge:/app/knowledge
       - ./logs:/app/logs
     networks:
@@ -23,8 +25,8 @@ services:
     restart: always
     working_dir: /app/noir-ui
     volumes:
+      - ./.env:/app/.env
       - ./noir-ui:/app/noir-ui
-      - .env:/app/.env
     ports:
       - "80:80"
     command: python web_server.py
@@ -32,22 +34,6 @@ services:
       - noir-net
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80/"]
-      interval: 1m
-      timeout: 10s
-      retries: 3
-
-  noir-telegram:
-    build: .
-    container_name: noir-telegram
-    restart: always
-    env_file: .env
-    command: python noir-vps/telegram_bot.py
-    volumes:
-      - ./logs:/app/logs
-    networks:
-      - noir-net
-    healthcheck:
-      test: ["CMD", "python3", "-c", "import os; exit(0 if os.path.exists('/app/noir-vps/telegram_bot.py') else 1)"]
       interval: 1m
       timeout: 10s
       retries: 3
