@@ -27,7 +27,7 @@ jobs:
             sqlite3 bzip2 libbz2-dev libssl-dev openssl libgdbm-dev \
             libgdbm-compat-dev liblzma-dev libreadline-dev libncursesw5-dev \
             libffi-dev uuid-dev libtool automake autoconf cmake ant \
-            openjdk-17-jdk zip unzip pkg-config
+            openjdk-17-jdk zip unzip pkg-config libunwind-dev
 
       - name: Install Buildozer & Cython
         run: |
