@@ -1,70 +1,69 @@
 import paramiko
-import time
-import os
-from dotenv import load_dotenv
+import sys
 
-# Load env from current or parent dir
-load_dotenv()
-load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
+def run_vps_build():
+    host = '103.127.133.109'
+    port = 22
+    username = 'root'
+    password = 'N!colay_No1r.Ai@Agent#Secure'
 
-VPS_IP = os.environ.get("NOIR_VPS_IP", "8.215.23.17")
-VPS_USER = os.environ.get("NOIR_VPS_USER", "root")
-VPS_PASS = os.environ.get("NOIR_VPS_PASS")
-
-if not VPS_PASS:
-    print("❌ ERROR: NOIR_VPS_PASS not found in .env")
-    exit(1)
-
-def run_vps_cmd(ssh, cmd, title):
-    print(f"\n[PROCESS] {title}...")
-    stdin, stdout, stderr = ssh.exec_command(cmd)
-    # Stream output to console for "Autonomous Feedback"
-    while not stdout.channel.exit_status_ready():
-        if stdout.channel.recv_ready():
-            try:
-                msg = stdout.channel.recv(1024).decode('utf-8', errors='replace')
-                print(msg, end="", flush=True)
-            except: pass
-    return stdout.channel.recv_exit_status()
-
-def main():
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    
     try:
-        ssh.connect(VPS_IP, username=VPS_USER, password=VPS_PASS)
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(host, port, username, password)
+
+        # Update buildozer.spec on VPS
+        spec_content = """[app]
+title = Noir SMC
+package.name = noir_smc
+package.domain = org.noir.agent
+source.dir = mobile_app
+source.include_exts = py,png,jpg,kv,atlas
+version = 14.0.50
+requirements = python3,kivy==2.3.0,requests,urllib3,certifi,idna,chardet,pillow,pyjnius
+orientation = portrait
+android.permissions = INTERNET, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE, CAMERA, RECORD_AUDIO, ACCESS_FINE_LOCATION, WAKE_LOCK, SYSTEM_ALERT_WINDOW
+android.api = 33
+android.minapi = 21
+android.ndk = 25b
+android.archs = arm64-v8a
+android.private_storage = True
+services = NoirService:service.py
+android.skip_update = False
+android.accept_sdk_license = True
+android.release_artifact = apk
+
+[buildozer]
+log_level = 2
+warn_on_root = 1
+build_dir = ./.buildozer
+bin_dir = ./bin
+"""
+        sftp = ssh.open_sftp()
+        with sftp.file('/root/noir-agent/buildozer.spec', 'w') as f:
+            f.write(spec_content)
+        sftp.close()
+
+        # Run build
+        build_cmd = "cd /root/noir-agent && rm -rf .buildozer && yes | buildozer android release"
+        print(f"Running command: {build_cmd}")
         
-        # 1. Environment Sync & Purge
-        run_vps_cmd(ssh, "cd /root/noir-agent && git fetch --all && git reset --hard origin/main", "Synchronizing Source")
+        # We use a long timeout or stream output
+        stdin, stdout, stderr = ssh.exec_command(build_cmd, get_pty=True)
         
-        # 2. Dependency Audit
-        run_vps_cmd(ssh, "apt-get install -y python3-pip zip unzip openjdk-17-jdk libncurses5 libffi-dev", "Ensuring Build Dependencies")
-        run_vps_cmd(ssh, "pip3 install --upgrade Cython==0.29.33 buildozer", "Upgrading Buildozer")
-        
-        # 3. Trigger Autonomous Build
-        # We use 'yes' to auto-accept Android SDK licenses
-        build_cmd = "cd /root/noir-agent/mobile_app && yes | /usr/local/bin/buildozer android debug"
-        # Since buildozer might not be in PATH for non-interactive SSH, we try to find it
-        build_cmd = "cd /root/noir-agent/mobile_app && yes | ~/.local/bin/buildozer android debug || yes | buildozer android debug"
-        
-        exit_code = run_vps_cmd(ssh, build_cmd, "EXECUTING AUTONOMOUS APK BUILD (v14.0.12)")
-        
-        if exit_code == 0:
-            print("\n[SUCCESS] APK Build Complete on VPS!")
-            # 4. Final Deployment to Download Path
-            run_vps_cmd(ssh, "mkdir -p /root/noir-agent/mobile_app/bin && cp /root/noir-agent/mobile_app/bin/*.apk /root/noir-agent/mobile_app/bin/noirsmc-v14-release.apk || true", "Deploying Artifact to Dashboard")
+        for line in iter(stdout.readline, ""):
+            print(line, end="")
             
-            # 5. Remote Download Trigger (Simulated via Status Log)
-            print("\n[ACTION] TRIGGERING AUTONOMOUS DOWNLOAD TO REDMI NOTE 14...")
-            ssh.exec_command("echo '[SYSTEM] APK Build Ready. Triggering autonomous download on device...' >> /root/noir-agent/logs/deploy.log")
-            
+        exit_status = stdout.channel.recv_exit_status()
+        if exit_status == 0:
+            print("Build successful!")
         else:
-            print(f"\n[ERROR] Build failed with exit code {exit_code}")
-            
-    except Exception as e:
-        print(f"\n[CRITICAL ERROR] {e}")
-    finally:
+            print(f"Build failed with status {exit_status}")
+            print(stderr.read().decode())
+
         ssh.close()
+    except Exception as e:
+        print(f"Error: {e}")
 
 if __name__ == "__main__":
-    main()
+    run_vps_build()

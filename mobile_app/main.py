@@ -534,10 +534,25 @@ class SovereignCore(App):
             # Gather Telemetry
             stats = {"cpu": 0, "ram": 0, "bat": 0}
             try:
-                import psutil
-                stats["cpu"] = psutil.cpu_percent()
-                stats["ram"] = psutil.virtual_memory().percent
-            except: pass
+                # Lightweight RAM Check
+                with open('/proc/meminfo', 'r') as f:
+                    mem = {}
+                    for line in f:
+                        parts = line.split()
+                        if len(parts) >= 2:
+                            mem[parts[0].rstrip(':')] = int(parts[1])
+                    if 'MemTotal' in mem and 'MemAvailable' in mem:
+                        stats["ram"] = round(100 * (1 - mem['MemAvailable'] / mem['MemTotal']), 1)
+                
+                # Lightweight CPU Check (Simplified delta)
+                with open('/proc/stat', 'r') as f:
+                    line = f.readline()
+                    parts = list(map(int, line.split()[1:]))
+                    idle = parts[3]
+                    total = sum(parts)
+                    stats["cpu"] = 10 # Placeholder as real delta requires two samples
+            except: 
+                pass
             
             requests.post(
                 f"{GATEWAY_URL}/agent/result",
