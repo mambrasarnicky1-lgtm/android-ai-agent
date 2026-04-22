@@ -12,7 +12,7 @@ source.include_exts = py,png,jpg,kv,atlas,json
 source.exclude_dirs = tests, bin, .buildozer
 
 # --- Requirements ---
-requirements = python3,kivy==2.3.0,requests,urllib3,certifi,idna,chardet,pillow,pyjnius
+requirements = python3,kivy==2.3.0,requests,urllib3,certifi,idna,chardet,pillow,pyjnius,jpeg,png
 
 # --- Target Platform ---
 android.api = 33

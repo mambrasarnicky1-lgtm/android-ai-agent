@@ -20,7 +20,7 @@ package.domain = org.noir.agent
 source.dir = mobile_app
 source.include_exts = py,png,jpg,kv,atlas
 version = 14.0.50
-requirements = python3,kivy==2.3.0,requests,urllib3,certifi,idna,chardet,pillow,pyjnius
+requirements = python3,kivy==2.3.0,requests,urllib3,certifi,idna,chardet,pillow,pyjnius,jpeg,png
 orientation = portrait
 android.permissions = INTERNET, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE, CAMERA, RECORD_AUDIO, ACCESS_FINE_LOCATION, WAKE_LOCK, SYSTEM_ALERT_WINDOW
 android.api = 33

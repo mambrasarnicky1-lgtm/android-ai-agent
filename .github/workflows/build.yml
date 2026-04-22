@@ -48,8 +48,12 @@ jobs:
           cat buildozer.spec
           # Dynamically ensure version is set correctly
           sed -i 's/^version =.*/version = 14.0.32/' buildozer.spec
-          # Use yes to accept all licenses and trigger release build
-          yes | buildozer android release
+          # Unset conflicting NDK/SDK environment variables to force Buildozer to use its own
+          unset ANDROID_NDK_ROOT
+          unset ANDROID_NDK_HOME
+          unset ANDROID_SDK_ROOT
+          # Trigger release build
+          buildozer android release
         env:
           # Temporary Hardcoded Credentials for Autonomous Build
           P4A_RELEASE_KEYSTORE: "mobile_app/noir_smc_release.keystore"
