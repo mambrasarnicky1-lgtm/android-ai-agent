@@ -16,7 +16,7 @@ source.dir = mobile_app
 source.include_exts = py,png,jpg,kv,atlas
 
 # (str) Application versioning (method 1)
-version = 14.0.60
+version = 14.0.70
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy

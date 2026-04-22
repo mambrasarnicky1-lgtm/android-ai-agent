@@ -48,6 +48,7 @@ jobs:
           # DEEP PURGE: Ensure no stale artifacts from previous failed runs
           rm -rf .buildozer/
           rm -rf ~/.buildozer/
+          rm -rf ~/.cache/pip
           
           # Diagnostic: Show spec file content
           cat buildozer.spec
