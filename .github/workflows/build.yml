@@ -44,8 +44,11 @@ jobs:
 
       - name: Build Android Release APK
         run: |
+          # Diagnostic: Show spec file content
+          cat buildozer.spec
+          # Dynamically ensure version is set correctly
+          sed -i 's/^version =.*/version = 14.0.32/' buildozer.spec
           # Use yes to accept all licenses and trigger release build
-          # Buildozer will use env vars for signing
           yes | buildozer android release
         env:
           # Signing Credentials (User should set these in GitHub Secrets)
