@@ -4,7 +4,7 @@
 title = Noir SMC
 
 # (str) Package name
-package.name = noir_smc
+package.name = noirsmc
 
 # (str) Package domain (needed for android packaging)
 package.domain = org.noir.agent
@@ -16,7 +16,7 @@ source.dir = mobile_app
 source.include_exts = py,png,jpg,kv,atlas
 
 # (str) Application versioning (method 1)
-version = 14.0.50
+version = 14.0.60
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
@@ -32,7 +32,7 @@ orientation = portrait
 android.permissions = INTERNET, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE, CAMERA, RECORD_AUDIO, ACCESS_FINE_LOCATION, WAKE_LOCK, SYSTEM_ALERT_WINDOW
 
 # (int) Target Android API, should be as high as possible.
-android.api = 34
+android.api = 33
 
 # (int) Minimum API your APK will support.
 android.minapi = 21
@@ -62,13 +62,10 @@ android.accept_sdk_license = True
 android.release_artifact = apk
 
 # (str) extra gradle arguments
-android.gradle_args = --stacktrace --info
+android.gradle_args = --stacktrace --info -Dorg.gradle.jvmargs=-Xmx2048m
 
 # (list) gradle dependencies
-android.gradle_dependencies = 'com.android.tools.build:gradle:7.4.2'
-
-# (str) gradle version
-android.gradle_version = 7.5.1
+android.gradle_dependencies = 'com.android.tools.build:gradle:7.3.0', 'org.jetbrains.kotlin:kotlin-stdlib:1.8.0'
 
 [buildozer]
 
