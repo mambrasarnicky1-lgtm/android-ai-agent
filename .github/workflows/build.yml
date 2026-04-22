@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04 # Reverting to 20.04 for peak toolchain stability
+    runs-on: ubuntu-latest # Switching to latest available runner for faster pick-up
     steps:
       - uses: actions/checkout@v4
 
