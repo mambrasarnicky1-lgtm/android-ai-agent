@@ -45,19 +45,8 @@ jobs:
 
       - name: Build Android Release APK
         run: |
-          # v16.0.03: TOTAL PURGE of any structural residues
+          # Fresh build env
           rm -rf .buildozer/
-          rm -rf ~/.buildozer/
-          rm -rf ~/.cache/pip
-          rm -rf ~/.gradle/
-          
-          # Force clean build environment
-          buildozer android clean
-          
-          # Diagnostic: Show spec file content
-          cat buildozer.spec
-          
-          # Build release (Version handled by spec file)
           
           # Unset conflicting NDK/SDK environment variables
           unset ANDROID_NDK_ROOT
@@ -65,7 +54,7 @@ jobs:
           unset ANDROID_SDK_ROOT
           
           # Build release
-          buildozer android release
+          buildozer -v android release
         env:
           JAVA_HOME: /usr/lib/jvm/temurin-17-jdk-amd64
           P4A_RELEASE_KEYSTORE: "${{ github.workspace }}/mobile_app/noir_smc_release.keystore"
