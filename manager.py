@@ -5,6 +5,9 @@ from scp import SCPClient
 import requests
 
 load_dotenv()
+if sys.platform == "win32":
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 class NoirManager:
     def __init__(self):

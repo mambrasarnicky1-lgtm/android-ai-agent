@@ -30,6 +30,7 @@ RUN pip install --no-cache-dir \
     pycryptodome \
     paramiko \
     scp \
+    httpx \
     docker
 
 # Copy source code

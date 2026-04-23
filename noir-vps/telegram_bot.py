@@ -23,8 +23,8 @@ import time
 try:
     import requests
     from telebot import TeleBot, types
-    # Import AIRouter from brain
-    from brain import AIRouter
+    from ai_router import AIRouter
+    from system_tools import SovereignUpdater
     from skill_acquisition import SkillAcquisitionEngine
     from linguistic_learning import LinguisticMastery
     from nlu_processor import NLUProcessor
@@ -205,7 +205,6 @@ def handle_all(msg):
     if found_action:
         if found_action == "upgrade":
             bot.reply_to(msg, "🚀 **UPGRADE INITIATED**: Menjalankan protokol pembaruan sistem otonom...")
-            from brain import SovereignUpdater
             res = SovereignUpdater.execute_upgrade()
             bot.reply_to(msg, f"📊 **UPGRADE RESULT**:\n{res}")
             return

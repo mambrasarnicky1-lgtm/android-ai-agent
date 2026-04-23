@@ -1,0 +1,16 @@
+{
+    "gemini": {
+        "active_index": 0,
+        "keys": [
+            "AIzaSyCSRfzM5nHSv-1Sx_fyy8E6rD46eaSMXLA"
+        ]
+    },
+    "groq": {
+        "active_index": 0,
+        "keys": []
+    },
+    "openrouter": {
+        "active_index": 0,
+        "keys": []
+    }
+}

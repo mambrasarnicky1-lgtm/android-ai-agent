@@ -1,5 +1,5 @@
 import os, json, logging
-from brain import AIRouter
+from ai_router import AIRouter
 from catalyst import catalyst
 
 log = logging.getLogger("LinguisticLearning")

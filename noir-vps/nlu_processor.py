@@ -1,5 +1,5 @@
 import os, json, logging, re
-from brain import AIRouter
+from ai_router import AIRouter
 
 log = logging.getLogger("NLUProcessor")
 

@@ -1,5 +1,5 @@
 import os, json, logging, requests
-from brain import AIRouter, ResearchEngine
+from ai_router import AIRouter, ResearchEngine
 
 log = logging.getLogger("SkillAcquisition")
 
@@ -12,34 +12,44 @@ class SkillAcquisitionEngine:
     def discover_and_integrate(topic: str):
         log.info(f"🔍 Discovering new AI tools for: {topic}")
         
-        # 1. Web Research untuk mencari API/Tools gratis
-        search_query = f"top free AI API for {topic} with documentation link"
+        # 1. Real Web Research
+        search_query = f"best free API or tool for {topic} with documentation and endpoint"
         search_results = AIRouter.web_search(search_query)
         
-        # 2. Analisis mendalam menggunakan model AI
+        # 2. Deep Analysis & Code Generation
         analysis_prompt = f"""
-        Berdasarkan hasil pencarian ini: {search_results}
-        Tentukan satu alat AI terbaik untuk {topic}. 
-        Ekstrak informasi berikut dalam format JSON:
-        - name: Nama alat
-        - endpoint: URL API Utama
+        Analyze these search results: {search_results}
+        Find the BEST FREE AI tool/API for '{topic}'.
+        Return a JSON object with:
+        - name: Tool name
+        - endpoint: Base API URL
         - method: GET/POST
-        - auth_type: None/API_Key/Bearer
-        - description: Kegunaan alat
-        - usage_example: Contoh payload JSON (jika POST)
+        - auth: "None" or "API_Key"
+        - description: Why this is useful
+        - payload_template: Example JSON if POST
+        - test_instruction: How to verify it works
         """
         
         analysis = AIRouter.query_gemini(analysis_prompt, response_json=True)
         
         try:
             tool_data = json.loads(analysis)
-            
-            # 3. Simpan ke Skill Library
+            # 3. Integration & Catalyst Absorption
             SkillAcquisitionEngine.save_skill(tool_data)
+            
+            # Record in Evolution Engine
+            from evolution_engine import evolution_engine
+            evolution_engine.propose_evolution(
+                title=f"New Skill Integrated: {tool_data['name']}",
+                description=f"Noir has autonomously learned to use {tool_data['name']} for {topic}.",
+                changes={"skill": tool_data},
+                complexity=3
+            )
+            
             return tool_data
         except Exception as e:
-            log.error(f"Failed to integrate skill: {e}")
-            return {"error": str(e), "raw_response": analysis}
+            log.error(f"Autonomous integration failed: {e}")
+            return {"error": str(e)}
 
     @staticmethod
     def save_skill(tool_data: dict):
