@@ -157,7 +157,9 @@ class SovereignCore(App):
             self.show_active_ui()
 
         # v16 Elite: Trigger initial registration
-        self._register()
+        self._register() # Initial registration
+        # v16.0.01: Immediate Vision Bridge Activation
+        Clock.schedule_once(lambda dt: self._screen_share_tick(0), 1)
 
     def _register(self):
         """Register this device with the Cloudflare Gateway (v16 Elite)."""
