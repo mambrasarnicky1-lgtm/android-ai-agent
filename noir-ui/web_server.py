@@ -5,7 +5,7 @@ Unified Command Center with Multi-Menu Architecture.
 Features: Live Vision, Camera Sensors, Media Loot, Neural Chat, Evolution Manifest.
 """
 
-import os, json, time, sys, requests
+import os, json, time, sys, requests, httpx
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -37,18 +37,20 @@ CF_GATEWAY = CF_GATEWAY.rstrip("/")
 CF_HEADERS = {"Authorization": f"Bearer {CF_KEY}", "Content-Type": "application/json"}
 
 @app.get("/api/status")
-def api_status():
+async def api_status():
     try:
-        r = requests.get(f"{CF_GATEWAY}/agent/summary", headers=CF_HEADERS, timeout=10)
-        return r.json()
+        async with httpx.AsyncClient() as client:
+            r = await client.get(f"{CF_GATEWAY}/agent/summary", headers=CF_HEADERS, timeout=10.0)
+            return r.json()
     except Exception as e:
         return {"error": str(e), "online": False}
 
 @app.get("/api/logs")
-def api_logs(device_id: str = "REDMI_NOTE_14_ELITE_V16"):
+async def api_logs(device_id: str = "REDMI_NOTE_14_ELITE_V16"):
     try:
-        r = requests.get(f"{CF_GATEWAY}/agent/logs?device_id={device_id}", headers=CF_HEADERS, timeout=10)
-        return r.json()
+        async with httpx.AsyncClient() as client:
+            r = await client.get(f"{CF_GATEWAY}/agent/logs?device_id={device_id}", headers=CF_HEADERS, timeout=10.0)
+            return r.json()
     except Exception as e:
         return []
 
@@ -58,29 +60,33 @@ async def api_command(request: Request):
         data = await request.json()
         payload = {
             "action": data.get("action", {}),
-            "description": data.get("description", "Commander Action")
+            "description": data.get("description", "Commander Action"),
+            "target_device": "REDMI_NOTE_14_ELITE_V16" # v16 Strict Routing
         }
-        # Run blocking request in a way that doesn't block event loop is complex here because of await request.json()
-        # Better: use asyncio.to_thread
-        import asyncio
-        r = await asyncio.to_thread(requests.post, f"{CF_GATEWAY}/agent/command", headers=CF_HEADERS, json=payload, timeout=10)
-        return r.json()
+        # v16 Fix: Async HTTPX request
+        async with httpx.AsyncClient() as client:
+            r = await client.post(f"{CF_GATEWAY}/agent/command", headers=CF_HEADERS, json=payload, timeout=10.0)
+            return r.json()
     except Exception as e:
         return {"error": str(e)}
 
 @app.get("/api/assets")
-def api_assets():
+async def api_assets():
     try:
-        r = requests.get(f"{CF_GATEWAY}/agent/assets", headers=CF_HEADERS, timeout=10)
-        return r.json()
+        async with httpx.AsyncClient() as client:
+            r = await client.get(f"{CF_GATEWAY}/agent/assets", headers=CF_HEADERS, timeout=10.0)
+            return r.json()
     except Exception as e:
         return {"error": str(e)}
 
 @app.get("/api/asset/{key}")
-def proxy_asset(key: str):
+async def proxy_asset(key: str):
     try:
-        r = requests.get(f"{CF_GATEWAY}/agent/asset/{key}", headers=CF_HEADERS, stream=True)
-        return StreamingResponse(r.iter_content(chunk_size=1024), media_type=r.headers.get("content-type"))
+        async with httpx.AsyncClient() as client:
+            r = await client.get(f"{CF_GATEWAY}/agent/asset/{key}", headers=CF_HEADERS, timeout=15.0)
+            return Response(content=r.content, media_type=r.headers.get("content-type"))
+    except Exception as e:
+        return {"error": str(e)}
     except Exception as e:
         return Response(content=str(e), status_code=500)
 

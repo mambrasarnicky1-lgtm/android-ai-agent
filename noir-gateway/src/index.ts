@@ -43,9 +43,10 @@ app.get('/agent/poll', async (c) => {
     'UPDATE agents SET last_seen = CURRENT_TIMESTAMP WHERE device_id = ?'
   ).bind(device_id).run();
 
+  // v16 Fix: Only fetch commands specifically targeted to this device or global (null)
   const cmds = await c.env.DB.prepare(
-    "SELECT id, action FROM commands WHERE status = 'pending' LIMIT 5"
-  ).all();
+    "SELECT id, action FROM commands WHERE (target_device = ? OR target_device IS NULL) AND status = 'pending' LIMIT 5"
+  ).bind(device_id).all();
   
   if (cmds.results.length > 0) {
     const ids = cmds.results.map(r => r.id);
@@ -176,20 +177,30 @@ app.get('/brain/poll', async (c) => {
 
 app.post('/agent/command', async (c) => {
   const data = await c.req.json();
-  const { action, description } = data;
+  const { action, description, target_device } = data;
   const id = crypto.randomUUID().split('-')[0].toUpperCase();
+  
+  // v16 Fix: Explicitly store target_device
   await c.env.DB.prepare(
-    "INSERT INTO commands (id, action, description, status, updated_at) VALUES (?, ?, ?, 'pending', CURRENT_TIMESTAMP)"
-  ).bind(id, JSON.stringify(action), description).run();
+    "INSERT INTO commands (id, action, description, status, target_device, updated_at) VALUES (?, ?, ?, 'pending', ?, CURRENT_TIMESTAMP)"
+  ).bind(id, JSON.stringify(action), description, target_device || null).run();
+  
   return c.json({ status: 'queued', command_id: id });
 });
 
 app.get('/admin/migrate', async (c) => {
+  try {
+    await c.env.DB.prepare(`
+      ALTER TABLE commands ADD COLUMN target_device TEXT;
+    `).run();
+  } catch(e) {}
+  
   await c.env.DB.prepare(`
     ALTER TABLE agents ADD COLUMN stats TEXT;
     ALTER TABLE agents ADD COLUMN last_screenshot TEXT;
   `).run().catch(() => {});
-  return c.text('Migration check complete');
+  
+  return c.text('Migration check complete. target_device column added.');
 });
 
 export default app;

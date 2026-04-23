@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS commands (
     action      TEXT NOT NULL,
     description TEXT DEFAULT 'Manual',
     status      TEXT DEFAULT 'pending',  -- pending | sent | done | failed
+    target_device TEXT,                  -- v16: Target specific agent
     result      TEXT,
     created_at  TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at  TEXT
