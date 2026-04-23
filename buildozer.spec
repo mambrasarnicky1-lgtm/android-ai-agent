@@ -16,7 +16,7 @@ source.dir = mobile_app
 source.include_exts = py,png,jpg,kv,atlas
 
 # (str) Application versioning (method 1)
-version = 14.0.90
+version = 14.1.00
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
@@ -36,6 +36,9 @@ android.api = 33
 
 # (int) Minimum API your APK will support.
 android.minapi = 21
+
+# (list) Android meta-data to set (key=value)
+android.meta_data = moe.shizuku.client.V3_SUPPORT=true
 
 # (str) Android NDK version to use
 android.ndk = 25b
