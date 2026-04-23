@@ -1,7 +1,7 @@
 {
   "name": "noir-agent-gateway",
-  "version": "6.0.0",
-  "description": "Noir Agent v6 — Cloudflare Edge Gateway",
+  "version": "16.0.0",
+  "description": "Noir Agent v16 ELITE — Cloudflare Edge Gateway",
   "main": "src/index.ts",
   "scripts": {
     "dev": "wrangler dev",
@@ -9,12 +9,12 @@
     "db:init": "wrangler d1 execute noir-db --file=schema.sql"
   },
   "dependencies": {
-    "hono": "^4.7.5",
-    "zod": "^3.24.2"
+    "hono": "^4.12.14",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20250409.0",
-    "wrangler": "^4.7.0",
-    "typescript": "^5.8.3"
+    "@cloudflare/workers-types": "^4.20260423.1",
+    "typescript": "^5.8.3",
+    "wrangler": "^4.7.0"
   }
 }

@@ -38,6 +38,19 @@ services:
       timeout: 10s
       retries: 3
 
+#  noir-telegram:
+#    build: .
+#    container_name: noir-telegram
+#    restart: always
+#    env_file: .env
+#    volumes:
+#      - ./.env:/app/.env
+#      - ./noir-vps:/app/noir-vps
+#      - ./logs:/app/logs
+#    command: python noir-vps/telegram_bot.py
+#    networks:
+#      - noir-net
+
 networks:
   noir-net:
     driver: bridge

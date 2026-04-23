@@ -1,8 +1,14 @@
-import paramiko
+import paramiko, os
+from dotenv import load_dotenv
+load_dotenv()
 
-VPS_IP = "8.215.23.17"
-VPS_USER = "root"
-VPS_PASS = "N!colay_No1r.Ai@Agent#Secure"
+VPS_IP = os.environ.get("NOIR_VPS_IP")
+VPS_USER = os.environ.get("NOIR_VPS_USER", "root")
+VPS_PASS = os.environ.get("NOIR_VPS_PASS")
+
+if not VPS_IP or not VPS_PASS:
+    print("[ERROR] NOIR_VPS_IP or NOIR_VPS_PASS not found.")
+    exit(1)
 
 print("[1] Connecting to VPS...")
 ssh = paramiko.SSHClient()

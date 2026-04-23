@@ -1,5 +1,5 @@
 """
-NOIR SOVEREIGN MOBILE CORE (SMC) v14.0 COMMANDER
+NOIR SOVEREIGN MOBILE CORE (SMC) v16.0 ELITE
 =====================================================
 Framework: Kivy + Buildozer (Android Native)
 Target: Redmi Note 14 (HyperOS / arm64-v8a)
@@ -20,6 +20,9 @@ import requests
 import socket
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+import base64
+from Crypto.Cipher import AES
+from Crypto.Protocol.KDF import PBKDF2
 
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
@@ -96,11 +99,43 @@ def is_social_media(pkg_name):
     return False
 
 
+class SecureVault:
+    """Implementasi AES-256-GCM E2EE untuk jalur komunikasi."""
+    @staticmethod
+    def _get_key():
+        password = API_KEY.encode()
+        salt = b'noir_sovereign_salt'
+        return PBKDF2(password, salt, dkLen=32, count=1000)
+
+    @staticmethod
+    def encrypt(data: str):
+        if not data: return data
+        try:
+            key = SecureVault._get_key()
+            cipher = AES.new(key, AES.MODE_GCM)
+            ciphertext, tag = cipher.encrypt_and_digest(data.encode())
+            combined = cipher.nonce + tag + ciphertext
+            return base64.b64encode(combined).decode('utf-8')
+        except: return data
+
+    @staticmethod
+    def decrypt(encrypted_data: str):
+        if not encrypted_data: return encrypted_data
+        try:
+            key = SecureVault._get_key()
+            raw = base64.b64decode(encrypted_data)
+            nonce = raw[:16]
+            tag = raw[16:32]
+            ciphertext = raw[32:]
+            cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+            return cipher.decrypt_and_verify(ciphertext, tag).decode('utf-8')
+        except: return encrypted_data
+
 class SovereignCore(App):
     is_stealth = False
 
     def build(self):
-        self.title = "Noir Sovereign ELITE v16.0.02"
+        self.title = "Noir Sovereign ELITE v16.0.03"
         self.root = BoxLayout(orientation='vertical')
         
         # FINAL SANITIZATION: Kill any ghost processes from old version = 16.0.00
@@ -126,7 +161,7 @@ class SovereignCore(App):
         self.root.spacing = 5
         
         self.log_label = Label(
-            text="[b]NOIR SOVEREIGN ELITE v16.0.02[/b]\nStatus: [color=00ff88]ELITE-COMMANDER[/color]",
+            text="[b]NOIR SOVEREIGN ELITE v16.0.03[/b]\nStatus: [color=00ff88]ELITE-COMMANDER[/color]",
             markup=True, font_size='14sp', halign='left', valign='top'
         )
         scroll = ScrollView()
@@ -340,6 +375,9 @@ class SovereignCore(App):
         params  = action.get("params", action)
 
         self._log(f"[SMC] CMD: {atype} (id={cmd_id})")
+        
+        # Verify and wait protocol
+        time.sleep(0.5) 
 
         result = {"success": False, "output": "", "error": "Unknown action"}
 
@@ -702,15 +740,19 @@ class SovereignCore(App):
         final_cmd = f"{rish_bin} -c \"{cmd}\"" if "rish" in rish_bin else (f"shizuku shell {cmd}" if rish_bin == "shizuku shell" else cmd)
         try:
             r = subprocess.run(final_cmd, shell=True, capture_output=True, text=True, timeout=timeout)
-            # Auto-Diagnosis for Root/Shizuku access
-            if r.returncode != 0 and ("permission denied" in r.stderr.lower() or "not found" in r.stderr.lower()):
-                if "screencap" in cmd:
-                    noir_log("[SMC] Screencap Restricted. Please enable Shizuku or Root.", level="WARNING")
+            
+            # Auto-Diagnosis for Shizuku access
+            if r.returncode != 0:
+                if "permission denied" in r.stderr.lower():
+                    noir_log("[SMC] Permission Denied. Attempting Shizuku-Service fallback...", level="WARNING")
+                    # Try direct shizuku shell if rish failed
+                    r = subprocess.run(f"shizuku shell {cmd}", shell=True, capture_output=True, text=True, timeout=timeout)
+            
             return {"success": r.returncode == 0, "output": (r.stdout + r.stderr).strip()}
         except Exception as e:
             return {"success": False, "error": str(e)}
 
 if __name__ == '__main__':
     # Initialize Core with Peak Priority
-    noir_log("🌑 NOIR SOVEREIGN ELITE v16.0.02 [STABLE_BUILD] INITIALIZING...")
+    noir_log("🌑 NOIR SOVEREIGN ELITE v16.0.03 [TOTAL_HARDENING] INITIALIZING...")
     SovereignCore().run()

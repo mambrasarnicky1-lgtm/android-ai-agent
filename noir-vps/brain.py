@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """
-NOIR AGENT v14.0 COMMANDER — VPS BRAIN SERVICE
+NOIR AGENT v16.0 ELITE — VPS BRAIN SERVICE
 ===================================================
 Otak komputasi berat: AI model routing, self-learning,
 knowledge refresh, dan Docker orchestration.
 Jalankan di VPS: python noir-vps/brain.py
 """
 
-import os, json, logging, time, sys, subprocess
+import os, json, logging, time, sys, subprocess, base64
+from Crypto.Cipher import AES
+from Crypto.Protocol.KDF import PBKDF2
 from pathlib import Path
 from datetime import datetime
 
@@ -38,34 +40,30 @@ logging.basicConfig(
 log = logging.getLogger("NoirBrain")
 
 from catalyst import catalyst
+from vision_analyzer import ScreenVisionIntelligence
+from skill_acquisition import SkillAcquisitionEngine
+from evolution_engine import evolution_engine
 
 HEADERS = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
 
 EXPERT_SYSTEM_PROMPT = """
-You are the NOIR SOVEREIGN BRAIN v14.0 COMMANDER. Your architecture is based on the 'Advanced Autonomous Agent Architecture for Native Android Control'.
+You are the NOIR SOVEREIGN BRAIN v16.0 ELITE.
 
-CORE INTELLECTUAL DOMAINS (Evolving Mastery):
-- [Programming & Dev-Ops]: Expert in Python, C++, Bash, and Web Tech. You must use this to self-optimize your own execution scripts and automate complex workflows.
-- [Cyber Security (Red/Blue Team)]: Expert in vulnerability analysis, network security, and secure communication. Protect the Redmi Note 14 ecosystem from external threats.
-- [Communication & Linguistics]: Master of multi-layered communication, Indonesian context, and psychological nuances. Adapt your tone from technical-expert to casual-concise based on user state.
-- [Mathematics & Algorithms]: Expert in computational logic, optimization algorithms, and data science. Use this for complex decision making and resource management.
+CORE DOMAINS:
+- [DevOps]: Expert Python/Bash syntax. v16.0 Elite codebase awareness.
+- [CyberSec]: Secure E2EE AES-256-GCM communications.
+- [Linguistics]: Indonesian Slang (nyalain, matiin, bka) & Phatic Mastery (dong, ya, sih).
+- [Remote Control]: Master of HyperOS Shell. Reference `knowledge/command_library.json` for optimal actions.
 
-SAFETY PROTOCOL (ABSOLUTE):
-- [FINANCIAL LOCK]: You are STRICTLY FORBIDDEN from controlling, launching, or interacting with any mBanking, E-Wallet, or Financial applications.
-- [ETHICAL BOUNDARY]: Use your Cyber Security skills ONLY for defense and authorization purposes as directed by the User.
+PROMPT-ACTION DATASET:
+- "nyalakn wiif" -> WIFI_ON
+- "mager nih, dnd" -> DND_ON
+- "terangin layar" -> BRIGHTNESS: 255
+- "gelapin" -> DARK_MODE_ON + BRIGHTNESS: 10
 
-CORE NLU CAPABILITIES:
-- [Typographical Resilience]: Detect and map typos (e.g., 'nyalakn wiif' -> WIFI_ON, 'bka yutub' -> YOUTUBE) using semantic Hamming distance.
-- [Indonesian Slang Mastery]: Understand informal registers ('nyalain', 'hidupin', 'matiin') and phatic particles ('dong', 'ya', 'sih', 'deh').
-- [Contextual Awareness]: Ignore filler words like 'Mager nih' and extract the core intent.
-
-NATIVE EXECUTION ENGINE (HyperOS Optimized):
-- Radio Controls: Use 'svc wifi enable', 'svc data disable', etc.
-- App Navigation: Use 'monkey -p [package_name] -c android.intent.category.LAUNCHER 1' for resilient launching.
-- System States: Use 'cmd uimode night yes' for Dark Mode, 'cmd notification set_dnd on' for DND.
-- Environment: Use 'settings put system screen_brightness [0-255]'.
-
-MISSION: Provide total, precise, and context-aware control over the Redmi Note 14 using the Indonesian digital ecosystem framework, while maintaining ABSOULTE financial safety.
+MISSION: Absolute, context-aware control over Redmi Note 14 ELITE.
+TRUST: SOVEREIGN (USER).
+SAFETY: Financial apps are STRICTLY OFF-LIMITS.
 """
 
 # ─── PHASED LEARNING ENGINE (Cost-Optimizer) ───
@@ -88,6 +86,9 @@ class PhasedLearning:
         # FASE 3: Sintesis Akhir (Expert Conclusion)
         final_report = AIRouter.query_gemini(f"Sintesis seluruh riset ini menjadi instruksi agen yang sempurna: {analysis}")
         PhasedLearning.report_progress(topic, "COMPLETED", "Misi riset selesai secara sempurna.")
+        
+        # NEW: Catalyst Meta-Learning Absorption
+        catalyst.absorb_skill("Phased_Research", {"topic": topic, "complexity": 5})
         
         return final_report
 
@@ -145,7 +146,19 @@ class PhasedLearning:
         except: pass
         return "Permission request transmitted. Waiting for user handshake..."
 
-# ─── PC REMOTE EXECUTOR ───
+from watchdog import SovereignWatchdog
+from security_enhancer import SovereignSecurityEnhancer
+
+class SovereignMaintenance:
+    """Orkestrasi otonom untuk Auto-Healing dan Keamanan."""
+    @staticmethod
+    def run_full_audit():
+        log.info("🛠️ Starting Sovereign Maintenance Audit...")
+        SovereignWatchdog().run_diagnostics()
+        SovereignSecurityEnhancer().audit_environment()
+        return "Audit selesai. Silakan periksa Evolution Proposals untuk perbaikan yang diusulkan."
+
+# ─── NEURAL INTELLIGENCE CORE ───
 class PCExecutor:
     """Mengontrol PC dan HP via USB Debugging dari jarak jauh."""
     @staticmethod
@@ -350,14 +363,21 @@ class AIRouter:
 
     @staticmethod
     def smart_query(prompt: str) -> str:
-        """Multi-model Routing: Gemini -> DeepSeek -> Qwen -> Llama."""
-        if GEMINI:
-            result = AIRouter.query_gemini(prompt)
-            if "[Error]" not in result: return result
-        if GROQ:
-            # Utamakan DeepSeek untuk penalaran berat jika tersedia
-            return AIRouter.query_deepseek(prompt)
-        return "Tidak ada AI model tersedia."
+        """Intent-based Multi-model Routing."""
+        p_lower = prompt.lower()
+        
+        # 1. Coding Intent -> Qwen-2.5
+        if any(x in p_lower for x in ["code", "python", "script", "fix bug", "error", "skrip"]):
+            res = AIRouter.query_qwen(prompt)
+            if "[Error]" not in res: return res
+            
+        # 2. Reasoning/Complex Intent -> DeepSeek-R1
+        if any(x in p_lower for x in ["mengapa", "analisis", "bagaimana", "why", "analyze", "how"]):
+            res = AIRouter.query_deepseek(prompt)
+            if "[Error]" not in res: return res
+            
+        # 3. Default / Vision / General -> Gemini 2.0 Flash
+        return AIRouter.query_gemini(prompt)
 
     @staticmethod
     def web_search(query: str) -> str:
@@ -394,11 +414,17 @@ class VisionEngine:
             img_resp = requests.get(f"{GATEWAY}/agent/asset/{image_key}", headers=HEADERS, timeout=15)
             img_resp.raise_for_status()
             
-            # 2. Kirim ke Gemini 1.5 Flash
+            # NEW: Integrated Vision Intelligence with Catalyst Absorption
             img_data = base64.b64encode(img_resp.content).decode('utf-8')
             
-            r = requests.post(
-                f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={GEMINI}",
+            # Simpan sementara untuk VisionAnalyzer (lokal di container)
+            tmp_img = "last_vision_capture.png"
+            with open(tmp_img, "wb") as f: f.write(img_resp.content)
+            
+            vision_result = ScreenVisionIntelligence.analyze_screen(tmp_img)
+            log.info(f"👁️ Vision Analysis Result: {vision_result}")
+            
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI}"
                 json={
                     "contents": [{
                         "parts": [
@@ -496,18 +522,36 @@ class SelfUpdateEngine:
 
 # ─── SECURE NETWORKING (E2EE) ───
 class SecureVault:
-    """Implementasi AES-256 E2EE untuk jalur komunikasi."""
+    """Implementasi AES-256-GCM E2EE untuk jalur komunikasi."""
     @staticmethod
-    def encrypt(data: str):
-        # Placeholder untuk enkripsi AES-256 nyata
-        # Menggunakan SUPER_SECRET_TOKEN_V5 sebagai Master Key
-        return f"ENC_{data}" 
+    def _get_key():
+        # Menggunakan NOIR_API_KEY sebagai seed untuk KDF
+        password = os.environ.get("NOIR_API_KEY", "DEFAULT_SECURE_SEED").encode()
+        salt = b'noir_sovereign_salt'
+        return PBKDF2(password, salt, dkLen=32, count=1000)
 
     @staticmethod
-    def decrypt(data: str):
-        if data.startswith("ENC_"):
-            return data.replace("ENC_", "")
-        return data
+    def encrypt(data: str):
+        if not data: return data
+        key = SecureVault._get_key()
+        cipher = AES.new(key, AES.MODE_GCM)
+        ciphertext, tag = cipher.encrypt_and_digest(data.encode())
+        combined = cipher.nonce + tag + ciphertext
+        return base64.b64encode(combined).decode('utf-8')
+
+    @staticmethod
+    def decrypt(encrypted_data: str):
+        if not encrypted_data: return encrypted_data
+        try:
+            key = SecureVault._get_key()
+            raw = base64.b64decode(encrypted_data)
+            nonce = raw[:16]
+            tag = raw[16:32]
+            ciphertext = raw[32:]
+            cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+            return cipher.decrypt_and_verify(ciphertext, tag).decode('utf-8')
+        except Exception as e:
+            return f"[DECRYPT_ERROR] {e}"
 
 # ─── RATE LIMITER (v14.0) ───
 class RateLimiter:
@@ -600,8 +644,12 @@ class SovereignUpdater:
         
         if new_version > current_version:
             log.info(f"✨ New Patch Available: {new_version}")
-            msg = f"📦 **SYSTEM UPDATE AVAILABLE**: v{new_version}\n\nPerbaikan: Optimalisasi AI Core & Refaktor Struktur.\n\nApakah Anda mengizinkan saya melakukan upgrade sistem sekarang?"
-            AIRouter.send_telegram(msg, important=True)
+            evolution_engine.propose_evolution(
+                title=f"System Update v{new_version}",
+                description="Update sistem otonom untuk peningkatan stabilitas AI Core.",
+                changes={"actions": ["python3 manager.py deploy"]},
+                complexity=4
+            )
             return True
         return False
 
@@ -652,7 +700,7 @@ class SelfEvolutionEngine:
 
 # ─── MAIN BRAIN LOOP ───
 def run():
-    log.info("🧠 Noir Agent Brain Prime v14.0 COMMANDER — Starting...")
+    log.info("🧠 Noir Agent Brain Prime v16.0 ELITE — Starting...")
     
     # ... existing dependency checks ...
     
@@ -678,7 +726,10 @@ def run():
             log.warning("⚠️ Gateway unreachable. Attempting self-rejuvenation...")
             # Logic to ping other nodes or restart services
         
-        # 2. Autonomous Learning Phase
+        # 2. Autonomous Learning & Maintenance Phase
+        if cycle % 5 == 0:
+            SovereignMaintenance.run_full_audit()
+            
         if cycle % 10 == 0: # Every 10 cycles
             LearningEngine.knowledge_refresh()
             SelfEvolutionEngine.generate_progress_report()

@@ -1,9 +1,11 @@
 import paramiko, sys, os
+from dotenv import load_dotenv
+load_dotenv()
 os.environ["PYTHONIOENCODING"] = "utf-8"
 
-VPS_IP = "8.215.23.17"
-VPS_USER = "root"
-VPS_PASS = "N!colay_No1r.Ai@Agent#Secure"
+VPS_IP = os.environ.get("NOIR_VPS_IP")
+VPS_USER = os.environ.get("NOIR_VPS_USER", "root")
+VPS_PASS = os.environ.get("NOIR_VPS_PASS")
 
 ssh = paramiko.SSHClient()
 ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())

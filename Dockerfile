@@ -27,6 +27,9 @@ RUN pip install --no-cache-dir \
     playwright \
     youtube-transcript-api \
     beautifulsoup4 \
+    pycryptodome \
+    paramiko \
+    scp \
     docker
 
 # Copy source code

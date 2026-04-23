@@ -45,10 +45,14 @@ jobs:
 
       - name: Build Android Release APK
         run: |
-          # DEEP PURGE: Ensure no stale artifacts from previous failed runs
+          # v16.0.03: TOTAL PURGE of any structural residues
           rm -rf .buildozer/
           rm -rf ~/.buildozer/
           rm -rf ~/.cache/pip
+          rm -rf ~/.gradle/
+          
+          # Force clean build environment
+          buildozer android clean
           
           # Diagnostic: Show spec file content
           cat buildozer.spec

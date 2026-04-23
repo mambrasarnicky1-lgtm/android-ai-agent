@@ -1,10 +1,15 @@
 import paramiko, sys, os, time
+from dotenv import load_dotenv
+load_dotenv()
 os.environ["PYTHONIOENCODING"] = "utf-8"
 
-VPS_IP = "8.215.23.17"
+VPS_IP = os.environ.get("NOIR_VPS_IP")
+VPS_USER = os.environ.get("NOIR_VPS_USER", "root")
+VPS_PASS = os.environ.get("NOIR_VPS_PASS")
+
 ssh = paramiko.SSHClient()
 ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh.connect(VPS_IP, username="root", password="N!colay_No1r.Ai@Agent#Secure", timeout=15)
+ssh.connect(VPS_IP, username=VPS_USER, password=VPS_PASS, timeout=15)
 print("Connected")
 
 def run(cmd, timeout=10):

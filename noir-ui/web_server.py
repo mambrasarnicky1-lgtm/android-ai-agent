@@ -154,4 +154,14 @@ async def get_index():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=80)
+    # v16.0.03: Smart-Port Dynamic Allocation
+    ports = [80, 8000, 5000, 9090]
+    for port in ports:
+        try:
+            print(f"🚀 Attempting to start Noir Commander on Port {port}...")
+            uvicorn.run(app, host="0.0.0.0", port=port)
+            break
+        except Exception as e:
+            print(f"⚠️ Port {port} unavailable: {e}")
+            if port == ports[-1]:
+                print("❌ FATAL: No available ports found. Check VPS firewall.")

@@ -1,0 +1,30 @@
+{
+    "RADIO_CONTROLS": {
+        "WIFI_ON": "svc wifi enable",
+        "WIFI_OFF": "svc wifi disable",
+        "DATA_ON": "svc data enable",
+        "DATA_OFF": "svc data disable",
+        "AIRPLANE_ON": "settings put global airplane_mode_on 1; am broadcast -a android.intent.action.AIRPLANE_MODE",
+        "AIRPLANE_OFF": "settings put global airplane_mode_on 0; am broadcast -a android.intent.action.AIRPLANE_MODE"
+    },
+    "SYSTEM_UI": {
+        "SCREENSHOT": "screencap -p /sdcard/noir_vision.png",
+        "DARK_MODE_ON": "cmd uimode night yes",
+        "DARK_MODE_OFF": "cmd uimode night no",
+        "DND_ON": "cmd notification set_dnd on",
+        "DND_OFF": "cmd notification set_dnd off",
+        "BRIGHTNESS": "settings put system screen_brightness {val}",
+        "VOLUME_MEDIA": "media volume --set {val}"
+    },
+    "APP_MANAGEMENT": {
+        "LAUNCH": "monkey -p {pkg} -c android.intent.category.LAUNCHER 1",
+        "FORCE_STOP": "am force-stop {pkg}",
+        "CLEAR_CACHE": "pm clear {pkg}",
+        "GET_IP": "ip addr show wlan0 | grep 'inet ' | awk '{print $2}' | cut -d/ -f1"
+    },
+    "HYPER_OS_SPECIFIC": {
+        "PERF_MODE": "cmd power set-mode 0",
+        "BATTERY_SAVER": "settings put global low_power 1",
+        "REFRESH_RATE_120": "settings put system user_refresh_rate 120"
+    }
+}
