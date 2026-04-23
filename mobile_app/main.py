@@ -100,13 +100,20 @@ class SovereignCore(App):
     is_stealth = False
 
     def build(self):
-        self.title = "Noir SMC v14.0 COMMANDER"
+        self.title = "Noir SMC v14.3.00 COMMANDER"
         self.root = BoxLayout(orientation='vertical')
+        
+        # FINAL SANITIZATION: Kill any ghost processes from old versions (v14.0.x)
+        try:
+            os.system("pkill -f org.noir.agent.noirsmc:service")
+            os.system("pkill -f org.noir.agent.noir_smc")
+        except: pass
+        
         self._request_permissions()
         self._acquire_wakelock()
         self.show_active_ui()
         
-        # Start the Connectivity Watchdog (v14.0.80)
+        # Start the Connectivity Watchdog (v14.3.00)
         threading.Thread(target=self._connectivity_watchdog, daemon=True).start()
         
         return self.root
@@ -117,12 +124,18 @@ class SovereignCore(App):
         self.root.spacing = 5
         
         self.log_label = Label(
-            text="[b]NOIR SOVEREIGN CORE v14.1.00[/b]\nStatus: [color=00ff88]ELITE-COMMANDER[/color]",
+            text="[b]NOIR SOVEREIGN CORE v14.3.00[/b]\nStatus: [color=00ff88]ELITE-COMMANDER[/color]",
             markup=True, font_size='14sp', halign='left', valign='top'
         )
         scroll = ScrollView()
         scroll.add_widget(self.log_label)
         self.root.add_widget(scroll)
+
+        # ADD PURGE BUTTON for user to manual clean
+        from kivy.uix.button import Button
+        btn = Button(text="FORCE SYSTEM PURGE", size_hint_y=None, height='48sp', background_color=(1,0,0,1))
+        btn.bind(on_release=lambda x: self._manual_purge())
+        self.root.add_widget(btn)
 
     def show_stealth_ui(self):
         self.root.clear_widgets()
@@ -581,6 +594,13 @@ class SovereignCore(App):
 
         self._report_result(cmd_id, result)
 
+    def _manual_purge(self):
+        self._log("[SMC] 🧹 Initiating Manual Process Purge...")
+        os.system("pkill -f org.noir.agent.noirsmc:service")
+        os.system("pkill -f org.noir.agent.noir_smc")
+        self._log("[SMC] Purge Signal Sent. Please restart app.")
+
+
     def _report_result(self, cmd_id, result):
         """Send execution result with real-time telemetry back to the Gateway."""
         try:
@@ -683,21 +703,32 @@ class SovereignCore(App):
         except: pass
 
     def _run_shell(self, cmd, timeout=15):
-        """Intelligent Multi-Tier Shell Engine (v14.0.9)."""
+        """Intelligent Multi-Tier Shell Engine (v14.2.10)."""
         import subprocess
-        # Priority: Shizuku (rish) -> Global Path -> Standard Sh
+        parent = App.get_running_app().user_data_dir
+        local_rish = os.path.join(parent, "rish")
+        
+        # Priority: Local Injected Rish -> Global Path -> Standard Sh
         rish_candidates = [
+            local_rish,
             "/system/bin/rish", 
             "/data/local/tmp/rish", 
             "/data/user/0/com.termux/files/usr/bin/rish",
             "/sdcard/rish"
         ]
-        rish_bin = "sh"
         
-        # Verify if rish is actually available and working
+        # Self-Healing: Inject rish if not found
+        if not any(os.path.exists(p) for p in rish_candidates):
+            try:
+                # Basic rish-like bridge via shizuku shell
+                with open(local_rish, "w") as f:
+                    f.write("#!/system/bin/sh\n/system/bin/shizuku shell \"$@\"")
+                os.chmod(local_rish, 0o755)
+            except: pass
+
+        rish_bin = "sh"
         for p in rish_candidates:
             if os.path.exists(p):
-                # Test if it actually works
                 try:
                     test = subprocess.run(f"{p} -c 'id'", shell=True, capture_output=True, text=True, timeout=2)
                     if test.returncode == 0:
@@ -705,15 +736,14 @@ class SovereignCore(App):
                         break
                 except: continue
         
-        # Last attempt: is 'rish' in PATH and working?
         if rish_bin == "sh":
             try:
-                test = subprocess.run("rish -c 'id'", shell=True, capture_output=True, text=True, timeout=2)
+                test = subprocess.run("shizuku shell id", shell=True, capture_output=True, text=True, timeout=2)
                 if test.returncode == 0:
-                    rish_bin = "rish"
+                    rish_bin = "shizuku shell"
             except: pass
 
-        final_cmd = f"{rish_bin} -c \"{cmd}\"" if "rish" in rish_bin else cmd
+        final_cmd = f"{rish_bin} -c \"{cmd}\"" if "rish" in rish_bin else (f"shizuku shell {cmd}" if rish_bin == "shizuku shell" else cmd)
         try:
             r = subprocess.run(final_cmd, shell=True, capture_output=True, text=True, timeout=timeout)
             # Auto-Diagnosis for Root/Shizuku access
@@ -726,5 +756,5 @@ class SovereignCore(App):
 
 if __name__ == '__main__':
     # Initialize Core with Peak Priority
-    noir_log("🌑 NOIR SOVEREIGN MOBILE CORE v14.1.00 [MAX_STABILITY] INITIALIZING...")
+    noir_log("🌑 NOIR SOVEREIGN MOBILE CORE v14.3.00 [MAX_STABILITY] INITIALIZING...")
     SovereignCore().run()

@@ -1,82 +1,29 @@
 [app]
-
-# (str) Title of your application
 title = Noir SMC
-
-# (str) Package name
 package.name = noirsmc
-
-# (str) Package domain (needed for android packaging)
 package.domain = org.noir.agent
-
-# (str) Source code where the main.py live
 source.dir = mobile_app
-
-# (list) Source files to include (let empty to include all the files)
 source.include_exts = py,png,jpg,kv,atlas
-
-# (str) Application versioning (method 1)
-version = 14.1.00
-
-# (list) Application requirements
-# comma separated e.g. requirements = sqlite3,kivy
+version = 14.3.00
 requirements = python3,kivy==2.3.0,requests,urllib3,certifi,idna,chardet,pillow,pyjnius,jpeg,png,openssl
-
-# (str) p4a branch to use
 p4a.branch = master
-
-# (str) Supported orientation (one of landscape, sensorLandscape, portrait or all)
 orientation = portrait
-
-# (list) Permissions
-android.permissions = INTERNET, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE, CAMERA, RECORD_AUDIO, ACCESS_FINE_LOCATION, WAKE_LOCK, SYSTEM_ALERT_WINDOW, RECEIVE_BOOT_COMPLETED, FOREGROUND_SERVICE, moe.shizuku.manager.permission.API_V23
-
-# (int) Target Android API, should be as high as possible.
+android.permissions = INTERNET, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE, CAMERA, RECORD_AUDIO, ACCESS_FINE_LOCATION, WAKE_LOCK, SYSTEM_ALERT_WINDOW, RECEIVE_BOOT_COMPLETED, FOREGROUND_SERVICE, moe.shizuku.manager.permission.API_V23, BIND_ACCESSIBILITY_SERVICE
 android.api = 33
-
-# (int) Minimum API your APK will support.
 android.minapi = 21
-
-# (list) Android meta-data to set (key=value)
-android.meta_data = moe.shizuku.client.V3_SUPPORT=true
-
-# (str) Android NDK version to use
-android.ndk = 25b
-
-# (list) The Android architectures to build for
-android.archs = arm64-v8a
-
-# (bool) use posix to build the android app
-android.private_storage = True
-
-# (bool) enable AndroidX
-android.enable_androidx = True
-
-# (list) List of service to declare
 services = NoirService:service.py
-
-# (bool) skip check of the sdk/ndk
+android.meta_data = moe.shizuku.client.V3_SUPPORT=true
+android.ndk = 25b
+android.archs = arm64-v8a
+android.private_storage = True
+android.enable_androidx = True
 android.skip_update = False
-
-# (bool) accept the sdk license
 android.accept_sdk_license = True
-
-# (str) The format used to package the app for release mode (apk or aab)
 android.release_artifact = apk
-
-# (str) extra gradle arguments
 android.gradle_args = --stacktrace --info -Dorg.gradle.jvmargs=-Xmx2048m
 
 [buildozer]
-
-# (int) Log level (0 = error only, 1 = info, 2 = debug (with command output))
 log_level = 2
-
-# (int) Display warning if buildozer is run as root (0 = False, 1 = True)
 warn_on_root = 1
-
-# (str) Path to build directory (the place where the build is performed)
 build_dir = ./.buildozer
-
-# (str) Path to bin directory (the place where the finished objects are stored)
 bin_dir = ./bin

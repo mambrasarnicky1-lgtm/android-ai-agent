@@ -1,45 +1,72 @@
 """
-NOIR SOVEREIGN BACKGROUND SERVICE v14.0
+NOIR SOVEREIGN BACKGROUND SERVICE v14.3.00
 =======================================
-This service runs in a separate process to ensure the agent stays online 
-even when the main UI is closed or killed by the system.
+Synchronized background engine with Autonomous Sentinel and Shizuku Bridge.
 """
 
 import os
 import time
 import requests
+import threading
+import socket
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-# --- CONFIG (Unified Standard v14) ---
-# Note: In Android service, we might need to find the .env file path
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# Fallback to defaults
+# --- CONFIG (Unified Standard v14.3.00) ---
 GATEWAY_URL = os.environ.get("NOIR_GATEWAY_URL", "https://noir-agent-gateway.si-umkm-ikm-pbd.workers.dev")
 API_KEY     = os.environ.get("NOIR_API_KEY", "NOIR_AGENT_KEY_V6_SI_UMKM_PBD_2026")
 DEVICE_ID   = os.environ.get("NOIR_DEVICE_ID", "REDMI_NOTE_14")
+OFFLINE_LOG_FILE = os.path.join(os.path.dirname(__file__), "service_offline.log")
 
 session = requests.Session()
 retries = Retry(total=5, backoff_factor=1, status_forcelist=[502, 503, 504])
 session.mount('https://', HTTPAdapter(max_retries=retries))
 
 def noir_log(message, level="INFO"):
-    print(f"[SERVICE-{level}] {message}")
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    formatted_msg = f"[{timestamp}] [SERVICE-{level}] {message}"
+    print(formatted_msg)
+    
+    # Persistent Offline Log
     try:
-        session.post(
-            f"{GATEWAY_URL}/agent/log",
-            headers={"Authorization": f"Bearer {API_KEY}"},
-            json={"device_id": DEVICE_ID, "level": level, "message": f"[BG-SERVICE] {message}"},
-            timeout=5
-        )
+        with open(OFFLINE_LOG_FILE, "a") as f:
+            f.write(formatted_msg + "\n")
     except: pass
 
+    def _send():
+        try:
+            session.post(
+                f"{GATEWAY_URL}/agent/log",
+                headers={"Authorization": f"Bearer {API_KEY}"},
+                json={"device_id": DEVICE_ID, "level": level, "message": f"[BG-SERVICE] {message}"},
+                timeout=5
+            )
+        except: pass
+    threading.Thread(target=_send, daemon=True).start()
+
 def run_service():
-    noir_log("Background Service ACTIVE")
+    noir_log("🌑 NOIR SERVICE v14.3.00: INITIALIZING...")
     
+    # Process Purge: Kill old ghosts if this is a fresh start
+    try:
+        os.system("pkill -f org.noir.agent.noir_smc")
+    except: pass
+
     poll_interval = 5
     while True:
         try:
+            # Connectivity Check
+            try:
+                socket.create_connection(("8.8.8.8", 53), timeout=3)
+                is_online = True
+            except:
+                is_online = False
+
+            if not is_online:
+                noir_log("Offline state. Retrying in 30s...", level="WARNING")
+                time.sleep(30)
+                continue
+
             headers = {"Authorization": f"Bearer {API_KEY}"}
             resp = session.get(
                 f"{GATEWAY_URL}/agent/poll",
@@ -53,8 +80,6 @@ def run_service():
                 commands = data.get("commands", [])
                 if commands:
                     noir_log(f"Received {len(commands)} background commands")
-                    # In a real service, we would notify the main app or execute 
-                    # non-UI commands directly here.
                     poll_interval = 2
                 else:
                     poll_interval = min(poll_interval + 2, 30)
