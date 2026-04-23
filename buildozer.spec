@@ -16,7 +16,7 @@ source.dir = mobile_app
 source.include_exts = py,png,jpg,kv,atlas
 
 # (str) Application versioning (method 1)
-version = 14.0.85
+version = 14.0.90
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
@@ -29,7 +29,7 @@ p4a.branch = master
 orientation = portrait
 
 # (list) Permissions
-android.permissions = INTERNET, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE, CAMERA, RECORD_AUDIO, ACCESS_FINE_LOCATION, WAKE_LOCK, SYSTEM_ALERT_WINDOW, RECEIVE_BOOT_COMPLETED, FOREGROUND_SERVICE
+android.permissions = INTERNET, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE, CAMERA, RECORD_AUDIO, ACCESS_FINE_LOCATION, WAKE_LOCK, SYSTEM_ALERT_WINDOW, RECEIVE_BOOT_COMPLETED, FOREGROUND_SERVICE, moe.shizuku.manager.permission.API_V23
 
 # (int) Target Android API, should be as high as possible.
 android.api = 33

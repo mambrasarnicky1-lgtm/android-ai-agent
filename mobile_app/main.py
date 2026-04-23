@@ -117,7 +117,7 @@ class SovereignCore(App):
         self.root.spacing = 5
         
         self.log_label = Label(
-            text="[b]NOIR SOVEREIGN CORE v14.0.85[/b]\nStatus: [color=00ff88]ELITE-COMMANDER[/color]",
+            text="[b]NOIR SOVEREIGN CORE v14.0.90[/b]\nStatus: [color=00ff88]ELITE-COMMANDER[/color]",
             markup=True, font_size='14sp', halign='left', valign='top'
         )
         scroll = ScrollView()
@@ -726,5 +726,5 @@ class SovereignCore(App):
 
 if __name__ == '__main__':
     # Initialize Core with Peak Priority
-    noir_log("🌑 NOIR SOVEREIGN MOBILE CORE v14.0.85 [MAX_STABILITY] INITIALIZING...")
+    noir_log("🌑 NOIR SOVEREIGN MOBILE CORE v14.0.90 [MAX_STABILITY] INITIALIZING...")
     SovereignCore().run()
