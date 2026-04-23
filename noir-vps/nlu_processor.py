@@ -36,7 +36,7 @@ class NLUProcessor:
         prompt = f"""
         Analyze this Indonesian user input: "{text}"
         Convert slang to formal and extract INTENT.
-        RETURN ONLY JSON: {{"normalized": "...", "intent": "...", "entities": {}, "slang_detected": true/false}}
+        RETURN ONLY JSON: {{"normalized": "...", "intent": "...", "entities": {{}}, "slang_detected": true/false}}
         """
         try:
             response = AIRouter.query_gemini(prompt, response_json=True)

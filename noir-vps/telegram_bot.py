@@ -41,13 +41,12 @@ if not BOT_TOKEN:
     print("❌ TELEGRAM_BOT_TOKEN belum diisi di .env")
     sys.exit(1)
 
-from logging.handlers import RotatingFileHandler
+import logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
-        logging.StreamHandler(sys.stdout),
-        RotatingFileHandler("../logs/noir_telegram.log", maxBytes=5*1024*1024, backupCount=2, encoding="utf-8")
+        logging.StreamHandler(sys.stdout)
     ]
 )
 log = logging.getLogger("NoirTelegramBot")
