@@ -45,7 +45,7 @@ def noir_log(message, level="INFO"):
     threading.Thread(target=_send, daemon=True).start()
 
 def run_service():
-    noir_log("🌑 NOIR ELITE SERVICE v16.0.00: INITIALIZING...")
+    noir_log("🌑 NOIR ELITE SERVICE v16.0.02: INITIALIZING...")
     
     # Process Purge: Kill old ghosts if this is a fresh start
     try:

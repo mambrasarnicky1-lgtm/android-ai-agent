@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NOIR COMMANDER | v16.0.00 ELITE</title>
+    <title>NOIR COMMANDER | v16.0.02 ELITE</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@300;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -358,7 +358,7 @@
                             <span style="cursor:pointer;" onclick="clearLogs()">CLEAR</span>
                         </div>
                         <div id="log-terminal" style="flex:1; background:rgba(0,0,0,0.5); font-family:monospace; font-size:0.7rem; padding:10px; overflow-y:auto; color:#0f0; min-height:200px; border:1px solid rgba(255,215,0,0.1);">
-                            [SYSTEM] Noir Sovereign ELITE v16.0.00 Online.
+                            [SYSTEM] Noir Sovereign ELITE v16.0.02 Online.
                         </div>
                     </div>
                 `
@@ -550,11 +550,11 @@
             box.appendChild(d); box.scrollTop = box.scrollHeight;
         }
 
-        // v16.0.00 ELITE: Neural Link Sanitization
-        if(localStorage.getItem('noir_version') !== '16.0.00') {
+        // v16.0.02 ELITE: Neural Link Sanitization
+        if(localStorage.getItem('noir_version') !== '16.0.02') {
             localStorage.clear();
-            localStorage.setItem('noir_version', '16.0.00');
-            console.log("NEURAL LINK SANITIZED for v16.0.00");
+            localStorage.setItem('noir_version', '16.0.02');
+            console.log("NEURAL LINK SANITIZED for v16.0.02");
         }
 
         showPage('vision');

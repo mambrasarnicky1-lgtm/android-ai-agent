@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 # Load env from root
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
-app = FastAPI(title="Noir Sovereign ELITE v16.0.00")
+app = FastAPI(title="Noir Sovereign ELITE v16.0.02")
 
 app.add_middleware(
     CORSMiddleware,

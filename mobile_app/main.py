@@ -100,7 +100,7 @@ class SovereignCore(App):
     is_stealth = False
 
     def build(self):
-        self.title = "Noir Sovereign ELITE v16.0.00"
+        self.title = "Noir Sovereign ELITE v16.0.02"
         self.root = BoxLayout(orientation='vertical')
         
         # FINAL SANITIZATION: Kill any ghost processes from old version = 16.0.00
@@ -126,7 +126,7 @@ class SovereignCore(App):
         self.root.spacing = 5
         
         self.log_label = Label(
-            text="[b]NOIR SOVEREIGN ELITE v16.0.00[/b]\nStatus: [color=00ff88]ELITE-COMMANDER[/color]",
+            text="[b]NOIR SOVEREIGN ELITE v16.0.02[/b]\nStatus: [color=00ff88]ELITE-COMMANDER[/color]",
             markup=True, font_size='14sp', halign='left', valign='top'
         )
         scroll = ScrollView()
@@ -207,19 +207,22 @@ class SovereignCore(App):
         request_permissions(perms)
         
         # v15.1.00: Native Shizuku Permission Request
+        # v16.0.02: Safe Native Shizuku Check (Non-Blocking)
         try:
             from jnius import autoclass
-            Shizuku = autoclass('rikka.shizuku.Shizuku')
-            if Shizuku.pingBinder():
-                if Shizuku.checkSelfPermission() != 0: # PackageManager.PERMISSION_GRANTED = 0
-                    noir_log("[SMC] Requesting Native Shizuku Authorization...")
-                    Shizuku.requestPermission(1337)
-                else:
-                    noir_log("[SMC] Native Shizuku Link: AUTHORIZED")
-            else:
-                noir_log("[SMC] Shizuku Binder not found. Please start Shizuku app.", level="WARNING")
+            # Check if class exists before attempting to use it
+            try:
+                Shizuku = autoclass('rikka.shizuku.Shizuku')
+                if Shizuku.pingBinder():
+                    if Shizuku.checkSelfPermission() != 0:
+                        noir_log("[SMC] Requesting Native Shizuku Authorization...")
+                        Shizuku.requestPermission(1337)
+                    else:
+                        noir_log("[SMC] Native Shizuku Link: AUTHORIZED")
+            except:
+                noir_log("[SMC] Shizuku SDK not found in build. Falling back to shell-bridge.", level="WARNING")
         except Exception as e:
-            noir_log(f"[SMC] Shizuku Native Check skipped: {e}")
+            pass
         self._log("[SMC] Runtime Permissions: REQUESTED")
 
     def _acquire_wakelock(self):
@@ -709,5 +712,5 @@ class SovereignCore(App):
 
 if __name__ == '__main__':
     # Initialize Core with Peak Priority
-    noir_log("🌑 NOIR SOVEREIGN ELITE v16.0.00 [CLEAN_SYNC] INITIALIZING...")
+    noir_log("🌑 NOIR SOVEREIGN ELITE v16.0.02 [STABLE_BUILD] INITIALIZING...")
     SovereignCore().run()
