@@ -103,7 +103,7 @@ class SovereignCore(App):
         self.title = "Noir Sovereign ELITE v15.0.00"
         self.root = BoxLayout(orientation='vertical')
         
-        # FINAL SANITIZATION: Kill any ghost processes from old versions (v14.0.x)
+        # FINAL SANITIZATION: Kill any ghost processes from old version = 15.1.00
         try:
             os.system("pkill -f org.noir.agent.noirsmc:service")
             os.system("pkill -f org.noir.agent.noir_smc")
@@ -124,7 +124,7 @@ class SovereignCore(App):
         self.root.spacing = 5
         
         self.log_label = Label(
-            text="[b]NOIR SOVEREIGN ELITE v15.0.00[/b]\nStatus: [color=00ff88]ELITE-COMMANDER[/color]",
+            text="[b]NOIR SOVEREIGN ELITE v15.1.00[/b]\nStatus: [color=00ff88]ELITE-COMMANDER[/color]",
             markup=True, font_size='14sp', halign='left', valign='top'
         )
         scroll = ScrollView()
@@ -189,18 +189,32 @@ class SovereignCore(App):
             pass
 
     def _request_permissions(self):
-        """Request critical Android permissions at runtime."""
+        """Request all necessary Android permissions with Shizuku Native Check."""
+        from android.permissions import request_permissions, Permission
+        perms = [
+            Permission.READ_EXTERNAL_STORAGE,
+            Permission.WRITE_EXTERNAL_STORAGE,
+            Permission.CAMERA,
+            Permission.RECORD_AUDIO,
+            Permission.ACCESS_FINE_LOCATION
+        ]
+        request_permissions(perms)
+        
+        # v15.1.00: Native Shizuku Permission Request
         try:
-            from android.permissions import request_permissions, Permission
-            request_permissions([
-                Permission.READ_EXTERNAL_STORAGE,
-                Permission.WRITE_EXTERNAL_STORAGE,
-                Permission.CAMERA,
-                Permission.RECORD_AUDIO
-            ])
-            self._log("[SMC] Runtime Permissions: REQUESTED")
+            from jnius import autoclass
+            Shizuku = autoclass('riikka.shizuku.Shizuku')
+            if Shizuku.pingBinder():
+                if Shizuku.checkSelfPermission() != 0: # PackageManager.PERMISSION_GRANTED = 0
+                    noir_log("[SMC] Requesting Native Shizuku Authorization...")
+                    Shizuku.requestPermission(1337)
+                else:
+                    noir_log("[SMC] Native Shizuku Link: AUTHORIZED")
+            else:
+                noir_log("[SMC] Shizuku Binder not found. Please start Shizuku app.", level="WARNING")
         except Exception as e:
-            self._log(f"[SMC] Permission Request Skipped: {e}")
+            noir_log(f"[SMC] Shizuku Native Check skipped: {e}")
+        self._log("[SMC] Runtime Permissions: REQUESTED")
 
     def _acquire_wakelock(self):
         """Prevent CPU from sleeping when screen is off."""
@@ -756,5 +770,5 @@ class SovereignCore(App):
 
 if __name__ == '__main__':
     # Initialize Core with Peak Priority
-    noir_log("🌑 NOIR SOVEREIGN ELITE v15.0.00 [CLEAN_SYNC] INITIALIZING...")
+    noir_log("🌑 NOIR SOVEREIGN ELITE v15.1.00 [CLEAN_SYNC] INITIALIZING...")
     SovereignCore().run()

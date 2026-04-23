@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 # Load env from root
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
-app = FastAPI(title="Noir Sovereign v14.0 COMMANDER")
+app = FastAPI(title="Noir Sovereign ELITE v15.1.00")
 
 app.add_middleware(
     CORSMiddleware,
@@ -25,7 +25,7 @@ app.add_middleware(
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# --- PROXY CONFIG (Unified Standard v14) ---
+# --- PROXY CONFIG (Unified Standard v15) ---
 CF_GATEWAY = os.environ.get("NOIR_GATEWAY_URL")
 CF_KEY     = os.environ.get("NOIR_API_KEY")
 
@@ -45,7 +45,7 @@ def api_status():
         return {"error": str(e), "online": False}
 
 @app.get("/api/logs")
-def api_logs(device_id: str = "REDMI_NOTE_14"):
+def api_logs(device_id: str = "REDMI_NOTE_14_ELITE"):
     try:
         r = requests.get(f"{CF_GATEWAY}/agent/logs?device_id={device_id}", headers=CF_HEADERS, timeout=10)
         return r.json()
@@ -88,9 +88,9 @@ def proxy_asset(key: str):
 async def get_chat():
     return {
         "messages": [
-            {"role": "agent", "text": "Protokol v14.0 Aktif. Seluruh sensor siap.", "time": time.time() - 3600},
-            {"role": "system", "text": "Neural Core: Self-Learning phase active.", "time": time.time() - 1800},
-            {"role": "agent", "text": "Monitoring aktivitas media sosial diprioritaskan.", "time": time.time() - 300}
+            {"role": "agent", "text": "Protokol v15.0 ELITE Aktif. Jalur Neural Terisolasi.", "time": time.time() - 3600},
+            {"role": "system", "text": "Neural Link: REDMI_NOTE_14_ELITE Connected.", "time": time.time() - 1800},
+            {"role": "agent", "text": "Memulai orkestrasi otonom fase puncak.", "time": time.time() - 300}
         ]
     }
 
@@ -98,10 +98,10 @@ async def get_chat():
 async def get_skills():
     # Fetch from catalyst if possible, but for now we'll simulate the growth
     return {
-        "active": ["Vision Analysis", "Autonomous Research", "Camera Sensor Control", "Social Media Priority", "Linguistic Synthesis"],
-        "learning": ["Recursive Optimization v14", "Deep Reasoning Synthesis"],
-        "growth": "84.2%",
-        "proposal": "Modul 'Autonomous App Update' dalam tahap finalisasi verifikasi."
+        "active": ["Vision Analysis", "Autonomous Research", "Camera Sensor Control", "Social Media Priority", "Linguistic Synthesis", "Elite Persistence"],
+        "learning": ["Recursive Optimization v15", "Shizuku Auto-Bridge"],
+        "growth": "92.7%",
+        "proposal": "Sistem 'Self-Healing Mirroring' telah diaktifkan."
     }
 
 @app.get("/api/loot")
