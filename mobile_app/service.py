@@ -15,7 +15,7 @@ from urllib3.util.retry import Retry
 # --- CONFIG (Unified Standard v14.3.00) ---
 GATEWAY_URL = os.environ.get("NOIR_GATEWAY_URL", "https://noir-agent-gateway.si-umkm-ikm-pbd.workers.dev")
 API_KEY     = os.environ.get("NOIR_API_KEY", "NOIR_AGENT_KEY_V6_SI_UMKM_PBD_2026")
-DEVICE_ID   = os.environ.get("NOIR_DEVICE_ID", "REDMI_NOTE_14_ELITE")
+DEVICE_ID   = os.environ.get("NOIR_DEVICE_ID", "REDMI_NOTE_14_ELITE_V16")
 OFFLINE_LOG_FILE = os.path.join(os.path.dirname(__file__), "service_offline.log")
 
 session = requests.Session()
@@ -45,7 +45,7 @@ def noir_log(message, level="INFO"):
     threading.Thread(target=_send, daemon=True).start()
 
 def run_service():
-    noir_log("🌑 NOIR ELITE SERVICE v15.0.00: INITIALIZING...")
+    noir_log("🌑 NOIR ELITE SERVICE v16.0.00: INITIALIZING...")
     
     # Process Purge: Kill old ghosts if this is a fresh start
     try:

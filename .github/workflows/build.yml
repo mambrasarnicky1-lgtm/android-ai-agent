@@ -1,4 +1,4 @@
-# NOIR SOVEREIGN COMMANDER v14.0.20 - Release Build Pipeline (Refreshed: 2026-04-23)
+# NOIR SOVEREIGN COMMANDER v16.0.00 - Elite Build Pipeline
 name: Build Noir SMC Android APK (Release)
 on:
   push:
@@ -53,8 +53,7 @@ jobs:
           # Diagnostic: Show spec file content
           cat buildozer.spec
           
-          # Dynamically ensure version is set correctly
-          sed -i 's/^version =.*/version = 14.0.32/' buildozer.spec
+          # Build release (Version handled by spec file)
           
           # Unset conflicting NDK/SDK environment variables
           unset ANDROID_NDK_ROOT
@@ -64,7 +63,7 @@ jobs:
           # Build release
           buildozer android release
         env:
-          JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+          JAVA_HOME: /usr/lib/jvm/temurin-17-jdk-amd64
           P4A_RELEASE_KEYSTORE: "${{ github.workspace }}/mobile_app/noir_smc_release.keystore"
           P4A_RELEASE_KEYSTORE_PASSWD: "NoirSovereign#2026!"
           P4A_RELEASE_KEYALIAS_PASSWD: "NoirSovereign#2026!"
@@ -75,5 +74,5 @@ jobs:
       - name: Upload Release Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: NoirSovereign-v14-Release-APK
+          name: NoirSovereign-v16-Release-APK
           path: bin/*.apk

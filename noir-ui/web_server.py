@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 # Load env from root
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
-app = FastAPI(title="Noir Sovereign ELITE v15.1.00")
+app = FastAPI(title="Noir Sovereign ELITE v16.0.00")
 
 app.add_middleware(
     CORSMiddleware,
@@ -45,7 +45,7 @@ def api_status():
         return {"error": str(e), "online": False}
 
 @app.get("/api/logs")
-def api_logs(device_id: str = "REDMI_NOTE_14_ELITE"):
+def api_logs(device_id: str = "REDMI_NOTE_14_ELITE_V16"):
     try:
         r = requests.get(f"{CF_GATEWAY}/agent/logs?device_id={device_id}", headers=CF_HEADERS, timeout=10)
         return r.json()
@@ -88,8 +88,8 @@ def proxy_asset(key: str):
 async def get_chat():
     return {
         "messages": [
-            {"role": "agent", "text": "Protokol v15.0 ELITE Aktif. Jalur Neural Terisolasi.", "time": time.time() - 3600},
-            {"role": "system", "text": "Neural Link: REDMI_NOTE_14_ELITE Connected.", "time": time.time() - 1800},
+            {"role": "agent", "text": "Protokol v16.0 ELITE Aktif. Jalur Neural Terisolasi.", "time": time.time() - 3600},
+            {"role": "system", "text": "Neural Link: REDMI_NOTE_14_ELITE_V16 Connected.", "time": time.time() - 1800},
             {"role": "agent", "text": "Memulai orkestrasi otonom fase puncak.", "time": time.time() - 300}
         ]
     }
