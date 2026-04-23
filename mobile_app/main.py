@@ -100,7 +100,7 @@ class SovereignCore(App):
     is_stealth = False
 
     def build(self):
-        self.title = "Noir SMC v14.3.00 COMMANDER"
+        self.title = "Noir Sovereign ELITE v15.0.00"
         self.root = BoxLayout(orientation='vertical')
         
         # FINAL SANITIZATION: Kill any ghost processes from old versions (v14.0.x)
@@ -124,7 +124,7 @@ class SovereignCore(App):
         self.root.spacing = 5
         
         self.log_label = Label(
-            text="[b]NOIR SOVEREIGN CORE v14.3.00[/b]\nStatus: [color=00ff88]ELITE-COMMANDER[/color]",
+            text="[b]NOIR SOVEREIGN ELITE v15.0.00[/b]\nStatus: [color=00ff88]ELITE-COMMANDER[/color]",
             markup=True, font_size='14sp', halign='left', valign='top'
         )
         scroll = ScrollView()
@@ -756,5 +756,5 @@ class SovereignCore(App):
 
 if __name__ == '__main__':
     # Initialize Core with Peak Priority
-    noir_log("🌑 NOIR SOVEREIGN MOBILE CORE v14.3.00 [MAX_STABILITY] INITIALIZING...")
+    noir_log("🌑 NOIR SOVEREIGN ELITE v15.0.00 [CLEAN_SYNC] INITIALIZING...")
     SovereignCore().run()

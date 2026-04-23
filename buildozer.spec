@@ -1,10 +1,10 @@
 [app]
-title = Noir SMC
-package.name = noirsmc
-package.domain = org.noir.agent
+title = Noir Sovereign ELITE v15.0.00
+package.name = noirelite
+package.domain = org.noir.elite
 source.dir = mobile_app
 source.include_exts = py,png,jpg,kv,atlas
-version = 14.3.00
+version = 15.0.00
 requirements = python3,kivy==2.3.0,requests,urllib3,certifi,idna,chardet,pillow,pyjnius,jpeg,png,openssl
 p4a.branch = master
 orientation = portrait
