@@ -35,7 +35,7 @@ session.mount('https://', HTTPAdapter(max_retries=retries))
 # --- CONFIG (Unified Standard v14) ---
 GATEWAY_URL = os.environ.get("NOIR_GATEWAY_URL", "https://noir-agent-gateway.si-umkm-ikm-pbd.workers.dev")
 API_KEY     = os.environ.get("NOIR_API_KEY", "NOIR_AGENT_KEY_V6_SI_UMKM_PBD_2026")
-DEVICE_ID   = os.environ.get("NOIR_DEVICE_ID", "REDMI_NOTE_14")
+DEVICE_ID   = os.environ.get("NOIR_DEVICE_ID", "REDMI_NOTE_14_ELITE")
 
 # Persistence Settings
 OFFLINE_LOG_FILE = os.path.join(os.path.dirname(__file__), "offline_queue.log")
