@@ -236,7 +236,7 @@ class VisionEngine:
                 },
                 timeout=30
             )
-            data = r.json()
+            data = resp.json()
             if "candidates" in data and len(data["candidates"]) > 0:
                 return data["candidates"][0]["content"]["parts"][0]["text"]
             else:
@@ -455,54 +455,39 @@ class SelfEvolutionEngine:
     def run_daily_discovery():
         """Noir mencari skill baru secara otonom berdasarkan tren."""
         log.info("🧪 Autonomous Evolution: Searching for new trending skills...")
-        topics = ["OCR API", "Image Upscaler", "Text Summarizer", "Currency Exchange API"]
-        import random
-        topic = random.choice(topics)
-        SkillAcquisitionEngine.discover_and_integrate(topic)
+        # Placeholder for manual trigger
 
-# ─── MAIN BRAIN LOOP ───
 def run():
-    log.info("🧠 Noir Agent Brain Prime v16.0 ELITE — Starting...")
-    
-    # ... existing dependency checks ...
-    
+    log.info("🧠 Noir Agent Brain v16.2 [ZEN-MODE] — Starting...")
     cycle = 0
-    start_time = time.time()
-    
     while True:
         cycle += 1
-        current_time = time.time()
-        elapsed = current_time - start_time
+        log.info(f"── Brain Prime v16.2 [ZEN-MODE] Cycle #{cycle} ──")
         
-        log.info(f"\n── Brain Prime Cycle #{cycle} [{datetime.now().strftime('%H:%M:%S')}] ──")
-
-        # --- Sovereign Watchdog (v14.0) ---
-        if not catalyst.check_readiness():
-            log.info("🧬 Catalyst: Absorbing mission context...")
-            catalyst.absorb_skill("Sovereign_Operational_Mode", {"name": "Elite Intelligence", "complexity": 5})
-
-        # 1. Basic Health check
-        NeuralWatchdog.monitor_health()
-        alive = SelfUpdateEngine.health_check_gateway()
-        if not alive: 
-            log.warning("⚠️ Gateway unreachable. Attempting self-rejuvenation...")
-            # Logic to ping other nodes or restart services
+        # 1. Connectivity Health Check
+        try:
+            if not SelfUpdateEngine.health_check_gateway():
+                log.warning("⚠️ Gateway Connection Latency Detected.")
+        except: pass
         
-        # 2. Autonomous Learning & Maintenance Phase (Reduced frequency to save tokens)
-        if cycle % 720 == 0: # Every 12 hours
-            SovereignMaintenance.run_full_audit()
+        # 3. Proactive Scene Intelligence (v17.1)
+        try:
+            summary_resp = requests.get(f"{GATEWAY}/agent/summary", headers=HEADERS, timeout=10)
+            summary = summary_resp.json()
+            last_ss = summary.get("agent", {}).get("last_screenshot")
             
-        if cycle % 1440 == 0: # Every 24 hours
-            LearningEngine.knowledge_refresh()
-            SovereignUpdater.check_for_updates()
+            if last_ss and last_ss != getattr(self, "_last_analyzed_ss", ""):
+                log.info(f"👁️ Proactive Vision: Analyzing scene {last_ss}...")
+                analysis = VisionEngine.analyze_screenshot(last_ss, "Analyze this Android screen. Is there any sensitive data, security risks, or important notifications? Respond briefly.")
+                
+                if "risk" in analysis.lower() or "warning" in analysis.lower() or "important" in analysis.lower():
+                    msg = f"⚠️ **PROACTIVE ALERT**: {analysis}"
+                    PhasedLearning.send_telegram(msg, important=True)
+                
+                self._last_analyzed_ss = last_ss
+        except: pass
 
-        # 3. Laporan Berkala & Evolusi (Sangat jarang, setiap 12 Jam)
-        if elapsed >= 43200:
-            SelfEvolutionEngine.generate_progress_report()
-            SelfEvolutionEngine.run_daily_discovery()
-            start_time = time.time() 
-
-        time.sleep(60) # Faster response: Check every minute instead of 5 minutes
+        time.sleep(60)
 
 if __name__ == "__main__":
     run()

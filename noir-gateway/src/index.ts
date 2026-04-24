@@ -1,18 +1,20 @@
-import { Hono } from 'hono';
+import { Hono, Context, Next } from 'hono';
 import { cors } from 'hono/cors';
 
 type Bindings = {
   DB: D1Database;
-  BUCKET: R2Bucket;
+  STORAGE: R2Bucket;
   API_KEY: string;
 };
 
-const app = new Hono<{ Bindings: Bindings }>();
+type Env = { Bindings: Bindings };
+
+const app = new Hono<Env>();
 
 app.use('*', cors());
 
 // Authentication Middleware
-app.use('*', async (c, next) => {
+app.use('*', async (c: Context<Env>, next: Next) => {
   if (c.req.path === '/' || c.req.path === '/health') return await next();
   const auth = c.req.header('Authorization');
   if (auth !== `Bearer ${c.env.API_KEY}`) {
@@ -21,12 +23,12 @@ app.use('*', async (c, next) => {
   await next();
 });
 
-app.get('/', (c) => c.text('Noir Sovereign Gateway v14.0 ACTIVE'));
-app.get('/health', (c) => c.json({ status: 'ok', version: '14.0' }));
+app.get('/', (c: Context<Env>) => c.text('Noir Sovereign Gateway v14.0 ACTIVE'));
+app.get('/health', (c: Context<Env>) => c.json({ status: 'ok', version: '14.0' }));
 
 // --- AGENT ENDPOINTS ---
 
-app.post('/agent/register', async (c) => {
+app.post('/agent/register', async (c: Context<Env>) => {
   const data = await c.req.json();
   const { device_id, agent, stats } = data;
   await c.env.DB.prepare(
@@ -35,30 +37,49 @@ app.post('/agent/register', async (c) => {
   return c.json({ status: 'ok' });
 });
 
-app.get('/agent/poll', async (c) => {
-  const device_id = c.req.query('device_id') || 'UNKNOWN';
-  
-  // Update activity timestamp
-  await c.env.DB.prepare(
-    'UPDATE agents SET last_seen = CURRENT_TIMESTAMP WHERE device_id = ?'
-  ).bind(device_id).run();
+app.all('/agent/poll', async (c: Context<Env>) => {
+  const device_id = (c.req.query('device_id') || 'UNKNOWN') as string;
+  let stats = null;
 
-  // v16 Fix: Only fetch commands specifically targeted to this device or global (null)
+  if (c.req.method === 'POST') {
+    try {
+      const body = await c.req.json();
+      stats = body.stats;
+    } catch {}
+  }
+  
+  // Update activity timestamp and stats if provided
+  if (stats) {
+    await c.env.DB.prepare(
+      "INSERT INTO agents (device_id, name, last_seen, stats) VALUES (?, 'Agent', datetime('now'), ?) ON CONFLICT(device_id) DO UPDATE SET last_seen=excluded.last_seen, stats=excluded.stats"
+    ).bind(device_id, JSON.stringify(stats)).run();
+  } else {
+    await c.env.DB.prepare(
+      'UPDATE agents SET last_seen = CURRENT_TIMESTAMP WHERE device_id = ?'
+    ).bind(device_id).run();
+  }
+
+  // Fetch pending commands
   const cmds = await c.env.DB.prepare(
     "SELECT id, action FROM commands WHERE (target_device = ? OR target_device IS NULL) AND status = 'pending' LIMIT 5"
   ).bind(device_id).all();
   
-  if (cmds.results.length > 0) {
-    const ids = cmds.results.map(r => r.id);
+  const results = cmds.results as unknown as { id: string; action: string }[];
+  
+  if (results.length > 0) {
+    const ids = results.map(r => r.id);
     await c.env.DB.prepare(
       `UPDATE commands SET status = 'sent' WHERE id IN (${ids.map(() => '?').join(',')})`
     ).bind(...ids).run();
   }
   
-  return c.json({ commands: cmds.results.map(r => ({ command_id: r.id, action: JSON.parse(r.action as string) })) });
+  return c.json({ 
+    status: 'ok',
+    commands: results.map(r => ({ command_id: r.id, action: JSON.parse(r.action) })) 
+  });
 });
 
-app.post('/agent/result', async (c) => {
+app.post('/agent/result', async (c: Context<Env>) => {
   const data = await c.req.json();
   const { command_id, device_id, telemetry } = data;
   
@@ -77,14 +98,14 @@ app.post('/agent/result', async (c) => {
   return c.json({ status: 'ok' });
 });
 
-app.post('/agent/upload', async (c) => {
+app.post('/agent/upload', async (c: Context<Env>) => {
   const body = await c.req.parseBody();
   const device_id = (c.req.query('device_id') || body.device_id || 'UNKNOWN') as string;
-  const file = body.file as File;
+  const file = body.file as unknown as File;
   const ext = file.name.split('.').pop() || 'png';
   const key = `ss_${Date.now()}.${ext}`;
   
-  await c.env.BUCKET.put(key, await file.arrayBuffer(), {
+  await c.env.STORAGE.put(key, await file.arrayBuffer(), {
     httpMetadata: { contentType: file.type || 'image/png' }
   });
   
@@ -101,11 +122,18 @@ app.post('/agent/upload', async (c) => {
 
 // --- DASHBOARD ENDPOINTS ---
 
-app.get('/agent/summary', async (c) => {
+app.get('/agent/summary', async (c: Context<Env>) => {
   const agents = await c.env.DB.prepare('SELECT * FROM agents ORDER BY last_seen DESC').all();
   const commands = await c.env.DB.prepare('SELECT id, description, status, result, updated_at FROM commands ORDER BY updated_at DESC LIMIT 10').all();
   
-  const agent = agents.results[0] as any || null;
+  const agentResults = agents.results as unknown as {
+    name: string;
+    last_seen: string;
+    stats: string;
+    last_screenshot: string;
+  }[];
+  
+  const agent = agentResults[0] || null;
   // Use Unix timestamps for reliable online check
   const last_seen_unix = agent ? new Date(agent.last_seen + 'Z').getTime() : 0;
   const is_online = agent ? (Date.now() - last_seen_unix < 60000) : false;
@@ -115,21 +143,21 @@ app.get('/agent/summary', async (c) => {
     agent: agent ? {
       name: agent.name,
       last_seen: agent.last_seen,
-      stats: JSON.parse(agent.stats as string || '{}'),
+      stats: JSON.parse(agent.stats || '{}'),
       last_screenshot: agent.last_screenshot
     } : null,
     commands: commands.results
   });
 });
 
-app.get('/agent/assets', async (c) => {
-  const objects = await c.env.BUCKET.list({ limit: 20 });
-  return c.json(objects.objects.map(o => ({ key: o.key, uploaded: o.uploaded })));
+app.get('/agent/assets', async (c: Context<Env>) => {
+  const objects = await c.env.STORAGE.list({ limit: 20 });
+  return c.json(objects.objects.map((o: any) => ({ key: o.key, uploaded: o.uploaded })));
 });
 
-app.get('/agent/asset/:key', async (c) => {
+app.get('/agent/asset/:key', async (c: Context<Env>) => {
   const key = c.req.param('key');
-  const object = await c.env.BUCKET.get(key);
+  const object = await c.env.STORAGE.get(key);
   if (!object) return c.text('Not Found', 404);
   
   const headers = new Headers();
@@ -139,7 +167,7 @@ app.get('/agent/asset/:key', async (c) => {
   return new Response(object.body, { headers });
 });
 
-app.get('/agent/logs', async (c) => {
+app.get('/agent/logs', async (c: Context<Env>) => {
   const device_id = c.req.query('device_id');
   const logs = await c.env.DB.prepare(
     "SELECT * FROM logs WHERE device_id = ? ORDER BY created_at DESC LIMIT 50"
@@ -147,7 +175,7 @@ app.get('/agent/logs', async (c) => {
   return c.json(logs.results);
 });
 
-app.post('/agent/log', async (c) => {
+app.post('/agent/log', async (c: Context<Env>) => {
   const data = await c.req.json();
   const { device_id, level, message } = data;
   await c.env.DB.prepare(
@@ -160,22 +188,24 @@ app.post('/agent/log', async (c) => {
   return c.json({ ok: true });
 });
 
-app.get('/brain/poll', async (c) => {
+app.get('/brain/poll', async (c: Context<Env>) => {
   const cmds = await c.env.DB.prepare(
     "SELECT id, action, description FROM commands WHERE status = 'pending' AND description LIKE '%Priority Social Media%' LIMIT 5"
   ).all();
   
-  if (cmds.results.length > 0) {
-    const ids = cmds.results.map(r => r.id);
+  const results = cmds.results as unknown as { id: string; action: string; description: string }[];
+  
+  if (results.length > 0) {
+    const ids = results.map(r => r.id);
     await c.env.DB.prepare(
       `UPDATE commands SET status = 'done' WHERE id IN (${ids.map(() => '?').join(',')})`
     ).bind(...ids).run();
   }
   
-  return c.json({ alerts: cmds.results.map(r => ({ alert_id: r.id, action: JSON.parse(r.action as string), desc: r.description })) });
+  return c.json({ alerts: results.map(r => ({ alert_id: r.id, action: JSON.parse(r.action), desc: r.description })) });
 });
 
-app.post('/agent/command', async (c) => {
+app.post('/agent/command', async (c: Context<Env>) => {
   const data = await c.req.json();
   const { action, description, target_device } = data;
   const id = crypto.randomUUID().split('-')[0].toUpperCase();
@@ -188,7 +218,7 @@ app.post('/agent/command', async (c) => {
   return c.json({ status: 'queued', command_id: id });
 });
 
-app.get('/admin/migrate', async (c) => {
+app.get('/admin/migrate', async (c: Context<Env>) => {
   try {
     await c.env.DB.prepare(`
       ALTER TABLE commands ADD COLUMN target_device TEXT;

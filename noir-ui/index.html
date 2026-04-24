@@ -267,14 +267,12 @@
         }
 
         const PAGES = {
-            vision: {
-                title: "VISION HUB",
-                menu: [
-                    { label: "Capture Screen", cmd: 'screenshot' },
-                    { label: "Pop-out Mirror", cmd: 'mirror_ui', custom: toggleMirror },
-                    { label: "Extract UI Metadata", cmd: 'ui_dump' }
-                ],
-                render: () => `<img id="v-stream" class="vision-feed" src="/api/asset/latest" alt="Vision Stream">`
+                render: () => `
+                    <div style="position:relative; width:100%; height:100%;">
+                        <img id="v-stream" class="vision-feed" src="/api/asset/latest" alt="Vision Stream" onclick="handleVisionClick(event)">
+                        <div id="click-feedback" style="position:absolute; width:20px; height:20px; border:2px solid var(--accent); border-radius:50%; display:none; pointer-events:none; transform:translate(-50%, -50%); box-shadow: 0 0 10px var(--accent);"></div>
+                    </div>
+                `
             },
             sensors: {
                 title: "SENSOR ARRAY",
@@ -312,14 +310,27 @@
                 title: "NEURAL EVOLUTION",
                 menu: [
                     { label: "Trigger Learning", cmd: 'learn' },
-                    { label: "Optimize Logic", cmd: 'optimize' }
+                    { label: "Sync Evolution", custom: loadEvolution }
                 ],
                 render: () => `
-                    <div style="padding:25px;">
-                        <h4 style="color:var(--gold);">Skill Manifest:</h4>
-                        <div id="skill-box">Loading...</div>
-                        <h4 style="color:var(--gold); margin-top:20px;">Upgrade Proposals:</h4>
-                        <div id="proposal-box">Analyzing...</div>
+                    <div style="padding:25px; display:grid; grid-template-columns: 1fr 1fr; gap:25px;">
+                        <div class="glass" style="padding:20px;">
+                            <h4 style="color:var(--gold); margin-bottom:15px; font-family:'Orbitron'; font-size:0.8rem;">🧬 SKILL MANIFEST</h4>
+                            <div id="skill-box" style="display:flex; flex-wrap:wrap; gap:10px;">Loading...</div>
+                        </div>
+                        <div class="glass" style="padding:20px; border-left: 3px solid var(--accent);">
+                            <h4 style="color:var(--accent); margin-bottom:15px; font-family:'Orbitron'; font-size:0.8rem;">🧠 AUTONOMOUS RESEARCH</h4>
+                            <div style="margin-bottom:15px;">
+                                <input id="learning-directive" type="text" placeholder="Set Learning Target (e.g. Cyber Security)..." 
+                                       style="width:100%; background:rgba(0,0,0,0.3); border:1px solid #444; color:#fff; padding:8px; border-radius:4px; font-size:0.8rem;">
+                                <button onclick="setDirective()" class="status-badge" style="margin-top:10px; cursor:pointer; width:100%; border-color:var(--accent); color:var(--accent);">🎯 UPDATE DIRECTIVE</button>
+                            </div>
+                            <div id="proposal-box" style="font-size:0.85rem; line-height:1.6; color:#aaa; max-height:200px; overflow-y:auto;">Analyzing codebase...</div>
+                            <div id="proposal-actions" style="margin-top:20px; display:none; gap:10px;">
+                                <button onclick="executeCmd('approve_evolution')" class="status-badge" style="cursor:pointer; border-color:var(--success); color:var(--success);">✅ APPROVE</button>
+                                <button onclick="executeCmd('deny_evolution')" class="status-badge" style="cursor:pointer; border-color:var(--danger); color:var(--danger);">❌ DISMISS</button>
+                            </div>
+                        </div>
                     </div>
                 `
             },
@@ -357,9 +368,19 @@
                             <span>DIAGNOSTIC TELEMETRY (REAL-TIME)</span>
                             <span style="cursor:pointer;" onclick="clearLogs()">CLEAR</span>
                         </div>
-                        <div id="log-terminal" style="flex:1; background:rgba(0,0,0,0.5); font-family:monospace; font-size:0.7rem; padding:10px; overflow-y:auto; color:#0f0; min-height:200px; border:1px solid rgba(255,215,0,0.1);">
-                            [SYSTEM] Noir Sovereign ELITE v16.0.03 Online.
+                        <div id="log-terminal" style="flex:1; background:rgba(0,0,0,0.5); font-family:monospace; font-size:0.7rem; padding:10px; overflow-y:auto; color:#0f0; min-height:100px; border:1px solid rgba(255,215,0,0.1);">
+                            [SYSTEM] Noir Sovereign ELITE v17.1 Online.
                         </div>
+                    </div>
+
+                    <!-- v17.1 CRITICAL AUTHORITY -->
+                    <div class="glass" style="margin:0 25px 25px; padding:20px; border-left: 3px solid var(--danger);">
+                        <h4 style="color:var(--danger); margin-bottom:15px; font-family:'Orbitron'; font-size:0.8rem;">🚨 CRITICAL AUTHORITY</h4>
+                        <div style="display:flex; gap:15px;">
+                            <button onclick="executeCmd('system_shutdown')" class="status-badge" style="cursor:pointer; flex:1; border-color:var(--danger); color:var(--danger); background:rgba(255,0,0,0.1);">🛑 SOVEREIGN KILL SWITCH</button>
+                            <button onclick="executeCmd('system_sleep')" class="status-badge" style="cursor:pointer; flex:1; border-color:var(--gold); color:var(--gold);">💤 DEEP SLEEP</button>
+                        </div>
+                        <p style="font-size:0.6rem; color:#888; margin-top:10px; font-style:italic;">Warning: Shutdown will terminate all background learning and monitoring processes immediately.</p>
                     </div>
                 `
             }
@@ -441,6 +462,11 @@
                     if(document.getElementById('s-bat')) {
                         const val = s.bat || '--';
                         document.getElementById('s-bat').innerText = `${val}%`;
+                    }
+                    if(document.getElementById('status-text')) {
+                        const priv = s.privacy || 'ACTIVE';
+                        document.getElementById('status-text').innerText = `SYNC: REDMI_NOTE_14 | ${priv}`;
+                        document.getElementById('status-text').style.color = priv === 'PROTECTED' ? 'var(--danger)' : 'var(--success)';
                     }
                     
                     if(d.agent.last_screenshot) {
@@ -527,10 +553,30 @@
         }
 
         async function loadEvolution() {
-            const r = await fetch(`${API}/skills`);
-            const d = await r.json();
-            document.getElementById('skill-box').innerHTML = d.active.map(s => `<span>${s}</span>`).join(' ');
-            document.getElementById('proposal-box').innerText = d.proposal;
+            try {
+                const r = await fetch(`${API}/skills`);
+                const d = await r.json();
+                
+                const skillBox = document.getElementById('skill-box');
+                if(skillBox) {
+                    skillBox.innerHTML = d.active.map(s => `<span class="status-badge" style="font-size:0.6rem;">${s}</span>`).join(' ');
+                }
+                
+                const propBox = document.getElementById('proposal-box');
+                const propActions = document.getElementById('proposal-actions');
+                
+                if(propBox) {
+                    if(d.proposal && d.proposal !== "Analyzing...") {
+                        propBox.innerHTML = `<div style="color:#fff; margin-bottom:10px;">${d.title || 'Evolution v17.1'}</div>${d.proposal}`;
+                        if(propActions) propActions.style.display = 'flex';
+                    } else {
+                        propBox.innerText = "No pending evolution proposals. Researcher is idle.";
+                        if(propActions) propActions.style.display = 'none';
+                    }
+                }
+            } catch(e) {
+                console.error("Evolution Sync Failed", e);
+            }
         }
 
         function handleIn(e) { if(e.key === 'Enter') sendChat(); }
@@ -550,14 +596,46 @@
             box.appendChild(d); box.scrollTop = box.scrollHeight;
         }
 
-        // v16.1 STRIKE-FORCE: Neural Link Sanitization (Nuclear Purge)
-        if(localStorage.getItem('noir_version') !== '16.1') {
+        // v16.3 GUARDIAN: Neural Link Sanitization (Privacy Protocol)
+        if(localStorage.getItem('noir_version') !== '16.3') {
             localStorage.clear();
-            localStorage.setItem('noir_version', '16.1');
-            console.log("NEURAL LINK SANITIZED for v16.1");
+            localStorage.setItem('noir_version', '16.3');
+            console.log("NEURAL LINK SANITIZED for v16.3");
         }
 
         showPage('vision');
+        function handleVisionClick(e) {
+            const img = e.target;
+            const feedback = document.getElementById('click-feedback');
+            
+            // Calculate coordinates relative to image (0-100%)
+            const rect = img.getBoundingClientRect();
+            const xPercent = (e.clientX - rect.left) / rect.width;
+            const yPercent = (e.clientY - rect.top) / rect.height;
+            
+            // Map to Redmi Note 14 Screen Resolution (Assuming 1080x2400)
+            const targetX = Math.round(xPercent * 1080);
+            const targetY = Math.round(yPercent * 2400);
+            
+            // Show Feedback
+            if(feedback) {
+                feedback.style.left = `${e.clientX - rect.left}px`;
+                feedback.style.top = `${e.clientY - rect.top}px`;
+                feedback.style.display = 'block';
+                setTimeout(() => feedback.style.display = 'none', 500);
+            }
+            
+            updateTerminal(`INTERACTIVE CLICK: ${targetX}, ${targetY}`, 'var(--accent)');
+            executeCmd('click', { x: targetX, y: targetY });
+        }
+
+        function setDirective() {
+            const val = document.getElementById('learning-directive').value;
+            if(!val) return;
+            updateTerminal(`SETTING LEARNING DIRECTIVE: ${val}`, 'var(--gold)');
+            executeCmd('set_learning_target', { target: val });
+        }
+
         setInterval(syncStatus, 3000);
     </script>
 </body>

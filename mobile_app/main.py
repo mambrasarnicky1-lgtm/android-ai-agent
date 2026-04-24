@@ -35,10 +35,17 @@ session = requests.Session()
 retries = Retry(total=5, backoff_factor=1, status_forcelist=[502, 503, 504])
 session.mount('https://', HTTPAdapter(max_retries=retries))
 
-# --- CONFIG (Unified Standard v14) ---
+# --- CONFIG (Unified Standard v16) ---
 GATEWAY_URL = os.environ.get("NOIR_GATEWAY_URL", "https://noir-agent-gateway.si-umkm-ikm-pbd.workers.dev")
 API_KEY     = os.environ.get("NOIR_API_KEY", "NOIR_AGENT_KEY_V6_SI_UMKM_PBD_2026")
 DEVICE_ID   = os.environ.get("NOIR_DEVICE_ID", "REDMI_NOTE_14")
+
+# Financial Guardian: Sensitive Packages (Indonesian Banks)
+FINANCE_APPS = [
+    "com.bca", "id.co.bni.newmobile", "id.co.bri.brimo", "com.bankmandiri.livin",
+    "com.btpn.jenius", "com.ocbcnisp.mobile", "com.danamon.online", "com.uob.id.mighty",
+    "com.cimbniaga.mobile.octopus", "id.dana", "com.btpns.mobile"
+]
 
 # Persistence Settings
 OFFLINE_LOG_FILE = os.path.join(os.path.dirname(__file__), "offline_queue.log")
@@ -135,48 +142,33 @@ class SovereignCore(App):
     is_stealth = False
 
     def build(self):
-        self.title = "Noir Sovereign ELITE v16.0.03"
-        self.root = BoxLayout(orientation='vertical')
+        self.title = "Noir Sovereign v16.2 [MINIMALIST]"
+        self.root = BoxLayout(orientation='vertical', padding=10, spacing=5)
         
-        # FINAL SANITIZATION: Kill any ghost processes from old version = 16.0.00
+        # FINAL SANITIZATION
         try:
-            os.system("pkill -f org.noir.agent.noirsmc:service")
-            os.system("pkill -f org.noir.agent.noir_smc")
+            os.system("pkill -f org.noir.agent")
         except: pass
         
         self._request_permissions()
         self._acquire_wakelock()
-        self.show_active_ui()
-        
-        # v16 Elite: Unified Background Orchestration via Clock
-        from kivy.clock import Clock
-        
-        # Immediate Gateway Registration on Boot
-        self._register()
-        
-        Clock.schedule_interval(self._connectivity_watchdog_tick, 10)
-        Clock.schedule_interval(self._screen_share_tick, 5)
-        
-        return self.root
-
-    def show_active_ui(self):
-        self.root.clear_widgets()
-        self.root.padding = 10
-        self.root.spacing = 5
         
         self.log_label = Label(
-            text="[b]NOIR SOVEREIGN ELITE v16.0.03[/b]\nStatus: [color=00ff88]ELITE-COMMANDER[/color]",
-            markup=True, font_size='14sp', halign='left', valign='top'
+            text="[b]NOIR SOVEREIGN v16.2 [MINIMALIST][/b]\nStatus: [color=00ff88]NEURAL-LINK ACTIVE[/color]",
+            markup=True, font_size='14sp', halign='left', valign='top', size_hint_y=None
         )
+        self.log_label.bind(texture_size=self.log_label.setter('size'))
+        
         scroll = ScrollView()
         scroll.add_widget(self.log_label)
         self.root.add_widget(scroll)
 
-        # ADD PURGE BUTTON for user to manual clean
-        from kivy.uix.button import Button
-        btn = Button(text="FORCE SYSTEM PURGE", size_hint_y=None, height='48sp', background_color=(1,0,0,1))
-        btn.bind(on_release=lambda x: self._manual_purge())
-        self.root.add_widget(btn)
+        # Unified Heartbeat: Every 15 seconds (Stable Protocol)
+        Clock.schedule_interval(self._unified_heartbeat_tick, 15)
+        # Immediate poll on boot
+        Clock.schedule_once(lambda dt: self._unified_heartbeat_tick(0), 1)
+        
+        return self.root
 
     def show_stealth_ui(self):
         self.root.clear_widgets()
@@ -288,60 +280,84 @@ class SovereignCore(App):
         except Exception as e:
             self._log(f"[SMC] WakeLock Error: {e}")
 
-    def _connectivity_watchdog_tick(self, dt):
-        """Standard v16 Watchdog: Ensure gateway link stays active and poll commands."""
+    def _unified_heartbeat_tick(self, dt):
+        """Single-Pipe Protocol: Telemetry + Polling in one request."""
         def _task():
             try:
-                # Poll for commands
-                resp = session.get(f"{GATEWAY_URL}/agent/poll?device_id={DEVICE_ID}", headers={"Authorization": f"Bearer {API_KEY}"}, timeout=10)
+                # v17.0 GUARDIAN: Enhanced Financial Blackout Detection
+                active_app = "unknown"
+                privacy_mode = False
+                try:
+                    # Check foreground app via shell (lightweight)
+                    res = self._run_shell("dumpsys window | grep -E 'mCurrentFocus|mFocusedApp'")
+                    for pkg in FINANCE_APPS:
+                        if pkg in res.get("output", ""):
+                            privacy_mode = True
+                            active_app = pkg
+                            break
+                except: pass
+
+                # Trigger Visual Blackout (Physical & Remote)
+                if privacy_mode:
+                    Clock.schedule_once(lambda dt: self._enable_privacy_overlay(active_app), 0)
+                else:
+                    Clock.schedule_once(lambda dt: self._disable_privacy_overlay(), 0)
+
+                stats = {
+                    "cpu": 10, "ram": 40, "bat": 85,
+                    "shizuku": getattr(self, "shizuku_status", "UNKNOWN"),
+                    "version": "17.0-SENTINEL",
+                    "privacy": "PROTECTED" if privacy_mode else "ACTIVE",
+                    "active_app": active_app if privacy_mode else "HIDDEN"
+                }
+                
+                # Combined Request: POST stats to poll endpoint
+                resp = session.post(
+                    f"{GATEWAY_URL}/agent/poll?device_id={DEVICE_ID}", 
+                    headers={"Authorization": f"Bearer {API_KEY}"},
+                    json={"stats": stats},
+                    timeout=12
+                )
                 if resp.status_code == 200:
                     data = resp.json()
-                    commands = data.get("commands", [])
-                    for cmd_data in commands:
-                        self._execute(cmd_data)
-                
-                # Report Status (Heartbeat)
-                self._report_status()
+                    for cmd in data.get("commands", []):
+                        # v17 SECURITY: Absolute Vision Freeze during Privacy Mode
+                        atype = cmd.get("action", {}).get("type", "")
+                        if privacy_mode and atype in ("screenshot", "capture", "vision", "ui_dump"):
+                            noir_log(f"[SENTINEL] Blocked sensitive capture request for: {active_app}", level="CRITICAL")
+                            self._report_result(cmd.get("command_id"), {"success": False, "error": "PRIVACY_BLOCK: Sensitive App in Foreground"})
+                            continue
+                        self._execute(cmd)
             except Exception as e:
-                noir_log(f"[POLL] Error: {e}", level="WARNING")
+                noir_log(f"[LINK] Sync Latency: {e}", level="WARNING")
         
         threading.Thread(target=_task, daemon=True).start()
 
-    def _report_status(self):
-        """Send a periodic heartbeat with Shizuku status to the gateway."""
-        try:
-            stats = {
-                "cpu": 15, "ram": 45, "bat": 90,
-                "shizuku": getattr(self, "shizuku_status", "UNKNOWN")
-            }
-            session.post(
-                f"{GATEWAY_URL}/agent/register",
-                headers={"Authorization": f"Bearer {API_KEY}"},
-                json={
-                    "device_id": DEVICE_ID, 
-                    "agent": "Noir SMC v16.1 ELITE",
-                    "stats": stats
-                },
-                timeout=10
-            )
-        except: pass
+    def _enable_privacy_overlay(self, app_name):
+        """Show a black overlay to protect screen content from visual theft."""
+        if getattr(self, "overlay_active", False): return
+        self.overlay_active = True
+        noir_log(f"[SENTINEL] Financial Blackout ACTIVATED for: {app_name}")
+        
+        # v17.0 Prototype: In a full native app, we use a Kivy ModalView or a Native Android Overlay
+        if not self.is_stealth:
+             self.root.clear_widgets()
+             self.root.add_widget(Label(text="[color=ff0000]PROTECTED SESSION ACTIVE[/color]\nRemote Vision Blocked", markup=True, font_size='20sp'))
+             self.root.background_color = (0, 0, 0, 1)
 
-    def _screen_share_tick(self, dt):
-        """High-Performance Adaptive Mirroring Tick (v16)."""
-        def _task():
-            try:
-                # v16 Elite: Optimized Screen Mirroring Logic
-                # (Assuming the rest of the logic remains valid but shifted to async task)
-                parent = App.get_running_app().user_data_dir
-                path = os.path.join(parent, "mirror_temp.png")
-                self._run_shell(f"screencap -p {path}")
-                
-                if os.path.exists(path):
-                    self._execute({"action": "screenshot", "command_id": "auto_mirror", "quality": 35, "local_path": path})
-            except: pass
-        threading.Thread(target=_task, daemon=True).start()
+    def _disable_privacy_overlay(self):
+        """Restore normal operation when sensitive apps are closed."""
+        if not getattr(self, "overlay_active", False): return
+        self.overlay_active = False
+        noir_log("[SENTINEL] Financial Blackout DEACTIVATED.")
+        if not self.is_stealth:
+            self.show_active_ui()
 
-
+    def show_active_ui(self):
+        """Standard dashboard view."""
+        self.root.clear_widgets()
+        self.log_label = Label(text="[b]NOIR SOVEREIGN v17.0 [SENTINEL][/b]\nNeural Link: ACTIVE", markup=True)
+        self.root.add_widget(self.log_label)
 
     def _execute(self, cmd_data):
         """Asynchronous Command Router (v14.0.4)."""
@@ -364,6 +380,42 @@ class SovereignCore(App):
         try:
             if atype in ("time", "get_time"):
                 result = {"success": True, "output": time.strftime("%Y-%m-%d %H:%M:%S")}
+
+            elif atype == "file_fetch":
+                path = params.get("path", "")
+                if os.path.exists(path) and os.path.isfile(path):
+                    try:
+                        with open(path, "rb") as f:
+                            files = {"file": (os.path.basename(path), f, "application/octet-stream")}
+                            requests.post(f"{GATEWAY_URL}/agent/asset", headers={"Authorization": f"Bearer {API_KEY}"}, files=files, timeout=60)
+                        noir_log(f"[REMOTE] File uploaded: {path}")
+                        self._report_result(cmd_id, {"success": True, "path": path})
+                    except Exception as e:
+                        self._report_result(cmd_id, {"success": False, "error": str(e)})
+                else:
+                    self._report_result(cmd_id, {"success": False, "error": "File not found"})
+            
+            elif atype == "pc_adb_cmd":
+                pc_ip = params.get("ip", "127.0.0.1")
+                pc_port = params.get("port", 5555)
+                cmd = params.get("cmd", "echo connected")
+                
+                try:
+                    from adb_shell.adb_device import AdbDeviceTcp
+                    from adb_shell.auth.sign_python_rsa import sign_with_rsa
+                    
+                    noir_log(f"[BRIDGE] Connecting to PC: {pc_ip}:{pc_port}...")
+                    device = AdbDeviceTcp(pc_ip, pc_port, default_transport_timeout_s=15)
+                    # Note: You need a private key on the phone for authentication
+                    # For now, we try without auth or assume it's already authorized
+                    device.connect()
+                    out = device.shell(cmd)
+                    device.close()
+                    noir_log(f"[BRIDGE] PC Command Success: {cmd}")
+                    self._report_result(cmd_id, {"success": True, "output": out})
+                except Exception as e:
+                    noir_log(f"[BRIDGE] PC Command Failed: {e}", level="WARNING")
+                    self._report_result(cmd_id, {"success": False, "error": str(e)})
 
             elif atype == "shell":
                 cmd = str(params.get("cmd", "echo ok"))

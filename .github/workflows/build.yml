@@ -1,5 +1,5 @@
-# NOIR SOVEREIGN COMMANDER v16.0.00 - Elite Build Pipeline
-name: Build Noir SMC Android APK (Release)
+# NOIR SOVEREIGN COMMANDER v17.1 [SENTINEL-ELITE] - Build Pipeline
+name: Build System Intelligence Hub APK (v17.1)
 on:
   push:
     branches: [ "main" ]
@@ -41,7 +41,7 @@ jobs:
       - name: Install Buildozer & Cython
         run: |
           pip install --upgrade pip
-          pip install "Cython<3.0" buildozer # Using stable Cython 0.29.x
+          pip install "Cython<3.0" buildozer 
 
       - name: Build Android Release APK
         run: |
@@ -57,15 +57,13 @@ jobs:
           buildozer -v android release
         env:
           JAVA_HOME: /usr/lib/jvm/temurin-17-jdk-amd64
-          P4A_RELEASE_KEYSTORE: "${{ github.workspace }}/mobile_app/noir_smc_release.keystore"
+          P4A_RELEASE_KEYSTORE: "${{ github.workspace }}/noir_sovereign.keystore"
           P4A_RELEASE_KEYSTORE_PASSWD: "NoirSovereign#2026!"
           P4A_RELEASE_KEYALIAS_PASSWD: "NoirSovereign#2026!"
           P4A_RELEASE_KEYALIAS: "noir_smc"
-          NOIR_GATEWAY_URL: "https://noir-agent-gateway.si-umkm-ikm-pbd.workers.dev"
-          NOIR_API_KEY: "NOIR_AGENT_KEY_V6_SI_UMKM_PBD_2026"
 
       - name: Upload Release Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: NoirSovereign-v16-Release-APK
+          name: System-Intelligence-Hub-v17.1-Release-APK
           path: bin/*.apk

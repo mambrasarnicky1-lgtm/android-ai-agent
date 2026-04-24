@@ -37,7 +37,7 @@ class NoirManager:
         return out, err
 
     def deploy_vps(self):
-        print("[PROCESS] Syncing to VPS (v16.0 ELITE)...")
+        print("[PROCESS] Syncing to VPS (v17.1 SENTINEL)...")
         if not self._connect(): return
         
         try:
@@ -45,7 +45,7 @@ class NoirManager:
             with SCPClient(self.ssh.get_transport()) as scp:
                 print("[SCP] Uploading project files...")
                 for item in os.listdir("."):
-                    if item in [".git", "venv", ".buildozer", "node_modules", "__pycache__", "bin"]: continue
+                    if item in [".git", "venv", ".buildozer", "node_modules", "__pycache__", "bin", "archive"]: continue
                     if item == "noir-gateway":
                         # Upload gateway but skip node_modules
                         temp_sync = os.path.join(os.getcwd(), "gateway_sync_tmp")
@@ -58,10 +58,11 @@ class NoirManager:
             
             self._run_remote("fuser -k 80/tcp || true")
             self._run_remote(f"cd {self.remote_path} && docker-compose down || true")
-            print("[PROCESS] Starting All Neural Services in Docker...")
+            print("[PROCESS] Starting All Neural Services in Docker (v17.1)...")
             self._run_remote(f"cd {self.remote_path} && docker-compose up -d --build")
             
-            print("[SUCCESS] v16.0 ELITE DEPLOYED.")
+            self.notify_telegram("🖤 *Noir Sovereign v17.1 Active*\nSemua layanan neural di VPS telah dideploy dan diaktifkan.")
+            print("[SUCCESS] v17.1 SENTINEL DEPLOYED.")
         except Exception as e:
             print(f"[ERROR] Deployment failed: {e}")
         finally:

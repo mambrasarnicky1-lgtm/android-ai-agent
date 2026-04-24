@@ -1,73 +1,84 @@
-import os, json, time
-import logging
-from datetime import datetime
+#!/usr/bin/env python3
+"""
+NOIR SOVEREIGN CATALYST (v17.1 PROPRIETARY)
+===========================================
+Meta-Learning Engine: Menyerap, membandingkan, dan mensintesis 
+pengetahuan dari berbagai AI Tools (Gemini, GPT, Claude, etc.)
+menjadi satu basis pengetahuan kedaulatan milik Noir.
+"""
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-log = logging.getLogger("NOIR_CATALYST")
+import os, json, logging, time, requests
+from ai_router import AIRouter
+
+log = logging.getLogger("SovereignCatalyst")
 
 class SovereignCatalyst:
-    """
-    Sovereign Catalyst v1.0
-    A proprietary AI meta-learning engine that absorbs skills from other models
-    and external sources to build a unique, task-oriented intelligence.
-    """
-    
-    KNOWLEDGE_FILE = os.path.join(os.path.dirname(__file__), "..", "knowledge", "catalyst_knowledge.json")
-    
     def __init__(self):
-        self.state = self.load_state()
-        self.is_ready = False
-        log.info("🚀 Sovereign Catalyst initialized. Absorption engine standing by.")
+        self.vault_path = "../knowledge/sovereign_intelligence.json"
+        if not os.path.exists("../knowledge"): os.makedirs("../knowledge")
 
-    def load_state(self):
-        if os.path.exists(self.KNOWLEDGE_FILE):
-            with open(self.KNOWLEDGE_FILE, 'r') as f:
-                return json.load(f)
-        return {
-            "version": "1.0",
-            "growth_level": 0.1,
-            "skills_absorbed": [],
-            "last_absorption": None,
-            "total_knowledge_points": 0
+    def absorb_and_synthesize(self, topic: str):
+        """Menyerap ilmu dari berbagai sumber AI dan mensintesisnya."""
+        log.info(f"🧬 CATALYST: Absorbing intelligence for topic: {topic}")
+        
+        # 1. Gather perspectives from multiple models (Simulated via different prompts/parameters)
+        # In a real multi-AI setup, we'd call different APIs here.
+        perspectives = {
+            "gemini": AIRouter.query_gemini(f"Deep dive analysis: {topic}. Focus on implementation."),
+            "reasoning": AIRouter.query_gemini(f"Critical review and security risks of: {topic}.")
         }
 
-    def save_state(self):
-        with open(self.KNOWLEDGE_FILE, 'w') as f:
-            json.dump(self.state, f, indent=4)
-
-    def absorb_skill(self, source_name, skill_data):
-        """Absorbs a specific skill or data point into the Catalyst brain."""
-        log.info(f"🧬 Absorbing knowledge from {source_name}...")
+        # 2. Synthesis (The Proprietary Part)
+        # Noir Catalyst akan membandingkan data dan membuat "Sovereign Synthesis"
+        synthesis_prompt = f"""
+        Analyze these two intelligence perspectives on '{topic}':
+        P1: {perspectives['gemini']}
+        P2: {perspectives['reasoning']}
         
-        # Logic to 'digest' and integrate the skill
-        new_skill = {
-            "name": skill_data.get("name"),
-            "source": source_name,
-            "timestamp": datetime.now().isoformat(),
-            "complexity": skill_data.get("complexity", 1)
+        Extract only the absolute best practices and create a structured 'Actionable Knowledge Package'.
+        Format as JSON with keys: [concept, implementation_steps, security_protocol, readiness_score].
+        """
+        
+        synthesis_raw = AIRouter.query_gemini(synthesis_prompt)
+        
+        try:
+            # Extract JSON and save to Private Vault
+            intelligence = json.loads(synthesis_raw[synthesis_raw.find("{"):synthesis_raw.rfind("}")+1])
+            self._save_to_vault(topic, intelligence)
+            return intelligence
+        except Exception as e:
+            log.error(f"Synthesis failed: {e}")
+            return {"error": "Synthesis error", "raw": synthesis_raw}
+
+    def _save_to_vault(self, topic, data):
+        """Simpan ke database intelijen Noir (Private Vault)."""
+        vault = {}
+        if os.path.exists(self.vault_path):
+            with open(self.vault_path, "r") as f:
+                vault = json.load(f)
+        
+        vault[topic] = {
+            "timestamp": time.time(),
+            "intelligence": data,
+            "status": "DORMANT" if data.get("readiness_score", 0) < 80 else "READY"
         }
         
-        self.state["skills_absorbed"].append(new_skill)
-        self.state["total_knowledge_points"] += new_skill["complexity"] * 10
-        self.state["growth_level"] = min(1.0, self.state["growth_level"] + 0.05)
-        self.state["last_absorption"] = datetime.now().isoformat()
+        with open(self.vault_path, "w") as f:
+            json.dump(vault, f, indent=4)
+        log.info(f"✅ Intelligence absorbed into Sovereign Vault: {topic}")
+
+    @staticmethod
+    def get_ready_tasks():
+        """Mengambil pengetahuan yang sudah 'READY' untuk dieksekusi."""
+        vault_path = "../knowledge/sovereign_intelligence.json"
+        if not os.path.exists(vault_path): return []
         
-        self.save_state()
-        return f"Catalyst Growth: {self.state['growth_level'] * 100:.1f}%"
-
-    def check_readiness(self):
-        # Catalyst is 'ready' when growth level is high or user manually activates
-        if self.state["growth_level"] >= 0.8:
-            self.is_ready = True
-        return self.is_ready
-
-    def execute_complex_mission(self, mission_desc):
-        if not self.is_ready:
-            return "❌ Catalyst is not yet mature enough for this mission. Current Growth: {:.1f}%".format(self.state["growth_level"] * 100)
+        with open(vault_path, "r") as f:
+            vault = json.load(f)
         
-        log.info(f"🔥 Catalyst executing Complex Mission: {mission_desc}")
-        # Here we would use the synthesized knowledge to perform multi-step reasoning
-        return "Sovereign Catalyst: Executing deep-reasoning sequence..."
+        return [k for k, v in vault.items() if v["status"] == "READY"]
 
-catalyst = SovereignCatalyst()
+if __name__ == "__main__":
+    catalyst = SovereignCatalyst()
+    # Test absorption
+    catalyst.absorb_and_synthesize("Advanced Kernel Injection Protection for Android")

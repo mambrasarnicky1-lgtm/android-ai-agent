@@ -11,13 +11,15 @@ class NLUProcessor:
         """Menormalisasi input dengan pendekatan hybrid (Local Mapping + AI)."""
         raw_text = text.lower().strip()
         
-        # 1. LOCAL FAST-MAPPING (Indonesian Context)
+        # 1. LOCAL FAST-MAPPING (Enhanced v17.0)
         local_mapping = {
-            "ss": "TAKE_SCREENSHOT", "screenshot": "TAKE_SCREENSHOT", "foto": "TAKE_SCREENSHOT",
-            "baterai": "GET_BATTERY", "batere": "GET_BATTERY", "battery": "GET_BATTERY",
-            "info": "GET_STATUS", "status": "GET_STATUS", "noir": "GET_STATUS",
-            "matiin": "SYSTEM_ACTION", "nyalain": "SYSTEM_ACTION", "hidupkan": "SYSTEM_ACTION",
-            "wifi": "WIFI_TOGGLE", "data": "DATA_TOGGLE", "bluetooth": "BT_TOGGLE"
+            "ss": "TAKE_SCREENSHOT", "screenshot": "TAKE_SCREENSHOT", "foto": "TAKE_SCREENSHOT", "layar": "TAKE_SCREENSHOT",
+            "baterai": "GET_BATTERY", "batere": "GET_BATTERY", "battery": "GET_BATTERY", "persen": "GET_BATTERY",
+            "info": "GET_STATUS", "status": "GET_STATUS", "noir": "GET_STATUS", "kondisi": "GET_STATUS",
+            "reboot": "SYSTEM_ACTION", "restart": "SYSTEM_ACTION", "matikan": "SYSTEM_ACTION", "hidupkan": "SYSTEM_ACTION",
+            "wifi": "WIFI_TOGGLE", "data": "DATA_TOGGLE", "bluetooth": "BT_TOGGLE",
+            "audit": "RUN_AUDIT", "periksa": "RUN_AUDIT", "cek": "RUN_AUDIT",
+            "upgrade": "SYSTEM_UPGRADE", "update": "SYSTEM_UPGRADE", "perbarui": "SYSTEM_UPGRADE"
         }
         
         for key, intent in local_mapping.items():
@@ -31,8 +33,14 @@ class NLUProcessor:
                     "slang_detected": True
                 }
 
-        # 2. AI DEEP NORMALIZATION (DISABLED in v16 Stabilization)
-        log.info(f"🚫 NLU: AI Normalization Disabled to save tokens -> {text}")
+        # 2. AI SMART NORMALIZATION (Re-enabled for Elite v17)
+        try:
+            prompt = f"Identify the intent of this message for an Android AI Agent. Return only the intent code (e.g. TAKE_SCREENSHOT, GET_BATTERY, SYSTEM_ACTION, RUN_AUDIT, or UNKNOWN). Message: '{raw_text}'"
+            intent = AIRouter.query_gemini(prompt).strip().upper()
+            if intent != "UNKNOWN":
+                return {"original": text, "normalized": raw_text, "intent": intent, "entities": {}, "slang_detected": False}
+        except: pass
+
         return {"original": text, "normalized": text, "intent": "UNKNOWN", "entities": {}, "slang_detected": False}
 
     @staticmethod

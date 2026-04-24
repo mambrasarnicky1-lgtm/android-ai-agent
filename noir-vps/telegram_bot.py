@@ -50,23 +50,14 @@ logging.basicConfig(
     ]
 )
 log = logging.getLogger("NoirTelegramBot")
-
 bot = TeleBot(BOT_TOKEN)
-log.info(f"🖤 Noir Sovereign Telegram Bot — Starting...")
-log.info(f"✅ Bot initialized. Target Chat ID: {CHAT_ID}")
-log.info(f"🔗 Gateway Link: {GATEWAY}")
 HEADERS = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
 
 SYSTEM_PROMPT = """
-You are the NOIR SOVEREIGN BRAIN. You control a Redmi Note 14 agent.
-If the user wants an action, YOU MUST include one of these tags in your response:
-- [ACTION:screenshot]
-- [ACTION:battery]
-- [ACTION:shell, cmd="command here"]
-- [ACTION:info]
-
-Example: "Sesuai perintah, saya akan mengambil screenshot sekarang. [ACTION:screenshot]"
-Respond in Indonesian. Be professional, cold, and sovereign.
+You are the NOIR SOVEREIGN BRAIN (v17.0). You control a Redmi Note 14 agent.
+Your tone is cold, efficient, and professional. 
+Respond in Indonesian.
+If the user asks for a physical action, you must interpret it and tell them you are executing it.
 """
 
 def cloud_cmd(action_type: str, params: dict = None, desc: str = "") -> dict:
@@ -74,204 +65,92 @@ def cloud_cmd(action_type: str, params: dict = None, desc: str = "") -> dict:
         r = requests.post(
             f"{GATEWAY}/agent/command",
             headers=HEADERS,
-            json={"action": {"type": action_type, **(params or {})}, "description": desc or action_type},
+            json={"action": {"type": action_type, **(params or {})}, "description": desc or action_type, "target_device": "REDMI_NOTE_14"},
             timeout=15
         )
         return r.json()
     except Exception as e:
         return {"error": str(e)}
 
-def is_authorized(msg) -> bool:
-    return not CHAT_ID or str(msg.chat.id) == CHAT_ID
-
-def make_menu():
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.row("📸 Screenshot", "🔋 Baterai")
-    markup.row("ℹ️ Info Agent", "📋 Histori")
-    markup.row("🖥️ Terminal", "🤖 Tanya AI")
-    return markup
-
-@bot.message_handler(commands=["start", "help"])
-def cmd_start(msg):
-    if not is_authorized(msg):
-        bot.reply_to(msg, "⛔ Akses ditolak.")
-        return
-    bot.send_message(
-        msg.chat.id,
-        "🖤 *NOIR SOVEREIGN CORE v14.0*\n\n"
-        "Kewenangan Mutlak: USER\n"
-        "Sistem AI: COMMANDER\n\n"
-        "🛠️ **Commands**:\n"
-        "/learn [topik] - Ajarkan AI skill baru\n"
-        "/skills - Lihat daftar skill otonom\n"
-        "/start - Menu utama",
-        parse_mode="Markdown",
-        reply_markup=make_menu()
-    )
-
-@bot.message_handler(commands=["learn"])
-def cmd_learn(msg):
-    if not is_authorized(msg): return
-    topic = msg.text.replace("/learn", "").strip()
-    if not topic:
-        bot.reply_to(msg, "💡 Gunakan: `/learn [topik]` (misal: `/learn image generator`)", parse_mode="Markdown")
+@bot.message_handler(commands=["fetch"])
+def cmd_fetch(msg):
+    if not CHAT_ID or str(msg.chat.id) != CHAT_ID: return
+    path = msg.text.replace("/fetch", "").strip()
+    if not path:
+        bot.reply_to(msg, "💡 Gunakan: `/fetch [path_file]` (misal: `/fetch /sdcard/Download/data.pdf`)", parse_mode="Markdown")
         return
     
-    bot.reply_to(msg, f"🧪 **EVOLUTION STARTED**: Mencari instrumen AI untuk `{topic}`...", parse_mode="Markdown")
-    tool = SkillAcquisitionEngine.discover_and_integrate(topic)
+    bot.reply_to(msg, f"🚚 **FILE FETCH INITIATED**: Mengambil `{os.path.basename(path)}` dari perangkat...", parse_mode="Markdown")
+    res = cloud_cmd("file_fetch", params={"path": path}, desc=f"Fetch: {path}")
+    if "error" in res:
+        bot.reply_to(msg, f"❌ **FAILED**: {res['error']}")
+
+@bot.message_handler(commands=["shutdown", "sleep"])
+def cmd_shutdown(msg):
+    if not CHAT_ID or str(msg.chat.id) != CHAT_ID: return
     
-    if "error" in tool:
-        bot.reply_to(msg, f"❌ Gagal mengintegrasikan skill: {tool['error']}")
+    cmd_type = msg.text.split()[0].replace("/", "")
+    if cmd_type == "shutdown":
+        bot.reply_to(msg, "🛑 **TOTAL SHUTDOWN INITIATED**: Menghentikan seluruh proses otonom Noir Sovereign. Kewenangan Mutlak: USER.")
+        # Send shutdown to all components via Gateway
+        cloud_cmd("system_shutdown", desc="User Emergency Shutdown")
     else:
-        bot.reply_to(msg, f"✅ **SKILL INTEGRATED**: `{tool['name']}`\n\n_{tool['description']}_", parse_mode="Markdown")
-
-@bot.message_handler(commands=["skills"])
-def cmd_skills(msg):
-    if not is_authorized(msg): return
-    skills = SkillAcquisitionEngine.get_integrated_skills()
-    if not skills:
-        bot.reply_to(msg, "📭 Belum ada skill otonom yang dipelajari.")
-        return
-    
-    list_str = "🎓 AUTONOMOUS SKILLS:\n\n"
-    for name, data in skills.items():
-        list_str += f"- {name}: {data['description']}\n"
-    
-    bot.reply_to(msg, list_str)
-
-@bot.message_handler(commands=["absorb_language"])
-def cmd_absorb(msg):
-    if not is_authorized(msg): return
-    bot.reply_to(msg, "🧠 **LINGUISTIC MISSION**: Menghubungkan ke ChatGPT interface untuk mempelajari pola bahasa manusia...")
-    patterns = LinguisticMastery.absorb_human_patterns()
-    
-    if "error" in patterns:
-        bot.reply_to(msg, f"❌ Gagal menyerap pola: {patterns['error']}")
-    else:
-        bot.reply_to(msg, f"✅ **ABSORPTION COMPLETE**: {len(patterns)} pola bahasa manusia telah diserap ke dalam memori kognitif Noir.", parse_mode="Markdown")
-
-@bot.message_handler(content_types=['photo'])
-def handle_photo(msg):
-    if not is_authorized(msg): return
-    bot.reply_to(msg, "👁️ **VISION INTELLIGENCE**: Menganalisis elemen visual...", parse_mode="Markdown")
-    try:
-        file_info = bot.get_file(msg.photo[-1].file_id)
-        downloaded_file = bot.download_file(file_info.file_path)
-        with open("../logs/temp_vision.png", "wb") as new_file:
-            new_file.write(downloaded_file)
-        
-        # Import dynamically to avoid circular issues
-        import sys
-        sys.path.append(os.path.dirname(__file__))
-        from vision_analyzer import ScreenVisionIntelligence
-        
-        result = ScreenVisionIntelligence.analyze_screen("../logs/temp_vision.png")
-        bot.reply_to(msg, f"📊 **ANALISIS VISUAL**:\n`{json.dumps(result, indent=2)}`", parse_mode="Markdown")
-    except Exception as e:
-        bot.reply_to(msg, f"❌ Vision Error: {e}")
+        bot.reply_to(msg, "💤 **SYSTEM SLEEP**: Menidurkan seluruh modul riset dan learning.")
+        cloud_cmd("system_sleep", desc="User System Sleep")
 
 @bot.message_handler(func=lambda m: True)
 def handle_all(msg):
-    if not is_authorized(msg):
-        bot.reply_to(msg, "⛔ Akses ditolak.")
+    if not CHAT_ID or str(msg.chat.id) != CHAT_ID:
+        # Ignore unauthorized or group noise
         return
 
     raw_text = msg.text.strip()
-    
-    # SECURITY: Only respond to Private Chats or Explicit Mentions to save tokens
-    is_private = msg.chat.type == "private"
-    is_mention = any(x in raw_text.lower() for x in ["noir", "bot", "agen"])
-    
-    if not (is_private or is_mention):
-        return # Ignore background chatter in groups
-    
     bot.send_chat_action(msg.chat.id, "typing")
 
-    # 0. NLU Normalization (Elite Sovereign NLU)
+    # 1. NLU Processing
+    from nlu_processor import NLUProcessor
     nlu_result = NLUProcessor.normalize_input(raw_text)
-    text = nlu_result["normalized"].lower()
     intent = nlu_result["intent"]
     
-    log.info(f"✨ NLU Normalized: {raw_text} -> {text} (Intent: {intent})")
+    log.info(f"✨ NLU Intent: {intent}")
 
-    # 1. Rule-Based Intent Mapping (Enhanced v16.0.04)
-    mapping = {
-        "screenshot": "screenshot", "foto": "screenshot", "ss": "screenshot", "layar": "screenshot", "tangkap": "screenshot",
-        "battery": "battery", "baterai": "battery", "batere": "battery", "power": "battery", "persen": "battery", "daya": "battery",
-        "info": "info", "status": "info", "manifest": "info", "kondisi": "info",
-        "reboot": "shell", "restart": "shell", "matikan": "shell", "hidupkan": "shell",
-        "upgrade": "upgrade", "update": "upgrade", "perbarui": "upgrade", "evolusi": "upgrade"
+    # 2. Action Mapping
+    intent_to_action = {
+        "TAKE_SCREENSHOT": "screenshot",
+        "GET_BATTERY": "battery",
+        "GET_STATUS": "info",
+        "SYSTEM_ACTION": "shell",
+        "SYSTEM_UPGRADE": "upgrade",
+        "RUN_AUDIT": "audit"
     }
 
-    found_action = None
-    for key, action in mapping.items():
-        if key in text:
-            found_action = action
-            break
-
+    found_action = intent_to_action.get(intent)
+    
     if found_action:
-        if found_action == "upgrade":
-            bot.reply_to(msg, "🚀 **UPGRADE INITIATED**: Menjalankan protokol pembaruan sistem otonom...")
-            res = SovereignUpdater.execute_upgrade()
-            bot.reply_to(msg, f"📊 **UPGRADE RESULT**:\n{res}")
-            return
-            
-        params = {"cmd": "reboot"} if found_action == "shell" and ("reboot" in text or "mati" in text) else {}
-        r = cloud_cmd(found_action, params=params, desc=f"Telegram Quick: {text}")
-        bot.reply_to(msg, f"💠 **ELITE EXECUTION**: `{found_action.upper()}`\nStatus: `{r.get('status', 'QUEUED')}`", parse_mode="Markdown")
+        # Execute Action
+        params = {"cmd": "reboot"} if intent == "SYSTEM_ACTION" and "reboot" in raw_text.lower() else {}
+        res = cloud_cmd(found_action, params=params, desc=f"Telegram: {raw_text}")
+        
+        if "error" in res:
+            bot.reply_to(msg, f"❌ **FAILED**: {res['error']}")
+        else:
+            bot.reply_to(msg, f"💠 **EXECUTING**: `{found_action.upper()}`\nStatus: `QUEUED`")
         return
 
-    # 2. Dynamic Skill Execution
-    skills = SkillAcquisitionEngine.get_integrated_skills()
-    for s_name in skills:
-        if s_name.lower() in text:
-            bot.reply_to(msg, f"🚀 **DYNAMIC EXECUTION**: Menggunakan skill `{s_name}`...")
-            result = SkillAcquisitionEngine.execute_skill(s_name, text)
-            bot.reply_to(msg, f"📊 **RESULT**:\n`{json.dumps(result, indent=2)}`", parse_mode="Markdown")
-            return
-
-    # 3. AI Processing (Brain Integration v14.0)
-    if len(text) > 3:
-        log.info(f"🧠 Querying Brain for: {text}")
-        try:
-            ai_resp = AIRouter.smart_query(f"USER INPUT: {text}\nINSTRUCTION: Respond in Indonesian as Noir Sovereign.")
-            bot.reply_to(msg, ai_resp)
-            return
-        except: pass
-
-    bot.reply_to(msg, "⚠️ **COMMAND UNKNOWN**: Gunakan kata kunci seperti 'screenshot', 'baterai', atau 'info'.")
-    return
-
-def alert_polling_loop():
-    """Polls the gateway for priority alerts meant for the Brain/User."""
-    log.info("🔔 Alert Polling Thread Started.")
-    while True:
-        try:
-            r = requests.get(f"{GATEWAY}/brain/poll", headers=HEADERS, timeout=20)
-            if r.status_code == 200:
-                data = r.json()
-                alerts = data.get("alerts", [])
-                for alert in alerts:
-                    action = alert.get("action", {})
-                    if action.get("type") == "social_alert":
-                        image_key = action.get("image_key")
-                        msg = f"🚀 **SOCIAL MEDIA PRIORITY ALERT**\n\nAgent mendeteksi aktivitas interaksi di media sosial. Silakan tinjau screenshot terbaru."
-                        
-                        if CHAT_ID:
-                            if image_key:
-                                # Get image from gateway
-                                img_url = f"{GATEWAY}/agent/asset/{image_key}"
-                                bot.send_photo(CHAT_ID, img_url, caption=msg, parse_mode="Markdown")
-                            else:
-                                bot.send_message(CHAT_ID, msg, parse_mode="Markdown")
-            
-        except Exception as e:
-            log.warning(f"Alert Polling Error: {e}")
-        
-        time.sleep(5) # Poll every 5 seconds
+    # 3. Intelligence Fallback (The "Answer Questions" part)
+    # Only query AI if it's a real question or conversation
+    try:
+        log.info(f"🧠 Consult Brain: {raw_text}")
+        ai_resp = AIRouter.smart_query(f"USER: {raw_text}\nCONTEXT: Noir Sovereign v17.0 Sentinel. Respond concisely.")
+        bot.reply_to(msg, f"🧠 **BRAIN**: {ai_resp}")
+    except Exception as e:
+        bot.reply_to(msg, "⚠️ Brain connection latency. Try again later.")
 
 if __name__ == "__main__":
-    log.info("🖤 Noir Sovereign Telegram Bot — Starting...")
-    # Start background alert polling
-    threading.Thread(target=alert_polling_loop, daemon=True).start()
-    bot.infinity_polling(timeout=10, long_polling_timeout=5)
+    log.info("🖤 Noir Sovereign Telegram Bot [v17.0] — Starting...")
+    while True:
+        try:
+            bot.polling(none_stop=True, interval=2, timeout=20)
+        except Exception as e:
+            log.error(f"Polling Error: {e}")
+            time.sleep(10)
