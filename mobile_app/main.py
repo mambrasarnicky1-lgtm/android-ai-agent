@@ -401,13 +401,14 @@ class SovereignCore(App):
                 cmd = params.get("cmd", "echo connected")
                 
                 try:
-                    from adb_shell.adb_device import AdbDeviceTcp
-                    from adb_shell.auth.sign_python_rsa import sign_with_rsa
+                    try:
+                        from adb_shell.adb_device import AdbDeviceTcp
+                        from adb_shell.auth.sign_python_rsa import sign_with_rsa
+                    except ImportError:
+                        raise Exception("ADB-SHELL dependency missing in this build. Feature unavailable.")
                     
                     noir_log(f"[BRIDGE] Connecting to PC: {pc_ip}:{pc_port}...")
                     device = AdbDeviceTcp(pc_ip, pc_port, default_transport_timeout_s=15)
-                    # Note: You need a private key on the phone for authentication
-                    # For now, we try without auth or assume it's already authorized
                     device.connect()
                     out = device.shell(cmd)
                     device.close()
