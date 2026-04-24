@@ -14,14 +14,14 @@ android.api = 33
 android.minapi = 21
 services = NoirService:service.py
 android.ndk = 25b
-android.ndk_api = 21
+android.ndk_api = 24
 android.archs = arm64-v8a
 android.private_storage = True
 android.enable_androidx = True
 android.skip_update = False
 android.accept_sdk_license = True
 android.release_artifact = apk
-android.gradle_args = --stacktrace --info -Dorg.gradle.jvmargs=-Xmx2048m
+android.gradle_args = --stacktrace --info -Dorg.gradle.jvmargs=-Xmx4096m
 android.meta_data = moe.shizuku.client.V3_SUPPORT=true
 
 [buildozer]

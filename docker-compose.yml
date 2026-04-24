@@ -66,6 +66,20 @@ services:
       - noir-net
     command: python noir-vps/autonomous_researcher.py
 
+  noir-healer:
+    build: .
+    container_name: noir-healer
+    restart: always
+    env_file: .env
+    volumes:
+      - ./.env:/app/.env
+      - ./noir-vps:/app/noir-vps
+      - ./knowledge:/app/knowledge
+      - ./logs:/app/logs
+    networks:
+      - noir-net
+    command: python noir-vps/healer.py
+
 networks:
   noir-net:
     driver: bridge
