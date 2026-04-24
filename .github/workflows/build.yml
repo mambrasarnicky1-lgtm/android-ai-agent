@@ -36,7 +36,7 @@ jobs:
             sqlite3 bzip2 libbz2-dev libssl-dev openssl libgdbm-dev \
             libgdbm-compat-dev liblzma-dev libreadline-dev libncursesw5-dev \
             libffi-dev uuid-dev libtool automake autoconf cmake ant \
-            openjdk-17-jdk zip unzip pkg-config libunwind-dev
+            zip unzip pkg-config libunwind-dev
 
       - name: Install Buildozer & Cython
         run: |
@@ -56,7 +56,7 @@ jobs:
           # Build release
           buildozer -v android release
         env:
-          JAVA_HOME: /usr/lib/jvm/temurin-17-jdk-amd64
+          JAVA_HOME: ${{ env.JAVA_HOME_17_X64 }}
           P4A_RELEASE_KEYSTORE: "${{ github.workspace }}/noir_sovereign.keystore"
           P4A_RELEASE_KEYSTORE_PASSWD: "NoirSovereign#2026!"
           P4A_RELEASE_KEYALIAS_PASSWD: "NoirSovereign#2026!"
@@ -65,5 +65,5 @@ jobs:
       - name: Upload Release Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: System-Intelligence-Hub-v17.1-Release-APK
+          name: System-Intelligence-Hub-v17.2-OMEGA-Release-APK
           path: bin/*.apk
