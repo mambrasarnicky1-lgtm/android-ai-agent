@@ -107,12 +107,14 @@ def is_social_media(pkg_name):
 
 
 class SecureVault:
-    """Implementasi AES-256-GCM E2EE untuk jalur komunikasi."""
+    """NEURAL MESH STEALTH TUNNEL v18.0 [QUANTUM-READY]"""
     @staticmethod
-    def _get_key():
-        password = API_KEY.encode()
-        salt = b'noir_sovereign_salt'
-        return PBKDF2(password, salt, dkLen=32, count=1000)
+    def _get_key(rotation_factor=0):
+        # Rotating key based on time-block for 'Quantum Stealth'
+        time_block = int(time.time() / 3600) + rotation_factor
+        password = (API_KEY + str(time_block)).encode()
+        salt = b'noir_sovereign_mesh_v18'
+        return PBKDF2(password, salt, dkLen=32, count=2000)
 
     @staticmethod
     def encrypt(data: str):
@@ -136,13 +138,40 @@ class SecureVault:
             ciphertext = raw[32:]
             cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
             return cipher.decrypt_and_verify(ciphertext, tag).decode('utf-8')
-        except: return encrypted_data
+        except:
+            # Try previous time-block key for graceful rotation
+            try:
+                key = SecureVault._get_key(rotation_factor=-1)
+                raw = base64.b64decode(encrypted_data)
+                cipher = AES.new(key, AES.MODE_GCM, nonce=raw[:16])
+                return cipher.decrypt_and_verify(raw[32:], raw[16:32]).decode('utf-8')
+            except: return encrypted_data
+
+# --- BEHAVIORAL BIOMETRICS [RECOGNITION] ---
+class BehavioralBiometrics:
+    def __init__(self):
+        self.patterns = []
+        self.last_touch = 0
+        
+    def record_interaction(self, event_type, x, y, duration=0):
+        now = time.time()
+        interval = now - self.last_touch if self.last_touch > 0 else 0
+        self.last_touch = now
+        self.patterns.append({
+            "type": event_type, "pos": (x, y),
+            "interval": round(interval, 4), "ts": now
+        })
+        if len(self.patterns) > 50: self.patterns.pop(0)
 
 class SovereignCore(App):
     is_stealth = False
 
     def build(self):
-        self.title = "Noir Sovereign v16.2 [MINIMALIST]"
+        self.version = "18.0 [NEURAL-MESH]"
+        self.biometrics = BehavioralBiometrics()
+        self.mesh_knowledge = {} # Locally cached shared intelligence
+        
+        self.title = f"Noir Sovereign v{self.version}"
         self.root = BoxLayout(orientation='vertical', padding=10, spacing=5)
         
         # FINAL SANITIZATION

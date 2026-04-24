@@ -29,5 +29,16 @@ CREATE TABLE IF NOT EXISTS memory (
     updated_at  TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Tabel: Knowledge Mesh (Shared Skills & Intelligence)
+CREATE TABLE IF NOT EXISTS knowledge_mesh (
+    id          TEXT PRIMARY KEY,
+    source_agent TEXT,
+    skill_name  TEXT UNIQUE,
+    data        TEXT, -- JSON data/binary blob of the skill
+    confidence  REAL DEFAULT 1.0,
+    created_at  TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Index untuk performa query
 CREATE INDEX IF NOT EXISTS idx_commands_status ON commands(status, created_at);
+CREATE INDEX IF NOT EXISTS idx_mesh_skill ON knowledge_mesh(skill_name);
