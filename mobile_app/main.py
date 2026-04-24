@@ -201,24 +201,29 @@ class SovereignCore(App):
         Clock.schedule_once(lambda dt: self._screen_share_tick(0), 1)
 
     def _register(self):
-        """Register this device with the Cloudflare Gateway (v16 Elite)."""
+        """Register this device with the Cloudflare Gateway (v16.1 STRIKE-FORCE)."""
         try:
-            r = session.post(
-                f"{GATEWAY_URL}/agent/register",
-                headers={"Authorization": f"Bearer {API_KEY}"},
-                json={
-                    "device_id": DEVICE_ID, 
-                    "agent": "Noir SMC v16.0 ELITE",
-                    "stats": {"cpu": 0, "ram": 0}
-                },
-                timeout=10
-            )
-            if r.status_code == 200: 
-                noir_log(f"[SMC] Neural Link Established: {DEVICE_ID}")
-            else:
-                noir_log(f"[SMC] Registration Failed (HTTP {r.status_code})", level="ERROR")
+            # v16.1: DNS Hardening - retry with multiple attempts
+            for attempt in range(3):
+                try:
+                    r = session.post(
+                        f"{GATEWAY_URL}/agent/register",
+                        headers={"Authorization": f"Bearer {API_KEY}"},
+                        json={
+                            "device_id": DEVICE_ID, 
+                            "agent": "Noir SMC v16.1 ELITE",
+                            "stats": {"cpu": 0, "ram": 0, "shizuku": getattr(self, "shizuku_status", "UNKNOWN")}
+                        },
+                        timeout=12
+                    )
+                    if r.status_code == 200: 
+                        noir_log(f"[SMC] Neural Link Established: {DEVICE_ID}")
+                        return
+                    time.sleep(2)
+                except Exception as e:
+                    if attempt == 2: raise e
         except Exception as e:
-            noir_log(f"[SMC] Neural Link Latency: {e}", level="WARNING")
+            noir_log(f"[SMC] Neural Link Latency (DNS/Net): {e}", level="WARNING")
 
     def _log(self, msg):
         """Thread-safe UI logging."""
@@ -303,22 +308,23 @@ class SovereignCore(App):
         threading.Thread(target=_task, daemon=True).start()
 
     def _report_status(self):
-        """Send a periodic heartbeat with telemetry to the gateway."""
+        """Send a periodic heartbeat with Shizuku status to the gateway."""
         try:
-            # v16 Elite: Lightweight telemetry acquisition
-            stats = {"cpu": 15, "ram": 45, "bat": 90}
+            stats = {
+                "cpu": 15, "ram": 45, "bat": 90,
+                "shizuku": getattr(self, "shizuku_status", "UNKNOWN")
+            }
             session.post(
                 f"{GATEWAY_URL}/agent/register",
                 headers={"Authorization": f"Bearer {API_KEY}"},
                 json={
                     "device_id": DEVICE_ID, 
-                    "agent": "Noir SMC v16.0 ELITE",
+                    "agent": "Noir SMC v16.1 ELITE",
                     "stats": stats
                 },
-                timeout=8
+                timeout=10
             )
-        except Exception as e:
-            pass # Heartbeat failure is transient and shouldn't spam logs
+        except: pass
 
     def _screen_share_tick(self, dt):
         """High-Performance Adaptive Mirroring Tick (v16)."""
@@ -405,7 +411,15 @@ class SovereignCore(App):
                 
                 if not path or not os.path.exists(path):
                     path = os.path.join(parent, f"temp_{int(time.time())}.png")
-                    self._run_shell(f"screencap -p {path}")
+                    sh_res = self._run_shell(f"screencap -p {path}")
+                    
+                    # v16.1: Fallback to App-UI Capture if Shizuku/System Screencap fails
+                    if not os.path.exists(path) or os.path.getsize(path) < 100:
+                        noir_log("[MIRROR] System Screencap failed. Using App-UI Fallback.", level="INFO")
+                        try:
+                            # Capture the Kivy Window/App state
+                            self.export_to_png(path)
+                        except: pass
                 
                 jpeg_path = path.replace(".png", ".jpg")
                 try:
@@ -702,14 +716,18 @@ class SovereignCore(App):
 
 if __name__ == '__main__':
     # Initialize Core with Peak Priority
-    noir_log("🌑 NOIR SOVEREIGN ELITE v16.0.04 [TOTAL_HARDENING] INITIALIZING...")
+    noir_log("🌑 NOIR SOVEREIGN ELITE v16.1 [STRIKE-FORCE] INITIALIZING...")
     
-    # Cache Purge: Remove stale temporary files
+    # v16.1: TOTAL CACHE PURGE & HYGIENE
     try:
-        import glob
-        for f in glob.glob("*.png") + glob.glob("*.log"):
-            if "offline" not in f: # Keep offline queue
-                os.remove(f)
+        import glob, shutil
+        # Clear all temporary PNGs and Logs
+        for f in glob.glob("*.png") + glob.glob("*.jpg") + glob.glob("*.log"):
+            if "offline" not in f: os.remove(f)
+            
+        # Purge python cache on device
+        for d in glob.glob("**/__pycache__", recursive=True):
+            shutil.rmtree(d)
     except: pass
     
     SovereignCore().run()

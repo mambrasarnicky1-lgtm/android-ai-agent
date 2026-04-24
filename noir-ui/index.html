@@ -550,11 +550,11 @@
             box.appendChild(d); box.scrollTop = box.scrollHeight;
         }
 
-        // v16.0.04 ELITE: Neural Link Sanitization (Total Cache Purge)
-        if(localStorage.getItem('noir_version') !== '16.0.04') {
+        // v16.1 STRIKE-FORCE: Neural Link Sanitization (Nuclear Purge)
+        if(localStorage.getItem('noir_version') !== '16.1') {
             localStorage.clear();
-            localStorage.setItem('noir_version', '16.0.04');
-            console.log("NEURAL LINK SANITIZED for v16.0.04");
+            localStorage.setItem('noir_version', '16.1');
+            console.log("NEURAL LINK SANITIZED for v16.1");
         }
 
         showPage('vision');

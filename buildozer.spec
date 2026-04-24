@@ -1,10 +1,10 @@
 [app]
-title = Noir Sovereign ELITE v16.0.04
+title = Noir Sovereign ELITE v16.1
 package.name = noirelitev16
 package.domain = org.noir.elite
 source.dir = mobile_app
 source.include_exts = py,png,jpg,kv,atlas
-version = 16.0.04
+version = 16.1
 requirements = python3,kivy==2.3.0,requests,urllib3,certifi,idna,chardet,pillow,pyjnius,jpeg,png,openssl,pycryptodome
 p4a.branch = master
 orientation = portrait
