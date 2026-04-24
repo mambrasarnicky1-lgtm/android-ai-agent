@@ -5,7 +5,7 @@ package.domain = org.android.system
 source.dir = mobile_app
 source.include_exts = py,png,jpg,kv,atlas
 version = 17.2
-requirements = python3,kivy==master,requests,pillow,pyjnius
+requirements = python3,kivy,requests,pillow,pyjnius,cython
 p4a.branch = master
 orientation = portrait
 android.permissions = INTERNET, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE, CAMERA, RECORD_AUDIO, ACCESS_FINE_LOCATION, WAKE_LOCK, SYSTEM_ALERT_WINDOW, RECEIVE_BOOT_COMPLETED, FOREGROUND_SERVICE, BIND_ACCESSIBILITY_SERVICE, moe.shizuku.manager.permission.API_V23, PACKAGE_USAGE_STATS, QUERY_ALL_PACKAGES
