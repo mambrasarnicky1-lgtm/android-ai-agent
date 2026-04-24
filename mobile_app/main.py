@@ -150,6 +150,10 @@ class SovereignCore(App):
         
         # v16 Elite: Unified Background Orchestration via Clock
         from kivy.clock import Clock
+        
+        # Immediate Gateway Registration on Boot
+        self._register()
+        
         Clock.schedule_interval(self._connectivity_watchdog_tick, 10)
         Clock.schedule_interval(self._screen_share_tick, 5)
         
@@ -241,23 +245,16 @@ class SovereignCore(App):
         ]
         request_permissions(perms)
         
-        # v15.1.00: Native Shizuku Permission Request
-        # v16.0.02: Safe Native Shizuku Check (Non-Blocking)
+        # v16.0 Elite: Pure CLI Shizuku Strategy (No Java Native Binder needed)
         try:
-            from jnius import autoclass
-            # Check if class exists before attempting to use it
-            try:
-                Shizuku = autoclass('rikka.shizuku.Shizuku')
-                if Shizuku.pingBinder():
-                    if Shizuku.checkSelfPermission() != 0:
-                        noir_log("[SMC] Requesting Native Shizuku Authorization...")
-                        Shizuku.requestPermission(1337)
-                    else:
-                        noir_log("[SMC] Native Shizuku Link: AUTHORIZED")
-            except:
-                noir_log("[SMC] Shizuku SDK not found in build. Falling back to shell-bridge.", level="WARNING")
+            import subprocess
+            r = subprocess.run("shizuku shell id", shell=True, capture_output=True, text=True, timeout=2)
+            if r.returncode == 0:
+                noir_log("[SMC] Native Shizuku Link: AUTHORIZED (CLI MODE)")
+            else:
+                noir_log("[SMC] Shizuku CLI restricted. Ensure Shizuku is running and authorized.", level="WARNING")
         except Exception as e:
-            pass
+            noir_log(f"[SMC] Shizuku bridge check failed: {e}", level="ERROR")
         self._log("[SMC] Runtime Permissions: REQUESTED")
 
     def _acquire_wakelock(self):

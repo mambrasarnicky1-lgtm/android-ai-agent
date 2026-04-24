@@ -133,11 +133,11 @@ def cmd_skills(msg):
         bot.reply_to(msg, "📭 Belum ada skill otonom yang dipelajari.")
         return
     
-    list_str = "🎓 **AUTONOMOUS SKILLS**:\n\n"
+    list_str = "🎓 AUTONOMOUS SKILLS:\n\n"
     for name, data in skills.items():
-        list_str += f"- **{name}**: {data['description']}\n"
+        list_str += f"- {name}: {data['description']}\n"
     
-    bot.reply_to(msg, list_str, parse_mode="Markdown")
+    bot.reply_to(msg, list_str)
 
 @bot.message_handler(commands=["absorb_language"])
 def cmd_absorb(msg):
