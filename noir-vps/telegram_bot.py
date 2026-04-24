@@ -177,6 +177,14 @@ def handle_all(msg):
         return
 
     raw_text = msg.text.strip()
+    
+    # SECURITY: Only respond to Private Chats or Explicit Mentions to save tokens
+    is_private = msg.chat.type == "private"
+    is_mention = any(x in raw_text.lower() for x in ["noir", "bot", "agen"])
+    
+    if not (is_private or is_mention):
+        return # Ignore background chatter in groups
+    
     bot.send_chat_action(msg.chat.id, "typing")
 
     # 0. NLU Normalization (Elite Sovereign NLU)
@@ -186,13 +194,13 @@ def handle_all(msg):
     
     log.info(f"✨ NLU Normalized: {raw_text} -> {text} (Intent: {intent})")
 
-    # 1. Rule-Based Intent Mapping (Using Normalized Text)
+    # 1. Rule-Based Intent Mapping (Enhanced v16.0.04)
     mapping = {
-        "screenshot": "screenshot", "foto": "screenshot", "ss": "screenshot", "layar": "screenshot",
-        "battery": "battery", "baterai": "battery", "power": "battery", "persen": "battery",
-        "info": "info", "status": "info", "manifest": "info",
-        "reboot": "shell", "restart": "shell",
-        "upgrade": "upgrade", "update": "upgrade", "perbarui": "upgrade"
+        "screenshot": "screenshot", "foto": "screenshot", "ss": "screenshot", "layar": "screenshot", "tangkap": "screenshot",
+        "battery": "battery", "baterai": "battery", "batere": "battery", "power": "battery", "persen": "battery", "daya": "battery",
+        "info": "info", "status": "info", "manifest": "info", "kondisi": "info",
+        "reboot": "shell", "restart": "shell", "matikan": "shell", "hidupkan": "shell",
+        "upgrade": "upgrade", "update": "upgrade", "perbarui": "upgrade", "evolusi": "upgrade"
     }
 
     found_action = None
@@ -208,7 +216,7 @@ def handle_all(msg):
             bot.reply_to(msg, f"📊 **UPGRADE RESULT**:\n{res}")
             return
             
-        params = {"cmd": "reboot"} if found_action == "shell" and "reboot" in text else {}
+        params = {"cmd": "reboot"} if found_action == "shell" and ("reboot" in text or "mati" in text) else {}
         r = cloud_cmd(found_action, params=params, desc=f"Telegram Quick: {text}")
         bot.reply_to(msg, f"💠 **ELITE EXECUTION**: `{found_action.upper()}`\nStatus: `{r.get('status', 'QUEUED')}`", parse_mode="Markdown")
         return
@@ -222,38 +230,17 @@ def handle_all(msg):
             bot.reply_to(msg, f"📊 **RESULT**:\n`{json.dumps(result, indent=2)}`", parse_mode="Markdown")
             return
 
-    # 3. AI Processing (Brain Integration v14.0 with NLU Context)
-    log.info(f"🧠 Querying Brain for: {text}")
-    try:
-        # Pass normalized context to Brain
-        ai_resp = AIRouter.smart_query(
-            f"USER INPUT (Normalized): {text}\n"
-            f"INTENT: {intent}\n"
-            f"ENTITIES: {json.dumps(nlu_result['entities'])}\n\n"
-            f"INSTRUCTION: Respond in Indonesian as Noir Sovereign. Be efficient.\n"
-            f"If the user wants a system action (screenshot, battery, wifi, etc.), you MUST include the action tag at the BEGINNING of your response in this format: [ACTION:type,cmd=\"optional_cmd\"].\n"
-            f"Supported Actions: screenshot, battery, info, wifi_on, wifi_off, reboot.\n"
-            f"Example: [ACTION:screenshot] Baik, saya ambilkan cuplikan layar sekarang."
-        )
-        
-        # Check for Actions in AI Response
-        actions_found = re.findall(r'\[ACTION:(.*?)\]', ai_resp)
-        for action_str in actions_found:
-            parts = action_str.split(",")
-            a_type = parts[0].strip()
-            a_params = {}
-            if "cmd=" in action_str:
-                cmd_match = re.search(r'cmd="(.*?)"', action_str)
-                if cmd_match: a_params["cmd"] = cmd_match.group(1)
-            
-            cloud_cmd(a_type, params=a_params, desc=f"AI Autonomous: {text}")
+    # 3. AI Processing (Brain Integration v14.0)
+    if len(text) > 3:
+        log.info(f"🧠 Querying Brain for: {text}")
+        try:
+            ai_resp = AIRouter.smart_query(f"USER INPUT: {text}\nINSTRUCTION: Respond in Indonesian as Noir Sovereign.")
+            bot.reply_to(msg, ai_resp)
+            return
+        except: pass
 
-        # Clean the response from tags
-        clean_resp = re.sub(r'\[ACTION:.*?\]', '', ai_resp).strip()
-        bot.reply_to(msg, clean_resp or "Perintah diproses secara otonom.")
-    except Exception as e:
-        log.error(f"Brain Sync Error: {e}")
-        bot.reply_to(msg, "⚠️ Brain Sync Error. Menggunakan mode darurat...")
+    bot.reply_to(msg, "⚠️ **COMMAND UNKNOWN**: Gunakan kata kunci seperti 'screenshot', 'baterai', atau 'info'.")
+    return
 
 def alert_polling_loop():
     """Polls the gateway for priority alerts meant for the Brain/User."""
