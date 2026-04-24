@@ -80,18 +80,5 @@ class SkillAcquisitionEngine:
         tool = skills[skill_name]
         log.info(f"🚀 Executing dynamic skill: {skill_name}")
         
-        # Logic eksekusi dinamis (sederhana)
-        try:
-            if tool["method"] == "POST":
-                # AI menyusun payload berdasarkan user_input dan contoh usage
-                payload_prompt = f"Berdasarkan input '{user_input}', susunlah payload JSON untuk API ini: {json.dumps(tool)}. Berikan HANYA JSON."
-                payload_str = AIRouter.query_gemini(payload_prompt, response_json=True)
-                payload = json.loads(payload_str)
-                
-                resp = requests.post(tool["endpoint"], json=payload, timeout=15)
-            else:
-                resp = requests.get(tool["endpoint"], params={"q": user_input}, timeout=15)
-            
-            return resp.json()
-        except Exception as e:
-            return f"Execution Error: {e}"
+        # Logic eksekusi dinamis (DISABLED in v16 Stabilization)
+        return {"status": "PAUSED", "message": f"Dynamic execution for '{skill_name}' is paused to save tokens."}

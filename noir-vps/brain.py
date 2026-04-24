@@ -488,11 +488,11 @@ def run():
             log.warning("⚠️ Gateway unreachable. Attempting self-rejuvenation...")
             # Logic to ping other nodes or restart services
         
-        # 2. Autonomous Learning & Maintenance Phase
-        if cycle % 5 == 0:
+        # 2. Autonomous Learning & Maintenance Phase (Reduced frequency to save tokens)
+        if cycle % 720 == 0: # Every 12 hours
             SovereignMaintenance.run_full_audit()
             
-        if cycle % 60 == 0: # Every 60 cycles (1 hour) instead of 10
+        if cycle % 1440 == 0: # Every 24 hours
             LearningEngine.knowledge_refresh()
             SovereignUpdater.check_for_updates()
 

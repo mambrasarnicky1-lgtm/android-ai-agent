@@ -31,20 +31,9 @@ class NLUProcessor:
                     "slang_detected": True
                 }
 
-        # 2. AI DEEP NORMALIZATION (Fallback)
-        log.info(f"🧠 NLU: AI Normalization Required -> {text}")
-        prompt = f"""
-        Analyze this Indonesian user input: "{text}"
-        Convert slang to formal and extract INTENT.
-        RETURN ONLY JSON: {{"normalized": "...", "intent": "...", "entities": {{}}, "slang_detected": true/false}}
-        """
-        try:
-            response = AIRouter.query_gemini(prompt, response_json=True)
-            result = json.loads(response)
-            result["original"] = text
-            return result
-        except Exception as e:
-            return {"original": text, "normalized": text, "intent": "UNKNOWN", "entities": {}, "slang_detected": False}
+        # 2. AI DEEP NORMALIZATION (DISABLED in v16 Stabilization)
+        log.info(f"🚫 NLU: AI Normalization Disabled to save tokens -> {text}")
+        return {"original": text, "normalized": text, "intent": "UNKNOWN", "entities": {}, "slang_detected": False}
 
     @staticmethod
     def extract_pattern(normalized_text: str):
