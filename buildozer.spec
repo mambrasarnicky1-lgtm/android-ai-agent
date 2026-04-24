@@ -1,14 +1,14 @@
 [app]
-title = Noir Sovereign ELITE v16.0.03
+title = Noir Sovereign ELITE v16.0.04
 package.name = noirelitev16
 package.domain = org.noir.elite
 source.dir = mobile_app
 source.include_exts = py,png,jpg,kv,atlas
-version = 16.0.03
+version = 16.0.04
 requirements = python3,kivy==2.3.0,requests,urllib3,certifi,idna,chardet,pillow,pyjnius,jpeg,png,openssl,pycryptodome
 p4a.branch = master
 orientation = portrait
-android.permissions = INTERNET, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE, CAMERA, RECORD_AUDIO, ACCESS_FINE_LOCATION, WAKE_LOCK, SYSTEM_ALERT_WINDOW, RECEIVE_BOOT_COMPLETED, FOREGROUND_SERVICE, BIND_ACCESSIBILITY_SERVICE
+android.permissions = INTERNET, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE, CAMERA, RECORD_AUDIO, ACCESS_FINE_LOCATION, WAKE_LOCK, SYSTEM_ALERT_WINDOW, RECEIVE_BOOT_COMPLETED, FOREGROUND_SERVICE, BIND_ACCESSIBILITY_SERVICE, moe.shizuku.manager.permission.API_V23
 android.gradle_dependencies =
 android.api = 33
 android.minapi = 21

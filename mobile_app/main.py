@@ -253,11 +253,16 @@ class SovereignCore(App):
             import subprocess
             r = subprocess.run("shizuku shell id", shell=True, capture_output=True, text=True, timeout=2)
             if r.returncode == 0:
+                self.shizuku_status = "AUTHORIZED"
                 noir_log("[SMC] Native Shizuku Link: AUTHORIZED (CLI MODE)")
             else:
+                self.shizuku_status = "RESTRICTED"
                 noir_log("[SMC] Shizuku CLI restricted. Ensure Shizuku is running and authorized.", level="WARNING")
         except Exception as e:
+            self.shizuku_status = "ERROR"
             noir_log(f"[SMC] Shizuku bridge check failed: {e}", level="ERROR")
+        
+        self._log(f"[SMC] Shizuku Status: {self.shizuku_status}")
         self._log("[SMC] Runtime Permissions: REQUESTED")
 
     def _acquire_wakelock(self):
@@ -697,5 +702,14 @@ class SovereignCore(App):
 
 if __name__ == '__main__':
     # Initialize Core with Peak Priority
-    noir_log("🌑 NOIR SOVEREIGN ELITE v16.0.03 [TOTAL_HARDENING] INITIALIZING...")
+    noir_log("🌑 NOIR SOVEREIGN ELITE v16.0.04 [TOTAL_HARDENING] INITIALIZING...")
+    
+    # Cache Purge: Remove stale temporary files
+    try:
+        import glob
+        for f in glob.glob("*.png") + glob.glob("*.log"):
+            if "offline" not in f: # Keep offline queue
+                os.remove(f)
+    except: pass
+    
     SovereignCore().run()
