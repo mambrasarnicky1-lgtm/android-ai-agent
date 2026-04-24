@@ -1,0 +1,51 @@
+﻿2026-04-24T12:15:07.8170630Z ##[group]Run pip install --upgrade pip
+2026-04-24T12:15:07.8171006Z [36;1mpip install --upgrade pip[0m
+2026-04-24T12:15:07.8171284Z [36;1mpip install "Cython<3.0" buildozer [0m
+2026-04-24T12:15:07.8233062Z shell: /usr/bin/bash -e {0}
+2026-04-24T12:15:07.8233303Z env:
+2026-04-24T12:15:07.8233506Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-04-24T12:15:07.8233862Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.15/x64
+2026-04-24T12:15:07.8234301Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.15/x64/lib/pkgconfig
+2026-04-24T12:15:07.8234718Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.15/x64
+2026-04-24T12:15:07.8235097Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.15/x64
+2026-04-24T12:15:07.8235478Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.15/x64
+2026-04-24T12:15:07.8235853Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.15/x64/lib
+2026-04-24T12:15:07.8236279Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+2026-04-24T12:15:07.8236752Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+2026-04-24T12:15:07.8237344Z ##[endgroup]
+2026-04-24T12:15:08.5122495Z Requirement already satisfied: pip in /opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages (26.0.1)
+2026-04-24T12:15:09.2688084Z Collecting Cython<3.0
+2026-04-24T12:15:09.3143523Z   Downloading Cython-0.29.37-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_24_x86_64.whl.metadata (3.1 kB)
+2026-04-24T12:15:09.3281269Z Collecting buildozer
+2026-04-24T12:15:09.3325963Z   Downloading buildozer-1.5.0-py3-none-any.whl.metadata (139 kB)
+2026-04-24T12:15:09.3658106Z Collecting pexpect (from buildozer)
+2026-04-24T12:15:09.3699908Z   Downloading pexpect-4.9.0-py2.py3-none-any.whl.metadata (2.5 kB)
+2026-04-24T12:15:09.4093816Z Collecting virtualenv (from buildozer)
+2026-04-24T12:15:09.4144455Z   Downloading virtualenv-21.2.4-py3-none-any.whl.metadata (3.5 kB)
+2026-04-24T12:15:09.4315556Z Collecting sh (from buildozer)
+2026-04-24T12:15:09.4367307Z   Downloading sh-2.2.2-py3-none-any.whl.metadata (3.7 kB)
+2026-04-24T12:15:09.4489264Z Collecting ptyprocess>=0.5 (from pexpect->buildozer)
+2026-04-24T12:15:09.4529285Z   Downloading ptyprocess-0.7.0-py2.py3-none-any.whl.metadata (1.3 kB)
+2026-04-24T12:15:09.4663901Z Collecting distlib<1,>=0.3.7 (from virtualenv->buildozer)
+2026-04-24T12:15:09.4704274Z   Downloading distlib-0.4.0-py2.py3-none-any.whl.metadata (5.2 kB)
+2026-04-24T12:15:09.4885804Z Collecting filelock<4,>=3.24.2 (from virtualenv->buildozer)
+2026-04-24T12:15:09.4924673Z   Downloading filelock-3.29.0-py3-none-any.whl.metadata (2.0 kB)
+2026-04-24T12:15:09.5098476Z Collecting platformdirs<5,>=3.9.1 (from virtualenv->buildozer)
+2026-04-24T12:15:09.5136137Z   Downloading platformdirs-4.9.6-py3-none-any.whl.metadata (4.7 kB)
+2026-04-24T12:15:09.5234705Z Collecting python-discovery>=1.2.2 (from virtualenv->buildozer)
+2026-04-24T12:15:09.5279572Z   Downloading python_discovery-1.2.2-py3-none-any.whl.metadata (5.4 kB)
+2026-04-24T12:15:09.5425559Z Downloading Cython-0.29.37-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_24_x86_64.whl (1.9 MB)
+2026-04-24T12:15:09.5864847Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.9/1.9 MB 47.0 MB/s  0:00:00
+2026-04-24T12:15:09.5920132Z Downloading buildozer-1.5.0-py3-none-any.whl (86 kB)
+2026-04-24T12:15:09.5982069Z Downloading pexpect-4.9.0-py2.py3-none-any.whl (63 kB)
+2026-04-24T12:15:09.6041489Z Downloading ptyprocess-0.7.0-py2.py3-none-any.whl (13 kB)
+2026-04-24T12:15:09.6111420Z Downloading sh-2.2.2-py3-none-any.whl (38 kB)
+2026-04-24T12:15:09.6169756Z Downloading virtualenv-21.2.4-py3-none-any.whl (5.8 MB)
+2026-04-24T12:15:09.6738242Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 5.8/5.8 MB 106.9 MB/s  0:00:00
+2026-04-24T12:15:09.6780902Z Downloading distlib-0.4.0-py2.py3-none-any.whl (469 kB)
+2026-04-24T12:15:09.6867656Z Downloading filelock-3.29.0-py3-none-any.whl (39 kB)
+2026-04-24T12:15:09.6927893Z Downloading platformdirs-4.9.6-py3-none-any.whl (21 kB)
+2026-04-24T12:15:09.6986083Z Downloading python_discovery-1.2.2-py3-none-any.whl (31 kB)
+2026-04-24T12:15:09.7405557Z Installing collected packages: ptyprocess, distlib, sh, platformdirs, pexpect, filelock, Cython, python-discovery, virtualenv, buildozer
+2026-04-24T12:15:10.6538558Z 
+2026-04-24T12:15:10.6552141Z Successfully installed Cython-0.29.37 buildozer-1.5.0 distlib-0.4.0 filelock-3.29.0 pexpect-4.9.0 platformdirs-4.9.6 ptyprocess-0.7.0 python-discovery-1.2.2 sh-2.2.2 virtualenv-21.2.4
