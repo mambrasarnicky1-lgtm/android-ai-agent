@@ -46,7 +46,7 @@ async def api_status():
         return {"error": str(e), "online": False}
 
 @app.get("/api/logs")
-async def api_logs(device_id: str = "REDMI_NOTE_14_ELITE_V16"):
+async def api_logs(device_id: str = "REDMI_NOTE_14"):
     try:
         async with httpx.AsyncClient() as client:
             r = await client.get(f"{CF_GATEWAY}/agent/logs?device_id={device_id}", headers=CF_HEADERS, timeout=10.0)
@@ -61,7 +61,7 @@ async def api_command(request: Request):
         payload = {
             "action": data.get("action", {}),
             "description": data.get("description", "Commander Action"),
-            "target_device": "REDMI_NOTE_14_ELITE_V16" # v16 Strict Routing
+            "target_device": "REDMI_NOTE_14" # v16 Strict Routing
         }
         # v16 Fix: Async HTTPX request
         async with httpx.AsyncClient() as client:
