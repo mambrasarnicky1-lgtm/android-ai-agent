@@ -394,11 +394,9 @@ class NeuralWatchdog:
             # Autonomous Daily Backup
             DataArchiver.backup_daily(data)
             
-            if not data.get("online"):
-                # Kirim alert jika sudah > 10 menit sejak alert terakhir
-                if time.time() - NeuralWatchdog._last_alert_time > 600:
-                    msg = f"🚨 [OFFLINE ALERT]\nAgent '{DEVICE_ID}' tidak terdeteksi aktif di Gateway!\nTerakhir terlihat: {data.get('agent', {}).get('last_seen')}"
-                    AIRouter.send_telegram(msg, important=True)
+                # Hanya log peringatan, jangan spam Telegram agar hemat token/API
+                if time.time() - NeuralWatchdog._last_alert_time > 3600:
+                    log.warning(f"🚨 [OFFLINE] Agent '{DEVICE_ID}' tidak terdeteksi aktif di Gateway!")
                     NeuralWatchdog._last_alert_time = time.time()
                 return "Agent Offline"
         except Exception as e:
@@ -494,15 +492,14 @@ def run():
         if cycle % 5 == 0:
             SovereignMaintenance.run_full_audit()
             
-        if cycle % 10 == 0: # Every 10 cycles
+        if cycle % 60 == 0: # Every 60 cycles (1 hour) instead of 10
             LearningEngine.knowledge_refresh()
-            SelfEvolutionEngine.generate_progress_report()
-            SelfEvolutionEngine.run_daily_discovery()
             SovereignUpdater.check_for_updates()
 
-        # 3. Laporan Berkala (Reduced to 1 Hour)
-        if elapsed >= 3600:
+        # 3. Laporan Berkala & Evolusi (Sangat jarang, setiap 12 Jam)
+        if elapsed >= 43200:
             SelfEvolutionEngine.generate_progress_report()
+            SelfEvolutionEngine.run_daily_discovery()
             start_time = time.time() 
 
         time.sleep(60) # Faster response: Check every minute instead of 5 minutes
