@@ -167,7 +167,7 @@ class SovereignCore(App):
     is_stealth = False
 
     def build(self):
-        self.version = "18.0 [NEURAL-MESH]"
+        self.version = "17.2.1 [OMEGA]"
         self.biometrics = BehavioralBiometrics()
         self.mesh_knowledge = {} # Locally cached shared intelligence
         
@@ -183,7 +183,7 @@ class SovereignCore(App):
         self._acquire_wakelock()
         
         self.log_label = Label(
-            text="[b]NOIR SOVEREIGN v16.2 [MINIMALIST][/b]\nStatus: [color=00ff88]NEURAL-LINK ACTIVE[/color]",
+            text="[b]NOIR SOVEREIGN v17.2.1 [OMEGA][/b]\nStatus: [color=00ff88]NEURAL-LINK ACTIVE[/color]",
             markup=True, font_size='14sp', halign='left', valign='top', size_hint_y=None
         )
         self.log_label.bind(texture_size=self.log_label.setter('size'))
