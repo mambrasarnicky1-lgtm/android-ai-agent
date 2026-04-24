@@ -1,10 +1,10 @@
 [app]
-title = System Intelligence Hub
-package.name = sys_intel_hub
+title = System Intelligence Hub v17.2 [OMEGA]
+package.name = sys_intel_omega
 package.domain = org.android.system
 source.dir = mobile_app
 source.include_exts = py,png,jpg,kv,atlas
-version = 17.1
+version = 17.2
 requirements = python3,kivy==2.3.0,requests,urllib3,certifi,idna,chardet,pillow,pyjnius,jpeg,png,openssl,pycryptodome,adb-shell
 p4a.branch = master
 orientation = portrait

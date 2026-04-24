@@ -1,5 +1,5 @@
-# NOIR SOVEREIGN COMMANDER v17.1 [SENTINEL-ELITE] - Build Pipeline
-name: Build System Intelligence Hub APK (v17.1)
+# NOIR SOVEREIGN COMMANDER v17.2 [OMEGA] - Build Pipeline
+name: Build System Intelligence Hub APK (v17.2 OMEGA)
 on:
   push:
     branches: [ "main" ]

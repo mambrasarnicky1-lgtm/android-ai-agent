@@ -1,5 +1,5 @@
 """
-NOIR SOVEREIGN MOBILE CORE (SMC) v16.0 ELITE
+NOIR SOVEREIGN MOBILE CORE (SMC) v17.2 [OMEGA]
 =====================================================
 Framework: Kivy + Buildozer (Android Native)
 Target: Redmi Note 14 (HyperOS / arm64-v8a)
