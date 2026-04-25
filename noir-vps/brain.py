@@ -42,10 +42,15 @@ logging.basicConfig(
 log = logging.getLogger("NoirBrain")
 
 from catalyst import SovereignCatalyst
+from temporal_memory import TemporalMemory
 from ai_router import AIRouter, EXPERT_SYSTEM_PROMPT, HEADERS
 from vision_analyzer import ScreenVisionIntelligence
 from skill_acquisition import SkillAcquisitionEngine
 from evolution_engine import evolution_engine
+
+# Initialize Core Mesh Components
+from catalyst import catalyst
+from temporal_memory import global_memory as memory
 
 # EXPERT_SYSTEM_PROMPT imported from ai_router
 
@@ -468,6 +473,9 @@ def run():
         cycle += 1
         log.info(f"── Brain Prime v16.2 [ZEN-MODE] Cycle #{cycle} ──")
         
+        # 0. Neural Context Retention (v17.5)
+        memory.record_interaction("SYSTEM_HEARTBEAT", f"Cycle #{cycle}", "Stable", {"readiness": "100%"})
+        
         # 1. Connectivity Health Check
         try:
             if not SelfUpdateEngine.health_check_gateway():
@@ -502,6 +510,8 @@ def run():
                 if analysis and any(word in analysis.lower() for word in ["risk", "warning", "important", "danger"]):
                     msg = f"⚠️ **PROACTIVE ALERT**: {analysis}"
                     PhasedLearning.send_telegram(msg, important=True)
+                    # Record risk detection to memory
+                    memory.record_interaction("VISION_ALERT", f"Scene {last_ss}", analysis, {"risk_level": "HIGH"})
                 
                 run._last_analyzed_ss = last_ss
         except: pass

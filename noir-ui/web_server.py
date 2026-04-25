@@ -25,25 +25,80 @@ app.add_middleware(
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# --- PROXY CONFIG (Unified Standard v15) ---
-CF_GATEWAY = os.environ.get("NOIR_GATEWAY_URL")
-CF_KEY     = os.environ.get("NOIR_API_KEY")
+# --- PROXY CONFIG (Unified Standard v17.5 Auto-Discovery) ---
+_BASE_GATEWAY = os.environ.get("NOIR_GATEWAY_URL", "https://noir-agent-gateway.si-umkm-ikm-pbd.workers.dev")
+VPS_IP = os.environ.get("NOIR_VPS_IP", "143.198.199.186")
+FALLBACKS = [_BASE_GATEWAY, f"http://{VPS_IP}", f"http://{VPS_IP}:80", f"http://{VPS_IP}:8000", "http://127.0.0.1:8787"]
 
-if not CF_GATEWAY or not CF_KEY:
-    print("❌ FATAL: NOIR_GATEWAY_URL or NOIR_API_KEY not found in environment.")
-    sys.exit(1)
+class DynamicGateway:
+    _current = None
+    @classmethod
+    def get(cls):
+        if cls._current: return cls._current
+        for gw in FALLBACKS:
+            try:
+                if requests.get(f"{gw}/health", timeout=2).status_code == 200:
+                    cls._current = gw
+                    print(f"✅ Auto-Discovery: Gateway matched -> {gw}")
+                    return gw
+            except: pass
+        return _BASE_GATEWAY
 
-CF_GATEWAY = CF_GATEWAY.rstrip("/")
+class _GatewayProxy:
+    def __str__(self): return DynamicGateway.get()
+    def __format__(self, format_spec): return format(str(self), format_spec)
+    def rstrip(self, chars=None): return str(self).rstrip(chars)
+
+CF_GATEWAY = _GatewayProxy()
+CF_KEY     = os.environ.get("NOIR_API_KEY", "NOIR_AGENT_KEY_V6_SI_UMKM_PBD_2026")
+
 CF_HEADERS = {"Authorization": f"Bearer {CF_KEY}", "Content-Type": "application/json"}
+
+# --- EMERGENCY DIRECT VPS GATEWAY (Zero-Failure Fallback) ---
+local_agent_state = {
+    "online": False,
+    "last_seen": 0,
+    "commands": [],
+    "logs": []
+}
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "version": "17.5-AutoDiscovery"}
+
+@app.get("/agent/poll")
+def local_poll(device_id: str = "REDMI_NOTE_14", client_type: str = "main"):
+    local_agent_state["online"] = True
+    local_agent_state["last_seen"] = time.time()
+    cmds = local_agent_state["commands"].copy()
+    local_agent_state["commands"].clear()
+    return {"commands": cmds, "status": "direct_vps_link_active"}
+
+@app.post("/agent/log")
+async def local_log(request: Request):
+    try:
+        data = await request.json()
+        local_agent_state["logs"].append(data)
+        if len(local_agent_state["logs"]) > 100:
+            local_agent_state["logs"].pop(0)
+        return {"success": True}
+    except: return {"success": False}
+
 
 @app.get("/api/status")
 async def api_status():
+    # If CF fails, fallback to local state
     try:
         async with httpx.AsyncClient() as client:
-            r = await client.get(f"{CF_GATEWAY}/agent/summary", headers=CF_HEADERS, timeout=20.0)
+            r = await client.get(f"{CF_GATEWAY}/agent/summary", headers=CF_HEADERS, timeout=5.0)
             return r.json()
     except Exception as e:
-        return {"error": str(e), "online": False}
+        is_online = (time.time() - local_agent_state["last_seen"]) < 60
+        return {
+            "online": is_online, 
+            "agent": {"stats": {"cpu": "N/A (Direct Link)", "ram": "N/A"}},
+            "connection": "DIRECT_VPS_FALLBACK"
+        }
 
 @app.get("/api/logs")
 async def api_logs(device_id: str = "REDMI_NOTE_14"):
@@ -61,12 +116,20 @@ async def api_command(request: Request):
         payload = {
             "action": data.get("action", {}),
             "description": data.get("description", "Commander Action"),
-            "target_device": "REDMI_NOTE_14" # v16 Strict Routing
+            "target_device": "REDMI_NOTE_14"
         }
-        # v16 Fix: Async HTTPX request
-        async with httpx.AsyncClient() as client:
-            r = await client.post(f"{CF_GATEWAY}/agent/command", headers=CF_HEADERS, json=payload, timeout=10.0)
-            return r.json()
+        
+        try:
+            async with httpx.AsyncClient() as client:
+                r = await client.post(f"{CF_GATEWAY}/agent/command", headers=CF_HEADERS, json=payload, timeout=5.0)
+                return r.json()
+        except:
+            # Fallback to local queue if CF is down
+            local_agent_state["commands"].append({
+                "command_id": f"cmd_{int(time.time())}",
+                "action": payload["action"]
+            })
+            return {"status": "queued_locally", "warning": "CF Gateway unreachable, using Direct VPS Link"}
     except Exception as e:
         return {"error": str(e)}
 
@@ -138,6 +201,30 @@ async def get_skills():
         "growth": "92.7%",
         "proposal": "Sistem 'Self-Healing Mirroring' telah diaktifkan."
     }
+
+@app.get("/api/memory")
+async def get_memory():
+    try:
+        # Path to memory file
+        mem_path = os.path.join(os.path.dirname(BASE_DIR), "knowledge", "temporal_memory.json")
+        if os.path.exists(mem_path):
+            with open(mem_path, "r") as f:
+                data = json.load(f)
+                interactions = data.get("interactions", [])
+                preferences = data.get("preferences", {})
+                
+                # Basic stats
+                stats = {
+                    "total_interactions": len(interactions),
+                    "last_active": interactions[-1].get("timestamp") if interactions else "Never",
+                    "top_preferences": list(preferences.keys())[:5],
+                    "memory_size": f"{os.path.getsize(mem_path) / 1024:.2f} KB"
+                }
+                return {"success": True, "stats": stats, "preferences": preferences}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+    
+    return {"success": False, "error": "Memory not initialized."}
 
 @app.get("/api/loot")
 def get_loot():

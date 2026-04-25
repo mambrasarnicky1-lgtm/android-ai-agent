@@ -311,6 +311,13 @@
                         <div class="glass" style="padding:25px;">
                             <div class="side-head" style="margin-bottom:20px;">🛡️ SKILL MANIFEST</div>
                             <div id="skill-box" style="display:flex; flex-wrap:wrap; gap:10px;"></div>
+                            
+                            <div class="side-head" style="margin-top:30px; margin-bottom:20px;">🧠 NEURAL MEMORY BANK</div>
+                            <div id="memory-box" style="font-size:0.85rem; color:#889; line-height:1.6;">
+                                <div class="pill" style="margin-bottom:10px;">Total Context: <span id="mem-total">--</span></div>
+                                <div class="pill" style="margin-bottom:10px;">Mem Size: <span id="mem-size">--</span></div>
+                                <div style="margin-top:10px;">Preferences: <span id="mem-prefs" style="color:var(--accent);">--</span></div>
+                            </div>
                         </div>
                     </div>
                 `
@@ -387,7 +394,7 @@
             
             document.getElementById('main-view').innerHTML = page.render();
             if(pageId === 'loot') loadLoot();
-            if(pageId === 'evolution') loadEvolution();
+            if(pageId === 'evolution') { loadEvolution(); loadMemory(); }
         }
 
         async function executeCmd(type, params={}) {
@@ -486,6 +493,18 @@
             d.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
             term.prepend(d);
             if(term.childNodes.length > 50) term.removeChild(term.lastChild);
+        }
+
+        async function loadMemory() {
+            try {
+                const r = await fetch(`${API}/memory`);
+                const d = await r.json();
+                if(d.success) {
+                    if(document.getElementById('mem-total')) document.getElementById('mem-total').innerText = d.stats.total_interactions;
+                    if(document.getElementById('mem-size')) document.getElementById('mem-size').innerText = d.stats.memory_size;
+                    if(document.getElementById('mem-prefs')) document.getElementById('mem-prefs').innerText = d.stats.top_preferences.join(", ") || "None";
+                }
+            } catch(e) { console.error("Memory Sync Error", e); }
         }
 
         async function fetchLogs() {

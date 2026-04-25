@@ -44,10 +44,33 @@ session = requests.Session()
 retries = Retry(total=5, backoff_factor=1, status_forcelist=[502, 503, 504])
 session.mount('https://', HTTPAdapter(max_retries=retries))
 
-# --- CONFIG (Unified Standard v16) ---
-GATEWAY_URL = os.environ.get("NOIR_GATEWAY_URL", "https://noir-agent-gateway.si-umkm-ikm-pbd.workers.dev")
+# --- CONFIG (Unified Standard v16 & Auto-Discovery) ---
+_BASE_GATEWAY = os.environ.get("NOIR_GATEWAY_URL", "https://noir-agent-gateway.si-umkm-ikm-pbd.workers.dev")
+VPS_IP = os.environ.get("NOIR_VPS_IP", "143.198.199.186")
+FALLBACKS = [_BASE_GATEWAY, f"http://{VPS_IP}", f"http://{VPS_IP}:80", f"http://{VPS_IP}:8000", "http://192.168.1.100:8000"]
+
+class DynamicGateway:
+    _current = None
+    @classmethod
+    def get(cls):
+        if cls._current: return cls._current
+        for gw in FALLBACKS:
+            try:
+                if session.get(f"{gw}/health", timeout=2).status_code == 200:
+                    cls._current = gw
+                    noir_log(f"Auto-Discovery: Gateway matched -> {gw}")
+                    return gw
+            except: pass
+        return _BASE_GATEWAY # default fallback
+
+class _GatewayProxy:
+    def __str__(self): return DynamicGateway.get()
+    def __format__(self, format_spec): return format(str(self), format_spec)
+
+GATEWAY_URL = _GatewayProxy()
 API_KEY     = os.environ.get("NOIR_API_KEY", "NOIR_AGENT_KEY_V6_SI_UMKM_PBD_2026")
 DEVICE_ID   = os.environ.get("NOIR_DEVICE_ID", "REDMI_NOTE_14")
+
 
 # Financial Guardian: Sensitive Packages (Indonesian Banks)
 FINANCE_APPS = [

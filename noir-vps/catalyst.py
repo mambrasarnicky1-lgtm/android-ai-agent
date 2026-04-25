@@ -78,7 +78,9 @@ class SovereignCatalyst:
         
         return [k for k, v in vault.items() if v["status"] == "READY"]
 
+# Module-level instance for global use
+catalyst = SovereignCatalyst()
+
 if __name__ == "__main__":
-    catalyst = SovereignCatalyst()
     # Test absorption
     catalyst.absorb_and_synthesize("Advanced Kernel Injection Protection for Android")

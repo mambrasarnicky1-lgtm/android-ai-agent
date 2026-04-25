@@ -31,6 +31,7 @@ try:
     from skill_acquisition import SkillAcquisitionEngine
     from linguistic_learning import LinguisticMastery
     from nlu_processor import NLUProcessor
+    from temporal_memory import global_memory as memory
 except ImportError:
     print("Install: pip install pyTelegramBotAPI requests")
     sys.exit(1)
@@ -136,8 +137,10 @@ def handle_all(msg):
         
         if "error" in res:
             bot.reply_to(msg, f"❌ **FAILED**: {res['error']}")
+            memory.record_interaction("USER_CMD_FAIL", raw_text, res['error'], {"intent": intent})
         else:
             bot.reply_to(msg, f"💠 **EXECUTING**: `{found_action.upper()}`\nStatus: `QUEUED`")
+            memory.record_interaction("USER_CMD_EXEC", raw_text, found_action, {"status": "QUEUED"})
         return
 
     # 3. Intelligence Fallback (The "Answer Questions" part)
@@ -146,6 +149,11 @@ def handle_all(msg):
         log.info(f"🧠 Consult Brain: {raw_text}")
         ai_resp = AIRouter.smart_query(f"USER: {raw_text}\nCONTEXT: Noir Sovereign v17.0 Sentinel. Respond concisely.")
         bot.reply_to(msg, f"🧠 **BRAIN**: {ai_resp}")
+        
+        # Record interaction for learning
+        memory.record_interaction("CHAT_INTERACTION", raw_text, ai_resp)
+        if "?" in raw_text:
+            memory.update_preference("INTEREST", raw_text.split()[-1]) # Simple heuristic
     except Exception as e:
         bot.reply_to(msg, "⚠️ Brain connection latency. Try again later.")
 

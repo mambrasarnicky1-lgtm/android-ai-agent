@@ -2,6 +2,8 @@ import os, json, logging
 import base64
 from ai_router import AIRouter
 from catalyst import catalyst
+from temporal_memory import global_memory as memory
+
 from datetime import datetime
 
 log = logging.getLogger("VisionAnalyzer")
@@ -52,28 +54,7 @@ class ScreenVisionIntelligence:
     @staticmethod
     def save_to_memory(analysis: dict):
         """Menyimpan ringkasan layar ke memori temporal."""
-        memory_path = os.path.join(os.path.dirname(__file__), "..", "knowledge", "temporal_memory.json")
-        try:
-            memory_data = {"memory": []}
-            if os.path.exists(memory_path):
-                with open(memory_path, "r") as f:
-                    memory_data = json.load(f)
-            
-            entry = {
-                "timestamp": datetime.now().isoformat(),
-                "app": analysis.get("app_detected"),
-                "context": analysis.get("context"),
-                "sensitive": analysis.get("is_sensitive", False)
-            }
-            
-            memory_data["memory"].append(entry)
-            memory_data["memory"] = memory_data["memory"][-100:]
-            memory_data["last_update"] = datetime.now().isoformat()
-            
-            with open(memory_path, "w") as f:
-                json.dump(memory_data, f, indent=4)
-        except Exception as e:
-            log.error(f"Failed to save to temporal memory: {e}")
+        memory.record_interaction("VISION_SCREEN_ANALYSIS", analysis.get("app_detected"), analysis.get("context"), {"sensitive": analysis.get("is_sensitive", False)})
 
 if __name__ == "__main__":
     import sys

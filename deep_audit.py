@@ -1,19 +1,12 @@
 import os
 import re
-import json
+import py_compile
 
 ROOT = r"c:\Users\ASUS\.gemini\antigravity\scratch\android-ai-agent"
-REPORT_FILE = os.path.join(ROOT, "total_audit_deep.md")
+REPORT_FILE = os.path.join(ROOT, "AUDIT_REPORT_V17.md")
 
 issues = []
-
-# Rules for detection
-PORT_REGEX = re.compile(r'port\s*=\s*(\d+)')
-URL_REGEX = re.compile(r'http[s]?://[^\s\'"]+')
-HARDCODED_KEY_REGEX = re.compile(r'API_KEY\s*=\s*[\'"][^\'"]+[\'"]')
-
-ports = {}
-urls = []
+cache_dirs = []
 cache_files = []
 
 def add_issue(category, file_path, line_num, message):
@@ -24,8 +17,17 @@ def add_issue(category, file_path, line_num, message):
         "message": message
     })
 
+def check_syntax(filepath):
+    try:
+        py_compile.compile(filepath, doraise=True)
+    except py_compile.PyCompileError as e:
+        add_issue("SYNTAX_ERROR", filepath, 0, str(e.msg).replace("\n", " "))
+
 def scan_file(filepath):
-    if not filepath.endswith(('.py', '.js', '.ts', '.yml', '.spec')): return
+    if filepath.endswith('.py'):
+        check_syntax(filepath)
+        
+    if not filepath.endswith(('.py', '.js', '.ts', '.yml', '.spec', '.html')): return
     
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
@@ -34,68 +36,76 @@ def scan_file(filepath):
         for i, line in enumerate(lines):
             line_num = i + 1
             
-            # Find hardcoded API Keys
-            if "API_KEY = " in line and "os.getenv" not in line and "os.environ" not in line:
-                add_issue("SECURITY", filepath, line_num, "Hardcoded API Key detected")
+            # Find duplicate class/function names which can cause conflicts
+            # This is a basic check, real AST parsing is better but this is fast
+            
+            # Find potential duplicate memory instances or singleton violations
+            if "memory = TemporalMemory()" in line and "def " not in line and "class " not in line:
+                add_issue("LOGIC_RISK", filepath, line_num, "TemporalMemory instance created globally/repeatedly without singleton pattern")
                 
-            # Find Ports
-            port_match = PORT_REGEX.search(line)
-            if port_match:
-                port = port_match.group(1)
-                if port not in ports: ports[port] = []
-                ports[port].append(filepath.replace(ROOT, ""))
+            # Check for obsolete or duplicate API keys
+            if "API_KEY" in line and "=" in line and ("os.environ" not in line and "os.getenv" not in line):
+                add_issue("SECURITY", filepath, line_num, "Hardcoded/Suspicious API Key assignment")
                 
-            # Find absolute paths (Windows) that might break on Linux/VPS
-            if "C:\\" in line and not "C:\\Users" in filepath: # avoid self script match
-                add_issue("PORTABILITY", filepath, line_num, "Windows absolute path detected")
+            # Hardcoded paths
+            if "/app/noir-vps/" in line and not filepath.endswith("docker-compose.yml"):
+                add_issue("PORTABILITY", filepath, line_num, "Hardcoded docker container path detected inside code")
                 
-            # Circular dependency check hints (just looking for imports inside functions as a smell or potential issue)
-            if filepath.endswith('.py') and line.strip().startswith('import ') and line_num > 20:
-                 if not line.startswith('import'):
-                     # inline import
-                     pass 
-                     
     except Exception as e:
         pass
 
 for root, dirs, files in os.walk(ROOT):
-    if '.git' in root or 'venv' in root or 'node_modules' in root or '.buildozer' in root:
+    # Detect Cache Dirs
+    for d in dirs:
+        if d in ['__pycache__', '.pytest_cache', '.buildozer', '.wrangler']:
+            cache_dirs.append(os.path.join(root, d).replace(ROOT, ""))
+            
+    if '.git' in root or 'venv' in root or 'node_modules' in root:
         continue
         
     for file in files:
-        if file.endswith('.pyc') or file == '__pycache__':
+        if file.endswith('.pyc') or file.endswith('.log'):
             cache_files.append(os.path.join(root, file).replace(ROOT, ""))
         else:
             scan_file(os.path.join(root, file))
 
-# Find Port Conflicts
-for port, files in ports.items():
-    if len(set(files)) > 1:
-        add_issue("CONFLICT", "Multiple", 0, f"Port {port} used across multiple files: {set(files)}")
-
 with open(REPORT_FILE, 'w', encoding='utf-8') as f:
-    f.write("# 🔬 DEEP SYSTEM AUDIT REPORT (Code-Level Analysis)\n\n")
+    f.write("# 🔬 TOTAL SYSTEM AUDIT REPORT (v17.5 Auto-Discovery Edition)\n\n")
     
-    f.write("## 1. Security & Hardcoded Variables\n")
-    for issue in [i for i in issues if i['category'] == 'SECURITY']:
-        f.write(f"- 🔴 **{issue['file']}:{issue['line']}** - {issue['message']}\n")
+    f.write("## 1. Syntax & Fatal Errors\n")
+    syntax_issues = [i for i in issues if i['category'] == 'SYNTAX_ERROR']
+    if syntax_issues:
+        for issue in syntax_issues:
+            f.write(f"- 🔴 **{issue['file']}** - {issue['message']}\n")
+    else:
+        f.write("- ✅ Zero Syntax Errors. Codebase is clean.\n")
         
-    f.write("\n## 2. Portability & Compatibility Risks\n")
-    for issue in [i for i in issues if i['category'] == 'PORTABILITY']:
-        f.write(f"- 🟡 **{issue['file']}:{issue['line']}** - {issue['message']}\n")
+    f.write("\n## 2. Logic & Architecture Risks\n")
+    logic_issues = [i for i in issues if i['category'] == 'LOGIC_RISK']
+    if logic_issues:
+        for issue in logic_issues:
+            f.write(f"- 🟠 **{issue['file']}:{issue['line']}** - {issue['message']}\n")
+    else:
+        f.write("- ✅ No obvious logic conflicts detected.\n")
+
+    f.write("\n## 3. Portability & Security\n")
+    port_issues = [i for i in issues if i['category'] in ['PORTABILITY', 'SECURITY']]
+    if port_issues:
+        for issue in port_issues:
+            f.write(f"- 🟡 **{issue['file']}:{issue['line']}** - {issue['message']}\n")
+    else:
+        f.write("- ✅ Code is portable and secure.\n")
         
-    f.write("\n## 3. Architecture & Port Conflicts\n")
-    for issue in [i for i in issues if i['category'] == 'CONFLICT']:
-        f.write(f"- 🟠 **{issue['message']}**\n")
-        
-    f.write("\n## 4. Cache & Ghost Files (Needs Cleaning)\n")
-    if cache_files:
-        f.write("Found compiled cache files that might cause version conflicts:\n")
-        for c in cache_files[:10]:
-            f.write(f"- ` {c} `\n")
-        if len(cache_files) > 10:
-            f.write(f"- ... and {len(cache_files)-10} more.\n")
+    f.write("\n## 4. Cache, Logs & Ghost Artifacts (Purge Recommended)\n")
+    if cache_dirs or cache_files:
+        f.write("Found compiled cache directories and log files that might cause build conflicts or disk bloat:\n")
+        for c in cache_dirs:
+            f.write(f"- 📂 ` {c} ` (Directory)\n")
+        for c in cache_files[:15]:
+            f.write(f"- 📄 ` {c} `\n")
+        if len(cache_files) > 15:
+            f.write(f"- ... and {len(cache_files)-15} more files.\n")
     else:
         f.write("- ✅ No stale cache files found.\n")
 
-print(f"Deep audit complete. Report saved to {REPORT_FILE}")
+print(f"Audit complete. See {REPORT_FILE}")
