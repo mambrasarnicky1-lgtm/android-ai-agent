@@ -39,6 +39,15 @@ CREATE TABLE IF NOT EXISTS knowledge_mesh (
     created_at  TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Tabel: Log Telemetri Agen
+CREATE TABLE IF NOT EXISTS logs (
+    device_id       TEXT,
+    level           TEXT,
+    message         TEXT,
+    created_at      TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Index untuk performa query
 CREATE INDEX IF NOT EXISTS idx_commands_status ON commands(status, created_at);
 CREATE INDEX IF NOT EXISTS idx_mesh_skill ON knowledge_mesh(skill_name);
+CREATE INDEX IF NOT EXISTS idx_logs_device ON logs(device_id, created_at);

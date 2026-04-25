@@ -37,7 +37,7 @@ class NoirManager:
         return out, err
 
     def deploy_vps(self):
-        print("[PROCESS] Syncing to VPS (v17.1 SENTINEL)...")
+        print("[PROCESS] Syncing to VPS (v17.2.2 OMEGA-FIX)...")
         if not self._connect(): return
         
         try:

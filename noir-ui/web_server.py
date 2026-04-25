@@ -86,15 +86,24 @@ async def proxy_asset(key: str):
         target_key = key
         if key == "latest":
             async with httpx.AsyncClient() as client:
-                r = await client.get(f"{CF_GATEWAY}/agent/summary", headers=CF_HEADERS, timeout=5.0)
-                summary = r.json()
-                target_key = summary.get("agent", {}).get("last_screenshot")
-                if not target_key:
-                    return {"error": "No screenshot available"}
+                try:
+                    r = await client.get(f"{CF_GATEWAY}/agent/summary", headers=CF_HEADERS, timeout=5.0)
+                    summary = r.json()
+                    target_key = summary.get("agent", {}).get("last_screenshot")
+                    if not target_key:
+                        # Fallback: return a 1x1 transparent pixel or 404
+                        return Response(status_code=404, content="No screenshot available")
+                except:
+                    return Response(status_code=404, content="Gateway unreachable")
         
         async with httpx.AsyncClient() as client:
-            r = await client.get(f"{CF_GATEWAY}/agent/asset/{target_key}", headers=CF_HEADERS, timeout=15.0)
-            return Response(content=r.content, media_type=r.headers.get("content-type", "image/png"))
+            try:
+                r = await client.get(f"{CF_GATEWAY}/agent/asset/{target_key}", headers=CF_HEADERS, timeout=15.0)
+                if r.status_code != 200:
+                    return Response(status_code=r.status_code, content="Asset not found")
+                return Response(content=r.content, media_type=r.headers.get("content-type", "image/png"))
+            except:
+                return Response(status_code=502, content="Failed to fetch asset")
     except Exception as e:
         return {"error": str(e)}
 

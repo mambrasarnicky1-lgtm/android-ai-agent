@@ -39,6 +39,7 @@ app.post('/agent/register', async (c: Context<Env>) => {
 
 app.all('/agent/poll', async (c: Context<Env>) => {
   const device_id = (c.req.query('device_id') || 'UNKNOWN') as string;
+  const client_type = (c.req.query('client_type') || 'main') as string;
   let stats = null;
 
   if (c.req.method === 'POST') {
@@ -59,11 +60,15 @@ app.all('/agent/poll', async (c: Context<Env>) => {
     ).bind(device_id).run();
   }
 
-  // Fetch pending commands
-  const cmds = await c.env.DB.prepare(
-    "SELECT id, action FROM commands WHERE (target_device = ? OR target_device IS NULL) AND status = 'pending' LIMIT 5"
-  ).bind(device_id).all();
-  
+  // Fetch pending commands with client_type awareness
+  // v17.2 optimization: Background service only pulls 'shell' commands to avoid swallowing 'vision' tasks
+  let query = "SELECT id, action FROM commands WHERE (target_device = ? OR target_device IS NULL) AND status = 'pending'";
+  if (client_type === 'service') {
+    query += " AND (action LIKE '%\"type\":\"shell\"%' OR action LIKE '%\"action\":\"shell\"%')";
+  }
+  query += " LIMIT 5";
+
+  const cmds = await c.env.DB.prepare(query).bind(device_id).all();
   const results = cmds.results as unknown as { id: string; action: string }[];
   
   if (results.length > 0) {
@@ -83,18 +88,18 @@ app.post('/agent/result', async (c: Context<Env>) => {
   const data = await c.req.json();
   const { command_id, device_id, telemetry } = data;
   
-  // Update command status
-  await c.env.DB.prepare(
-    "UPDATE commands SET status = 'done', result = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
-  ).bind(JSON.stringify(data), command_id).run();
+  // v17.2: Atomic Multi-Operation via D1 Batching
+  const statements = [
+    c.env.DB.prepare("UPDATE commands SET status = 'done', result = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(JSON.stringify(data), command_id)
+  ];
 
-  // If telemetry is present, update agent stats for real-time monitoring
   if (telemetry && device_id) {
-    await c.env.DB.prepare(
-      "UPDATE agents SET stats = ?, last_seen = datetime('now') WHERE device_id = ?"
-    ).bind(JSON.stringify(telemetry), device_id).run();
+    statements.push(
+      c.env.DB.prepare("UPDATE agents SET stats = ?, last_seen = datetime('now') WHERE device_id = ?").bind(JSON.stringify(telemetry), device_id)
+    );
   }
   
+  await c.env.DB.batch(statements);
   return c.json({ status: 'ok' });
 });
 

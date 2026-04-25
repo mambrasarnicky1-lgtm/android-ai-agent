@@ -320,10 +320,10 @@ class SecureVault:
     """Implementasi AES-256-GCM E2EE untuk jalur komunikasi."""
     @staticmethod
     def _get_key():
-        # Menggunakan NOIR_API_KEY sebagai seed untuk KDF
-        password = os.environ.get("NOIR_API_KEY", "DEFAULT_SECURE_SEED").encode()
-        salt = b'noir_sovereign_salt'
-        return PBKDF2(password, salt, dkLen=32, count=1000)
+        # Sync with Mobile Agent v17.2.2 [OMEGA-FIX]
+        password = os.environ.get("NOIR_API_KEY", "NOIR_AGENT_KEY_V6_SI_UMKM_PBD_2026").encode()
+        salt = b'noir_sovereign_mesh_v18'
+        return PBKDF2(password, salt, dkLen=32, count=2000)
 
     @staticmethod
     def encrypt(data: str):
