@@ -45,13 +45,17 @@ def noir_log(message, level="INFO"):
     threading.Thread(target=_send, daemon=True).start()
 
 def run_service():
-    noir_log("🌑 NOIR ELITE SERVICE v17.1 [SENTINEL]: INITIALIZING...")
+    noir_log("NOIR ELITE SERVICE v17.2.2 [OMEGA-FIX]: INITIALIZING...")
     
-    # Process Purge: Kill old ghosts if this is a fresh start
+    # WARN-03 FIX: Kill old ghosts using updated package domain
     try:
-        os.system("pkill -f org.noir.agent.noirelitev16")
-        os.system("pkill -f org.noir.agent.noirelitev17")
+        os.system("pkill -f org.noir.sovereign")
+        os.system("pkill -f org.noir.agent")
     except: pass
+
+    # WARN-01 FIX: Wait 6s for Android network init before first poll
+    time.sleep(6)
+
 
     poll_interval = 10
     while True:

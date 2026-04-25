@@ -31,6 +31,15 @@ from kivy.uix.scrollview import ScrollView
 from kivy.clock import Clock
 
 # Configure robust requests with built-in retry for DNS/Network issues
+# BUG-01 FIX: Inject certifi CA bundle so HTTPS works on Android 14
+try:
+    import certifi
+    import os as _os
+    _os.environ['SSL_CERT_FILE'] = certifi.where()
+    _os.environ['REQUESTS_CA_BUNDLE'] = certifi.where()
+except Exception:
+    pass
+
 session = requests.Session()
 retries = Retry(total=5, backoff_factor=1, status_forcelist=[502, 503, 504])
 session.mount('https://', HTTPAdapter(max_retries=retries))
@@ -174,16 +183,17 @@ class SovereignCore(App):
         self.title = f"Noir Sovereign v{self.version}"
         self.root = BoxLayout(orientation='vertical', padding=10, spacing=5)
         
-        # FINAL SANITIZATION
+        # FINAL SANITIZATION — WARN-03 FIX: use updated package domain
         try:
-            os.system("pkill -f org.noir.agent")
+            os.system("pkill -f org.noir.sovereign")
         except: pass
         
         self._request_permissions()
         self._acquire_wakelock()
         
+        # INFO-01 FIX: Start as CONNECTING (amber), updated dynamically on success/fail
         self.log_label = Label(
-            text="[b]NOIR SOVEREIGN v17.2.1 [OMEGA][/b]\nStatus: [color=00ff88]NEURAL-LINK ACTIVE[/color]",
+            text="[b]NOIR SOVEREIGN v17.2.2 [OMEGA-FIX][/b]\nStatus: [color=ffaa00]CONNECTING...[/color]",
             markup=True, font_size='14sp', halign='left', valign='top', size_hint_y=None
         )
         self.log_label.bind(texture_size=self.log_label.setter('size'))
@@ -192,12 +202,15 @@ class SovereignCore(App):
         scroll.add_widget(self.log_label)
         self.root.add_widget(scroll)
 
+        # BUG-02 FIX: Register device explicitly at boot with 5s delay
+        Clock.schedule_once(lambda dt: threading.Thread(target=self._register, daemon=True).start(), 5)
+        # WARN-01 FIX: Delay first heartbeat to 6s (after network init completes)
+        Clock.schedule_once(lambda dt: self._unified_heartbeat_tick(0), 6)
         # Unified Heartbeat: Every 15 seconds (Stable Protocol)
         Clock.schedule_interval(self._unified_heartbeat_tick, 15)
-        # Immediate poll on boot
-        Clock.schedule_once(lambda dt: self._unified_heartbeat_tick(0), 1)
         
         return self.root
+
 
     def show_stealth_ui(self):
         self.root.clear_widgets()
@@ -317,8 +330,8 @@ class SovereignCore(App):
                 active_app = "unknown"
                 privacy_mode = False
                 try:
-                    # Check foreground app via shell (lightweight)
-                    res = self._run_shell("dumpsys window | grep -E 'mCurrentFocus|mFocusedApp'")
+                    # WARN-02 FIX: Hard timeout on dumpsys to prevent heartbeat hang
+                    res = self._run_shell("dumpsys window | grep -E 'mCurrentFocus|mFocusedApp'", timeout=3)
                     for pkg in FINANCE_APPS:
                         if pkg in res.get("output", ""):
                             privacy_mode = True
@@ -348,17 +361,21 @@ class SovereignCore(App):
                     timeout=12
                 )
                 if resp.status_code == 200:
+                    # INFO-01 FIX: Update UI status dynamically on successful connection
+                    Clock.schedule_once(lambda dt: self._set_status_online(), 0)
                     data = resp.json()
                     for cmd in data.get("commands", []):
-                        # v17 SECURITY: Absolute Vision Freeze during Privacy Mode
                         atype = cmd.get("action", {}).get("type", "")
                         if privacy_mode and atype in ("screenshot", "capture", "vision", "ui_dump"):
                             noir_log(f"[SENTINEL] Blocked sensitive capture request for: {active_app}", level="CRITICAL")
                             self._report_result(cmd.get("command_id"), {"success": False, "error": "PRIVACY_BLOCK: Sensitive App in Foreground"})
                             continue
                         self._execute(cmd)
+                else:
+                    Clock.schedule_once(lambda dt: self._set_status_offline(), 0)
             except Exception as e:
                 noir_log(f"[LINK] Sync Latency: {e}", level="WARNING")
+                Clock.schedule_once(lambda dt: self._set_status_offline(), 0)
         
         threading.Thread(target=_task, daemon=True).start()
 
@@ -382,10 +399,26 @@ class SovereignCore(App):
         if not self.is_stealth:
             self.show_active_ui()
 
+    def _set_status_online(self):
+        """Dynamically update UI to show ONLINE state."""
+        try:
+            lines = self.log_label.text.split('\n')
+            lines[1] = "Status: [color=00ff88]NEURAL-LINK ACTIVE[/color]"
+            self.log_label.text = '\n'.join(lines)
+        except: pass
+
+    def _set_status_offline(self):
+        """Dynamically update UI to show OFFLINE/ERROR state."""
+        try:
+            lines = self.log_label.text.split('\n')
+            lines[1] = "Status: [color=ff4444]LINK SEVERED — Retrying...[/color]"
+            self.log_label.text = '\n'.join(lines)
+        except: pass
+
     def show_active_ui(self):
         """Standard dashboard view."""
         self.root.clear_widgets()
-        self.log_label = Label(text="[b]NOIR SOVEREIGN v17.0 [SENTINEL][/b]\nNeural Link: ACTIVE", markup=True)
+        self.log_label = Label(text="[b]NOIR SOVEREIGN v17.2.2 [OMEGA-FIX][/b]\nStatus: [color=ffaa00]RECONNECTING...[/color]", markup=True)
         self.root.add_widget(self.log_label)
 
     def _execute(self, cmd_data):

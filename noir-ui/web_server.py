@@ -40,7 +40,7 @@ CF_HEADERS = {"Authorization": f"Bearer {CF_KEY}", "Content-Type": "application/
 async def api_status():
     try:
         async with httpx.AsyncClient() as client:
-            r = await client.get(f"{CF_GATEWAY}/agent/summary", headers=CF_HEADERS, timeout=10.0)
+            r = await client.get(f"{CF_GATEWAY}/agent/summary", headers=CF_HEADERS, timeout=20.0)
             return r.json()
     except Exception as e:
         return {"error": str(e), "online": False}
@@ -49,7 +49,7 @@ async def api_status():
 async def api_logs(device_id: str = "REDMI_NOTE_14"):
     try:
         async with httpx.AsyncClient() as client:
-            r = await client.get(f"{CF_GATEWAY}/agent/logs?device_id={device_id}", headers=CF_HEADERS, timeout=10.0)
+            r = await client.get(f"{CF_GATEWAY}/agent/logs?device_id={device_id}", headers=CF_HEADERS, timeout=20.0)
             return r.json()
     except Exception as e:
         return []
