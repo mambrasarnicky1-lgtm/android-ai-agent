@@ -6,7 +6,11 @@ Autonomous Self-Repair: Memantau log sistem secara real-time,
 mendiagnosis error via AI, dan menyusun patch otomatis.
 """
 
-import os, json, logging, time, requests, subprocess
+import os, json, logging, time, requests, subprocess, sys
+
+# v17.2: Unified Path Normalization
+sys.path.append(os.path.join(os.path.dirname(__file__)))
+
 from ai_router import AIRouter
 
 log = logging.getLogger("SovereignHealer")

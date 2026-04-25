@@ -39,9 +39,9 @@ class AutonomousResearcher:
         
         # Contoh scan file krusial
         target_files = [
-            "../mobile_app/main.py",
-            "../noir-vps/brain.py",
-            "../noir-gateway/src/index.ts"
+            "mobile_app/main.py",
+            "noir-vps/brain.py",
+            "noir-gateway/src/index.ts"
         ]
         
         for file_path in target_files:

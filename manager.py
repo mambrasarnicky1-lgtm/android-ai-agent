@@ -119,6 +119,18 @@ class NoirManager:
             self.ssh.close()
         print("[SUCCESS] Total Purge Complete.")
 
+    def show_logs(self):
+        print("[PROCESS] Fetching Neural Services Logs...")
+        if not self._connect(): return
+        self._run_remote(f"cd {self.remote_path} && docker-compose logs --tail=20")
+        self.ssh.close()
+
+    def run_heal(self):
+        print("[PROCESS] TRIGGERING AI HEALER...")
+        if not self._connect(): return
+        self._run_remote(f"cd {self.remote_path} && docker-compose exec -T noir-brain python healer.py")
+        self.ssh.close()
+
 if __name__ == "__main__":
     manager = NoirManager()
     if len(sys.argv) > 1:
@@ -127,5 +139,7 @@ if __name__ == "__main__":
         elif cmd == "build-apk": manager.build_apk()
         elif cmd == "total-purge": manager.total_purge()
         elif cmd == "gateway": manager.gateway_deploy()
+        elif cmd == "logs": manager.show_logs()
+        elif cmd == "heal": manager.run_heal()
     else:
-        print("Usage: python manager.py [deploy|build-apk|total-purge|gateway]")
+        print("Usage: python manager.py [deploy|build-apk|total-purge|gateway|logs|heal]")

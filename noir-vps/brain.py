@@ -11,6 +11,9 @@ import os, json, logging, time, sys, subprocess, base64
 from Crypto.Cipher import AES
 from Crypto.Protocol.KDF import PBKDF2
 from pathlib import Path
+
+# v17.2: Unified Path Normalization
+sys.path.append(os.path.join(os.path.dirname(__file__)))
 from datetime import datetime
 
 # Load env
@@ -394,6 +397,7 @@ class NeuralWatchdog:
             # Autonomous Daily Backup
             DataArchiver.backup_daily(data)
             
+            if not data.get("online"):
                 # Hanya log peringatan, jangan spam Telegram agar hemat token/API
                 if time.time() - NeuralWatchdog._last_alert_time > 3600:
                     log.warning(f"🚨 [OFFLINE] Agent '{DEVICE_ID}' tidak terdeteksi aktif di Gateway!")

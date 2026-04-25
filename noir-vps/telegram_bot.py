@@ -5,8 +5,11 @@ NOIR AGENT v14.0 COMMANDER — TELEGRAM SOVEREIGN INTERFACE
 Bot Telegram cerdas dengan integrasi AI Brain.
 """
 
-import os, json, logging, sys, re
+import os, json, logging, sys, re, time
 from pathlib import Path
+
+# v17.2: Unified Path Normalization
+sys.path.append(os.path.join(os.path.dirname(__file__)))
 
 # Load env
 env_path = Path(__file__).resolve().parent.parent / ".env"
