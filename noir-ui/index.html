@@ -189,6 +189,7 @@
             <div class="nav-node" onclick="showPage('loot', this)" title="Media Vault">📦</div>
             <div class="nav-node" onclick="showPage('chat', this)" title="C&C Terminal">💬</div>
             <div class="nav-node" onclick="showPage('evolution', this)" title="Apex Evolution">🧬</div>
+            <div class="nav-node" onclick="showPage('healer', this)" title="Neuro-Healer">🚑</div>
             <div class="nav-node" onclick="showPage('system', this)" title="System Core">⚙️</div>
         </nav>
 
@@ -314,6 +315,24 @@
                     </div>
                 `
             },
+            healer: {
+                title: "NEURO-HEALER",
+                menu: [
+                    { label: "Full Scan", cmd: 'scan' },
+                    { label: "Reset Matrix", cmd: 'reset_link' }
+                ],
+                render: () => `
+                    <div style="padding:30px; height:100%; display:flex; flex-direction:column; gap:20px;">
+                        <div class="glass" style="padding:30px; border-top:4px solid var(--accent); text-align:center;">
+                            <div id="healer-status" style="font-family:'Orbitron'; font-size:1.5rem; margin-bottom:10px; color:var(--accent);">AI HEALER: STANDBY</div>
+                            <button onclick="initiateHeal()" class="btn-action" style="font-size:1rem; padding:15px 40px;">INITIATE NEURO-HEAL</button>
+                        </div>
+                        <div class="glass" style="flex:1; padding:20px; background:rgba(0,0,0,0.4); font-family:'Fira Code'; font-size:0.8rem; overflow-y:auto;" id="healer-log">
+                            <div style="color:#555;">[SYSTEM] Initializing diagnostics...</div>
+                        </div>
+                    </div>
+                `
+            },
             system: {
                 title: "SYSTEM CORE",
                 menu: [
@@ -392,9 +411,17 @@
                 const d = await r.json();
                 
                 const sync = document.getElementById('sync-status');
+                const recon = document.getElementById('reconnect-ui');
+                
                 sync.innerText = d.online ? "LINK: SECURE" : "LINK: SEVERED";
                 sync.style.color = d.online ? "var(--success)" : "var(--danger)";
                 sync.style.borderColor = d.online ? "var(--success)" : "var(--danger)";
+
+                if(!d.online) {
+                    recon.style.display = 'flex';
+                } else {
+                    recon.style.display = 'none';
+                }
 
                 if(d.agent) {
                     const s = d.agent.stats || {};
@@ -411,7 +438,43 @@
                 }
                 
                 if(currentPage === 'system') fetchLogs();
-            } catch(e) {}
+            } catch(e) {
+                document.getElementById('reconnect-ui').style.display = 'flex';
+            }
+        }
+
+        async function initiateHeal() {
+            const status = document.getElementById('healer-status');
+            const log = document.getElementById('healer-log');
+            
+            status.innerText = "HEALER: ANALYZING...";
+            status.style.color = "var(--gold)";
+            log.innerHTML += `<div style="color:var(--accent);">[${new Date().toLocaleTimeString()}] Starting Deep Forensic Scan...</div>`;
+            
+            // Step 1: Ping Gateway
+            log.innerHTML += `<div>[1/4] Checking Gateway Matrix...</div>`;
+            const r1 = await fetch(`${API}/status`);
+            const d1 = await r1.json();
+            log.innerHTML += `<div style="color:var(--success);">-> Gateway Status: ${d1.online ? 'REACHABLE' : 'UNREACHABLE'}</div>`;
+
+            // Step 2: Trigger Agent Heal
+            log.innerHTML += `<div>[2/4] Injecting Neural Heal Pulse to Agent...</div>`;
+            await executeCmd('heal');
+            log.innerHTML += `<div style="color:var(--success);">-> Pulse Injected. Awaiting Agent Response.</div>`;
+
+            // Step 3: Clear Local Cache
+            log.innerHTML += `<div>[3/4] Purging Local Dashboard Cache...</div>`;
+            localStorage.clear();
+            log.innerHTML += `<div style="color:var(--success);">-> Cache Purged.</div>`;
+
+            // Step 4: Finalize
+            log.innerHTML += `<div>[4/4] Optimizing Neural Pathways...</div>`;
+            setTimeout(() => {
+                status.innerText = "HEALER: REPAIR COMPLETE";
+                status.style.color = "var(--success)";
+                log.innerHTML += `<div style="color:var(--success); font-weight:bold;">[SUCCESS] System Integrity Restored. Reloading...</div>`;
+                setTimeout(() => location.reload(), 2000);
+            }, 3000);
         }
 
         function updateTerminal(msg, color='#00ffaa') {
