@@ -61,8 +61,8 @@ class NoirManager:
             print("[PROCESS] Starting All Neural Services in Docker (v17.1)...")
             self._run_remote(f"cd {self.remote_path} && docker-compose up -d --build")
             
-            self.notify_telegram("🖤 *Noir Sovereign v17.1 Active*\nSemua layanan neural di VPS telah dideploy dan diaktifkan.")
-            print("[SUCCESS] v17.1 SENTINEL DEPLOYED.")
+            self.notify_telegram("🖤 *Noir Sovereign v17.2.2 Active*\nSemua layanan neural di VPS telah dideploy dan diaktifkan.")
+            print("[SUCCESS] v17.2.2 OMEGA-FIX DEPLOYED.")
         except Exception as e:
             print(f"[ERROR] Deployment failed: {e}")
         finally:
@@ -81,7 +81,7 @@ class NoirManager:
         except: pass
 
     def build_apk(self):
-        print("[PROCESS] STARTING REMOTE SOVEREIGN BUILD (v16.0.03)...")
+        print("[PROCESS] STARTING REMOTE SOVEREIGN BUILD (v17.2.2)...")
         if not self._connect(): return
         
         try:
@@ -100,7 +100,7 @@ class NoirManager:
                 scp.get(f"{self.remote_path}/bin/*.apk", local_path=local_bin)
             
             print(f"[SUCCESS] APK downloaded to: {local_bin}")
-            self.notify_telegram("📦 *Sovereign Build Complete*\nAPK v16.0.03 telah berhasil dibangun di VPS.")
+            self.notify_telegram("📦 *Sovereign Build Complete*\nAPK v17.2.2 telah berhasil dibangun di VPS.")
         except Exception as e:
             print(f"[ERROR] Build failed: {e}")
         finally:
