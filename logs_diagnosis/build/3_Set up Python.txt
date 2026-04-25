@@ -1,0 +1,16 @@
+﻿2026-04-24T13:10:35.4990966Z ##[group]Run actions/setup-python@v5
+2026-04-24T13:10:35.4992157Z with:
+2026-04-24T13:10:35.4992846Z   python-version: 3.11
+2026-04-24T13:10:35.4993625Z   check-latest: false
+2026-04-24T13:10:35.4994829Z   token: ***
+2026-04-24T13:10:35.4995559Z   update-environment: true
+2026-04-24T13:10:35.4996409Z   allow-prereleases: false
+2026-04-24T13:10:35.4997246Z   freethreaded: false
+2026-04-24T13:10:35.4997971Z env:
+2026-04-24T13:10:35.4998695Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-04-24T13:10:35.4999626Z ##[endgroup]
+2026-04-24T13:10:35.6312186Z ##[group]Installed versions
+2026-04-24T13:10:35.6400198Z (node:2061) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-04-24T13:10:35.6402934Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-04-24T13:10:35.6405009Z Successfully set up CPython (3.11.15)
+2026-04-24T13:10:35.6407087Z ##[endgroup]

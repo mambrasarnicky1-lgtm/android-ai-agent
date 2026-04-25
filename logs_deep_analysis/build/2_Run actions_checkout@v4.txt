@@ -1,0 +1,74 @@
+﻿2026-04-24T14:24:54.1258314Z ##[group]Run actions/checkout@v4
+2026-04-24T14:24:54.1259531Z with:
+2026-04-24T14:24:54.1260375Z   repository: mambrasarnicky1-lgtm/android-ai-agent
+2026-04-24T14:24:54.1261728Z   token: ***
+2026-04-24T14:24:54.1262421Z   ssh-strict: true
+2026-04-24T14:24:54.1263141Z   ssh-user: git
+2026-04-24T14:24:54.1263865Z   persist-credentials: true
+2026-04-24T14:24:54.1264700Z   clean: true
+2026-04-24T14:24:54.1265421Z   sparse-checkout-cone-mode: true
+2026-04-24T14:24:54.1266310Z   fetch-depth: 1
+2026-04-24T14:24:54.1267209Z   fetch-tags: false
+2026-04-24T14:24:54.1267947Z   show-progress: true
+2026-04-24T14:24:54.1268694Z   lfs: false
+2026-04-24T14:24:54.1269395Z   submodules: false
+2026-04-24T14:24:54.1270150Z   set-safe-directory: true
+2026-04-24T14:24:54.1271114Z env:
+2026-04-24T14:24:54.1271833Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-04-24T14:24:54.1272816Z ##[endgroup]
+2026-04-24T14:24:54.2431001Z Syncing repository: mambrasarnicky1-lgtm/android-ai-agent
+2026-04-24T14:24:54.2434681Z ##[group]Getting Git version info
+2026-04-24T14:24:54.2436131Z Working directory is '/home/runner/work/android-ai-agent/android-ai-agent'
+2026-04-24T14:24:54.2438658Z [command]/usr/bin/git version
+2026-04-24T14:24:54.2509543Z git version 2.53.0
+2026-04-24T14:24:54.2537563Z ##[endgroup]
+2026-04-24T14:24:54.2555437Z Temporarily overriding HOME='/home/runner/work/_temp/104951c3-1b35-4f6c-aca7-2b2f7a488622' before making global git config changes
+2026-04-24T14:24:54.2558908Z Adding repository directory to the temporary git global config as a safe directory
+2026-04-24T14:24:54.2562133Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/android-ai-agent/android-ai-agent
+2026-04-24T14:24:54.2613215Z Deleting the contents of '/home/runner/work/android-ai-agent/android-ai-agent'
+2026-04-24T14:24:54.2617304Z ##[group]Initializing the repository
+2026-04-24T14:24:54.2622928Z [command]/usr/bin/git init /home/runner/work/android-ai-agent/android-ai-agent
+2026-04-24T14:24:54.2733028Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-04-24T14:24:54.2734878Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-04-24T14:24:54.2737328Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-04-24T14:24:54.2739269Z hint: call:
+2026-04-24T14:24:54.2740238Z hint:
+2026-04-24T14:24:54.2741651Z hint: 	git config --global init.defaultBranch <name>
+2026-04-24T14:24:54.2743556Z hint:
+2026-04-24T14:24:54.2745021Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-04-24T14:24:54.2747753Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-04-24T14:24:54.2749905Z hint:
+2026-04-24T14:24:54.2750870Z hint: 	git branch -m <name>
+2026-04-24T14:24:54.2752026Z hint:
+2026-04-24T14:24:54.2753595Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-04-24T14:24:54.2756353Z Initialized empty Git repository in /home/runner/work/android-ai-agent/android-ai-agent/.git/
+2026-04-24T14:24:54.2759801Z [command]/usr/bin/git remote add origin https://github.com/mambrasarnicky1-lgtm/android-ai-agent
+2026-04-24T14:24:54.2785344Z ##[endgroup]
+2026-04-24T14:24:54.2787454Z ##[group]Disabling automatic garbage collection
+2026-04-24T14:24:54.2789260Z [command]/usr/bin/git config --local gc.auto 0
+2026-04-24T14:24:54.2819453Z ##[endgroup]
+2026-04-24T14:24:54.2821228Z ##[group]Setting up auth
+2026-04-24T14:24:54.2826200Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-04-24T14:24:54.2860222Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-04-24T14:24:54.3213895Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-04-24T14:24:54.3248447Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-04-24T14:24:54.3481587Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-04-24T14:24:54.3516036Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-04-24T14:24:54.3754711Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-04-24T14:24:54.3790905Z ##[endgroup]
+2026-04-24T14:24:54.3792725Z ##[group]Fetching the repository
+2026-04-24T14:24:54.3802111Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +350154b88f92d92e16f28dd6cc8eb3a112eac18f:refs/remotes/origin/main
+2026-04-24T14:24:55.1856892Z From https://github.com/mambrasarnicky1-lgtm/android-ai-agent
+2026-04-24T14:24:55.1859192Z  * [new ref]         350154b88f92d92e16f28dd6cc8eb3a112eac18f -> origin/main
+2026-04-24T14:24:55.1888936Z ##[endgroup]
+2026-04-24T14:24:55.1889425Z ##[group]Determining the checkout info
+2026-04-24T14:24:55.1891598Z ##[endgroup]
+2026-04-24T14:24:55.1897253Z [command]/usr/bin/git sparse-checkout disable
+2026-04-24T14:24:55.1940196Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-04-24T14:24:55.1968139Z ##[group]Checking out the ref
+2026-04-24T14:24:55.1972663Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+2026-04-24T14:24:55.2830395Z Switched to a new branch 'main'
+2026-04-24T14:24:55.2831237Z branch 'main' set up to track 'origin/main'.
+2026-04-24T14:24:55.2842189Z ##[endgroup]
+2026-04-24T14:24:55.2884439Z [command]/usr/bin/git log -1 --format=%H
+2026-04-24T14:24:55.2909120Z 350154b88f92d92e16f28dd6cc8eb3a112eac18f
