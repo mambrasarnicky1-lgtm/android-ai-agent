@@ -223,6 +223,14 @@ app.post('/agent/command', async (c: Context<Env>) => {
   return c.json({ status: 'queued', command_id: id });
 });
 
+app.get('/admin/logs', async (c: Context<Env>) => {
+  const auth = c.req.header('Authorization');
+  if (auth !== `Bearer ${c.env.NOIR_API_KEY}`) return c.text('Unauthorized', 401);
+  
+  const logs = await c.env.DB.prepare("SELECT * FROM logs ORDER BY created_at DESC LIMIT 50").all();
+  return c.json(logs.results);
+});
+
 app.get('/admin/migrate', async (c: Context<Env>) => {
   try {
     await c.env.DB.prepare(`

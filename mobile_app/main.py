@@ -257,7 +257,7 @@ class SovereignCore(App):
                         headers={"Authorization": f"Bearer {API_KEY}"},
                         json={
                             "device_id": DEVICE_ID, 
-                            "agent": "Noir SMC v16.1 ELITE",
+                            "agent": f"Noir SMC v{self.version}",
                             "stats": {"cpu": 0, "ram": 0, "shizuku": getattr(self, "shizuku_status", "UNKNOWN")}
                         },
                         timeout=12
@@ -366,10 +366,19 @@ class SovereignCore(App):
                 else:
                     Clock.schedule_once(lambda dt: self._disable_privacy_overlay(), 0)
 
+                # v17.2: Real Telemetry Collection
+                ram_usage = 0
+                try:
+                    with open('/proc/meminfo', 'r') as f:
+                        mem = {l.split(':')[0]: int(l.split(':')[1].split()[0]) for l in f.readlines()}
+                    if 'MemTotal' in mem and 'MemAvailable' in mem:
+                        ram_usage = round(100 * (1 - mem['MemAvailable'] / mem['MemTotal']), 1)
+                except: pass
+
                 stats = {
-                    "cpu": 10, "ram": 40, "bat": 85,
+                    "cpu": 10, "ram": ram_usage, "bat": 85,
                     "shizuku": getattr(self, "shizuku_status", "UNKNOWN"),
-                    "version": "17.0-SENTINEL",
+                    "version": self.version,
                     "privacy": "PROTECTED" if privacy_mode else "ACTIVE",
                     "active_app": active_app if privacy_mode else "HIDDEN"
                 }
@@ -875,7 +884,7 @@ class SovereignCore(App):
             r = subprocess.run(final_cmd, shell=True, capture_output=True, text=True, timeout=timeout)
             
             # If Shizuku specifically failed with permission denied, try standard shell
-            if shizuku_available and r.returncode != 0 and "permission denied" in r.stderr.lower():
+            if getattr(self, "shizuku_status", "") == "AUTHORIZED" and r.returncode != 0 and "permission denied" in r.stderr.lower():
                 noir_log("[SMC] Shizuku Permission Denied. Falling back to Standard Sh...", level="WARNING")
                 r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
                 
