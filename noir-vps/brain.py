@@ -472,12 +472,12 @@ def run():
         
         # 2. Automated Learning & Evolution (v17.2 OMEGA)
         try:
-            # Refresh knowledge every 10 cycles (~10 mins)
-            if cycle % 10 == 0:
+            # Refresh knowledge every 20 cycles (~20 mins)
+            if cycle % 20 == 0:
                 LearningEngine.knowledge_refresh()
             
-            # Generate Evolution Report every 30 cycles (~30 mins)
-            if cycle % 30 == 0:
+            # Generate Evolution Report every 120 cycles (~2 hours) to save tokens
+            if cycle % 120 == 0:
                 SelfEvolutionEngine.generate_progress_report()
         except Exception as e:
             log.error(f"Evolution Loop Error: {e}")
