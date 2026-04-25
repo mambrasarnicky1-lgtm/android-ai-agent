@@ -470,21 +470,36 @@ def run():
                 log.warning("⚠️ Gateway Connection Latency Detected.")
         except: pass
         
-        # 3. Proactive Scene Intelligence (v17.1)
+        # 2. Automated Learning & Evolution (v17.2 OMEGA)
+        try:
+            # Refresh knowledge every 10 cycles (~10 mins)
+            if cycle % 10 == 0:
+                LearningEngine.knowledge_refresh()
+            
+            # Generate Evolution Report every 30 cycles (~30 mins)
+            if cycle % 30 == 0:
+                SelfEvolutionEngine.generate_progress_report()
+        except Exception as e:
+            log.error(f"Evolution Loop Error: {e}")
+
+        # 3. Proactive Scene Intelligence (v17.2)
         try:
             summary_resp = requests.get(f"{GATEWAY}/agent/summary", headers=HEADERS, timeout=10)
             summary = summary_resp.json()
             last_ss = summary.get("agent", {}).get("last_screenshot")
             
-            if last_ss and last_ss != getattr(self, "_last_analyzed_ss", ""):
+            # Using global storage for analyzed state
+            if not hasattr(run, "_last_analyzed_ss"): run._last_analyzed_ss = ""
+            
+            if last_ss and last_ss != run._last_analyzed_ss:
                 log.info(f"👁️ Proactive Vision: Analyzing scene {last_ss}...")
                 analysis = VisionEngine.analyze_screenshot(last_ss, "Analyze this Android screen. Is there any sensitive data, security risks, or important notifications? Respond briefly.")
                 
-                if "risk" in analysis.lower() or "warning" in analysis.lower() or "important" in analysis.lower():
+                if analysis and any(word in analysis.lower() for word in ["risk", "warning", "important", "danger"]):
                     msg = f"⚠️ **PROACTIVE ALERT**: {analysis}"
                     PhasedLearning.send_telegram(msg, important=True)
                 
-                self._last_analyzed_ss = last_ss
+                run._last_analyzed_ss = last_ss
         except: pass
 
         time.sleep(60)

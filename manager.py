@@ -58,7 +58,7 @@ class NoirManager:
             
             self._run_remote("fuser -k 80/tcp || true")
             self._run_remote(f"cd {self.remote_path} && docker-compose down || true")
-            print("[PROCESS] Starting All Neural Services in Docker (v17.1)...")
+            print("[PROCESS] Starting All Neural Services in Docker (v17.2.2)...")
             self._run_remote(f"cd {self.remote_path} && docker-compose up -d --build")
             
             self.notify_telegram("🖤 *Noir Sovereign v17.2.2 Active*\nSemua layanan neural di VPS telah dideploy dan diaktifkan.")
