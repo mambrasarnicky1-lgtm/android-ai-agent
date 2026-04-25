@@ -41,7 +41,7 @@ logging.basicConfig(
 )
 log = logging.getLogger("NoirBrain")
 
-from catalyst import catalyst
+from catalyst import SovereignCatalyst
 from ai_router import AIRouter, EXPERT_SYSTEM_PROMPT, HEADERS
 from vision_analyzer import ScreenVisionIntelligence
 from skill_acquisition import SkillAcquisitionEngine
