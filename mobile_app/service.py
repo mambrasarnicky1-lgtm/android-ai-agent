@@ -12,24 +12,37 @@ import socket
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-# --- CONFIG (Unified Standard v17.1 & Auto-Discovery) ---
+# --- CONFIG (Unified Standard v17.5 OMEGA-MESH) ---
 _BASE_GATEWAY = os.environ.get("NOIR_GATEWAY_URL", "https://noir-agent-gateway.si-umkm-ikm-pbd.workers.dev")
 VPS_IP = os.environ.get("NOIR_VPS_IP", "8.215.23.17")
-FALLBACKS = [_BASE_GATEWAY, f"http://{VPS_IP}", f"http://{VPS_IP}:80", f"http://{VPS_IP}:8000", "http://192.168.1.100:8000"]
+FALLBACKS = [
+    _BASE_GATEWAY,
+    f"http://{VPS_IP}",
+    f"http://{VPS_IP}:80",
+    f"http://{VPS_IP}:8000",
+]
 
 class DynamicGateway:
     _current = None
+    _last_discovery = 0
     @classmethod
     def get(cls):
-        if cls._current: return cls._current
+        if cls._current and (time.time() - cls._last_discovery) < 300:
+            return cls._current
         for gw in FALLBACKS:
             try:
-                if requests.get(f"{gw}/health", timeout=2).status_code == 200:
+                r = requests.get(f"{gw}/health", timeout=3)
+                if r.status_code == 200:
                     cls._current = gw
-                    noir_log(f"Auto-Discovery: Gateway matched -> {gw}")
+                    cls._last_discovery = time.time()
                     return gw
             except: pass
+        cls._current = None
         return _BASE_GATEWAY
+    @classmethod
+    def reset(cls):
+        cls._current = None
+        cls._last_discovery = 0
 
 class _GatewayProxy:
     def __str__(self): return DynamicGateway.get()

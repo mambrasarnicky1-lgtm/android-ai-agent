@@ -44,24 +44,54 @@ session = requests.Session()
 retries = Retry(total=5, backoff_factor=1, status_forcelist=[502, 503, 504])
 session.mount('https://', HTTPAdapter(max_retries=retries))
 
-# --- CONFIG (Unified Standard v16 & Auto-Discovery) ---
+# --- CONFIG (Unified Standard v17.5 OMEGA-MESH) ---
 _BASE_GATEWAY = os.environ.get("NOIR_GATEWAY_URL", "https://noir-agent-gateway.si-umkm-ikm-pbd.workers.dev")
 VPS_IP = os.environ.get("NOIR_VPS_IP", "8.215.23.17")
-FALLBACKS = [_BASE_GATEWAY, f"http://{VPS_IP}", f"http://{VPS_IP}:80", f"http://{VPS_IP}:8000", "http://192.168.1.100:8000"]
+# Priority order: Cloudflare → VPS Direct (port 80/Dashboard) → VPS alt ports
+FALLBACKS = [
+    _BASE_GATEWAY,
+    f"http://{VPS_IP}",
+    f"http://{VPS_IP}:80",
+    f"http://{VPS_IP}:8000",
+]
 
 class DynamicGateway:
+    """AUTO-CONNECTION AI AGENT TASK v17.5
+    Secara otonom mencari dan mempertahankan koneksi ke gateway yang aktif.
+    Mereset dirinya sendiri saat gateway gagal dan mencari ulang jalur baru.
+    """
     _current = None
+    _failure_count = 0
+    _last_discovery = 0
+
     @classmethod
     def get(cls):
-        if cls._current: return cls._current
+        # Re-discover if no current, or if it's been >5 minutes since last check
+        if cls._current and (time.time() - cls._last_discovery) < 300:
+            return cls._current
+        # Always re-probe to confirm current gateway is alive
         for gw in FALLBACKS:
             try:
-                if session.get(f"{gw}/health", timeout=2).status_code == 200:
+                r = session.get(f"{gw}/health", timeout=3)
+                if r.status_code == 200:
+                    if cls._current != gw:
+                        noir_log(f"[MESH] Auto-Discovery: Gateway locked -> {gw}")
                     cls._current = gw
-                    noir_log(f"Auto-Discovery: Gateway matched -> {gw}")
+                    cls._failure_count = 0
+                    cls._last_discovery = time.time()
                     return gw
             except: pass
-        return _BASE_GATEWAY # default fallback
+        noir_log(f"[MESH] All gateways unreachable. Using base: {_BASE_GATEWAY}", level="WARNING")
+        cls._current = None  # Force re-probe next call
+        return _BASE_GATEWAY
+
+    @classmethod
+    def reset(cls):
+        """Force re-discovery on next request. Called when a request fails."""
+        cls._current = None
+        cls._last_discovery = 0
+        cls._failure_count += 1
+        noir_log(f"[MESH] Gateway reset triggered. Failure count: {cls._failure_count}")
 
 class _GatewayProxy:
     def __str__(self): return DynamicGateway.get()
@@ -70,6 +100,7 @@ class _GatewayProxy:
 GATEWAY_URL = _GatewayProxy()
 API_KEY     = os.environ.get("NOIR_API_KEY", "NOIR_AGENT_KEY_V6_SI_UMKM_PBD_2026")
 DEVICE_ID   = os.environ.get("NOIR_DEVICE_ID", "REDMI_NOTE_14")
+
 
 
 # Financial Guardian: Sensitive Packages (Indonesian Banks)
@@ -435,6 +466,7 @@ class SovereignCore(App):
                     self._poll_backoff = min(getattr(self, "_poll_backoff", 0) + 1, 10)
                     Clock.schedule_once(lambda dt: self._set_status_offline(), 0)
             except Exception as e:
+                DynamicGateway.reset()  # Force re-discovery on next heartbeat
                 self._poll_backoff = min(getattr(self, "_poll_backoff", 0) + 1, 10)
                 noir_log(f"[LINK] Sync Latency: {e}", level="WARNING")
                 Clock.schedule_once(lambda dt: self._set_status_offline(), 0)
