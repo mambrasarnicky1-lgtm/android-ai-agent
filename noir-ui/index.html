@@ -144,6 +144,15 @@
         .bubble.agent { background: rgba(0, 242, 255, 0.05); border: 1px solid var(--border); align-self: flex-start; color: var(--accent); }
         .bubble.user { background: rgba(255, 204, 0, 0.05); border: 1px solid rgba(255,204,0,0.15); align-self: flex-end; color: var(--gold); }
 
+        .brain-input-group {
+            display: flex; gap: 10px; padding: 20px; background: rgba(0,0,0,0.4); border-top: 1px solid var(--border);
+        }
+        .brain-input {
+            flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--border); 
+            color: #fff; padding: 12px 20px; border-radius: 30px; font-size: 0.9rem;
+        }
+        .brain-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
+
         /* BUTTONS */
         .btn-action {
             background: none; border: 1px solid var(--accent); color: var(--accent);
@@ -289,34 +298,36 @@
                 `
             },
             evolution: {
-                title: "APEX EVOLUTION",
+                title: "NEURAL HUB",
                 menu: [
-                    { label: "Start HVT Cycle", cmd: 'learn' },
-                    { label: "Sovereign Vault", cmd: 'vault_sync' }
+                    { label: "Analyze Screen", cmd: 'vision_analyze' },
+                    { label: "Self-Learn Mode", cmd: 'autonomous_mode' }
                 ],
                 render: () => `
-                    <div style="padding:30px; display:grid; grid-template-columns:1fr 1fr; gap:30px; height:100%;">
-                        <div class="glass" style="padding:25px;">
-                            <div class="side-head" style="margin-bottom:20px;">🧠 SOVEREIGN CATALYST</div>
-                            <div style="margin-bottom:20px;">
-                                <input id="learning-directive" type="text" placeholder="Direct Catalyst (e.g. Encryption)..." 
-                                       style="width:100%; background:rgba(0,0,0,0.3); border:1px solid #333; color:#fff; padding:10px; border-radius:4px;">
-                                <button onclick="setDirective()" class="btn-action" style="margin-top:10px; width:100%;">SET TARGET</button>
+                    <div style="display:grid; grid-template-columns: 1.5fr 1fr; height:100%; gap:2px; background:var(--border);">
+                        <div class="glass" style="border-radius:0; background:rgba(0,0,0,0.3); display:flex; flex-direction:column;">
+                            <div class="chat-log" id="brain-chat-log">
+                                <div class="bubble agent">I am NOIR BRAIN v17.5. Systems synchronized. Waiting for directive.</div>
                             </div>
-                            <div id="prop-box" style="font-size:0.85rem; line-height:1.6; color:#99a;">Synthesis in progress...</div>
-                            <div id="prop-actions" style="margin-top:20px; display:none; gap:10px;">
-                                <button onclick="executeCmd('approve_evolution')" class="btn-action" style="border-color:var(--success); color:var(--success);">✅ APPROVE</button>
+                            <div class="brain-input-group">
+                                <input type="text" id="brain-msg" class="brain-input" placeholder="Enter Neural Command (e.g. 'Check WhatsApp')..." onkeypress="if(event.key==='Enter') sendBrainMsg()">
+                                <button onclick="sendBrainMsg()" class="btn-action" style="border-radius:30px; padding:0 25px;">THINK</button>
                             </div>
                         </div>
-                        <div class="glass" style="padding:25px;">
-                            <div class="side-head" style="margin-bottom:20px;">🛡️ SKILL MANIFEST</div>
-                            <div id="skill-box" style="display:flex; flex-wrap:wrap; gap:10px;"></div>
-                            
-                            <div class="side-head" style="margin-top:30px; margin-bottom:20px;">🧠 NEURAL MEMORY BANK</div>
-                            <div id="memory-box" style="font-size:0.85rem; color:#889; line-height:1.6;">
-                                <div class="pill" style="margin-bottom:10px;">Total Context: <span id="mem-total">--</span></div>
-                                <div class="pill" style="margin-bottom:10px;">Mem Size: <span id="mem-size">--</span></div>
-                                <div style="margin-top:10px;">Preferences: <span id="mem-prefs" style="color:var(--accent);">--</span></div>
+                        <div style="display:flex; flex-direction:column; gap:2px;">
+                            <div class="glass" style="border-radius:0; padding:25px; flex:1;">
+                                <div class="side-head">🧠 ACTIVE SKILLS</div>
+                                <div id="skill-box" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;"></div>
+                                
+                                <div class="side-head" style="margin-top:30px;">🧠 NEURAL MEMORY</div>
+                                <div id="memory-stats" style="font-size:0.8rem; margin-top:10px; color:#889;">
+                                    <div class="pill" style="margin-bottom:10px; display:block;">Context: <span id="mem-ctx">--</span></div>
+                                    <div class="pill" style="margin-bottom:10px; display:block;">Growth: <span id="mem-growth">97.3%</span></div>
+                                </div>
+                            </div>
+                            <div class="glass" style="border-radius:0; padding:25px; height:200px;">
+                                <div class="side-head">📊 AUTONOMOUS TASK</div>
+                                <div id="brain-task" style="font-size:0.8rem; color:var(--accent); margin-top:10px;">Idle...</div>
                             </div>
                         </div>
                     </div>
@@ -394,12 +405,11 @@
             
             document.getElementById('main-view').innerHTML = page.render();
             if(pageId === 'loot') loadLoot();
-            if(pageId === 'evolution') { loadEvolution(); loadMemory(); }
+            if(pageId === 'evolution') { loadEvolution(); }
         }
 
         async function executeCmd(type, params={}) {
             if(!type) return;
-            // ALIGNMENT FIX: Dashboard 'click' -> Agent 'tap'
             const finalType = type === 'click' ? 'tap' : type;
             updateTerminal(`EXECUTING: ${finalType.toUpperCase()}`, 'var(--accent)');
             try {
@@ -460,23 +470,19 @@
             status.style.color = "var(--gold)";
             log.innerHTML += `<div style="color:var(--accent);">[${new Date().toLocaleTimeString()}] Starting Deep Forensic Scan...</div>`;
             
-            // Step 1: Ping Gateway
             log.innerHTML += `<div>[1/4] Checking Gateway Matrix...</div>`;
             const r1 = await fetch(`${API}/status`);
             const d1 = await r1.json();
             log.innerHTML += `<div style="color:var(--success);">-> Gateway Status: ${d1.online ? 'REACHABLE' : 'UNREACHABLE'}</div>`;
 
-            // Step 2: Trigger Agent Heal
             log.innerHTML += `<div>[2/4] Injecting Neural Heal Pulse to Agent...</div>`;
             await executeCmd('heal');
             log.innerHTML += `<div style="color:var(--success);">-> Pulse Injected. Awaiting Agent Response.</div>`;
 
-            // Step 3: Clear Local Cache
             log.innerHTML += `<div>[3/4] Purging Local Dashboard Cache...</div>`;
             localStorage.clear();
             log.innerHTML += `<div style="color:var(--success);">-> Cache Purged.</div>`;
 
-            // Step 4: Finalize
             log.innerHTML += `<div>[4/4] Optimizing Neural Pathways...</div>`;
             setTimeout(() => {
                 status.innerText = "HEALER: REPAIR COMPLETE";
@@ -497,21 +503,64 @@
             if(term.childNodes.length > 50) term.removeChild(term.lastChild);
         }
 
-        async function loadMemory() {
-            try {
-                const r = await fetch(`${API}/memory`);
-                const d = await r.json();
-                if(d.success) {
-                    if(document.getElementById('mem-total')) document.getElementById('mem-total').innerText = d.stats.total_interactions;
-                    if(document.getElementById('mem-size')) document.getElementById('mem-size').innerText = d.stats.memory_size;
-                    if(document.getElementById('mem-prefs')) document.getElementById('mem-prefs').innerText = d.stats.top_preferences.join(", ") || "None";
-                }
-            } catch(e) { console.error("Memory Sync Error", e); }
+        async function sendChat() {
+            const input = document.getElementById('chat-in');
+            const val = input.value.trim();
+            if(!val) return;
+            const box = document.getElementById('chat-box');
+            const d = document.createElement('div');
+            d.className = 'bubble user';
+            d.innerText = val;
+            box.appendChild(d);
+            box.scrollTop = box.scrollHeight;
+            input.value = '';
+            executeCmd('shell', {cmd: val});
         }
 
-        async function fetchLogs() {
-            // Already handled by updateTerminal in this version for simplicity
+        async function sendBrainMsg() {
+            const input = document.getElementById('brain-msg');
+            const msg = input.value.trim();
+            if(!msg) return;
+
+            const log = document.getElementById('brain-chat-log');
+            log.innerHTML += `<div class="bubble user">${msg}</div>`;
+            input.value = '';
+            log.scrollTop = log.scrollHeight;
+
+            try {
+                const r = await fetch(`${API}/brain/chat`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ message: msg })
+                });
+                const d = await r.json();
+                
+                log.innerHTML += `<div class="bubble agent">${d.response}</div>`;
+                if(d.autonomous_action) {
+                    updateTerminal(`AI INITIATED: ${d.autonomous_action.type.toUpperCase()}`, 'var(--gold)');
+                }
+                log.scrollTop = log.scrollHeight;
+            } catch(e) {
+                log.innerHTML += `<div class="bubble agent" style="color:var(--danger)">Neural link failure. Brain disconnected.</div>`;
+            }
         }
+
+        async function loadEvolution() {
+            try {
+                const r = await fetch(`${API}/brain/status`);
+                const d = await r.json();
+                
+                document.getElementById('mem-ctx').innerText = `${d.memory_size} Context Nodes`;
+                const skillBox = document.getElementById('skill-box');
+                skillBox.innerHTML = d.skills.map(s => `<div class="pill" style="font-size:0.6rem;">${s}</div>`).join('');
+                
+                const taskRes = await fetch(`${API}/agent-task`);
+                const taskData = await taskRes.json();
+                document.getElementById('brain-task').innerText = taskData.task + ": " + taskData.status;
+            } catch(e) {}
+        }
+
+        async function fetchLogs() { }
 
         async function loadLoot() {
             const r = await fetch(`${API}/assets`);
@@ -524,26 +573,12 @@
             `).join('');
         }
 
-        async function loadEvolution() {
-            const r = await fetch(`${API}/skills`);
-            const d = await r.json();
-            const skillBox = document.getElementById('skill-box');
-            if(skillBox) skillBox.innerHTML = d.active.map(s => `<div class="pill">${s}</div>`).join('');
-            
-            const propBox = document.getElementById('prop-box');
-            if(propBox && d.proposal) {
-                propBox.innerHTML = `<div style="color:var(--accent); margin-bottom:10px;">${d.title || 'NEW PROPOSAL'}</div>${d.proposal}`;
-                document.getElementById('prop-actions').style.display = 'flex';
-            }
-        }
-
         function handleVisionClick(e) {
             const img = e.target;
             const rect = img.getBoundingClientRect();
             const xP = (e.clientX - rect.left) / rect.width;
             const yP = (e.clientY - rect.top) / rect.height;
             
-            // Redmi Note 14 Resolution Mapping
             const tx = Math.round(xP * 1080);
             const ty = Math.round(yP * 2400);
 
@@ -558,27 +593,8 @@
             executeCmd('tap', { x: tx, y: ty });
         }
 
-        function setDirective() {
-            const val = document.getElementById('learning-directive').value;
-            if(val) executeCmd('set_learning_target', { target: val });
-        }
-
-        function sendChat() {
-            const input = document.getElementById('chat-in');
-            const val = input.value.trim();
-            if(!val) return;
-            const box = document.getElementById('chat-box');
-            const d = document.createElement('div');
-            d.className = 'bubble user';
-            d.innerText = val;
-            box.appendChild(d);
-            box.scrollTop = box.scrollHeight;
-            input.value = '';
-            executeCmd('shell', {cmd: val});
-        }
-
-        showPage('vision');
-        setInterval(syncStatus, 3000);
+        setInterval(syncStatus, 2000);
+        showPage('vision', document.querySelector('.nav-node'));
     </script>
 </body>
 </html>

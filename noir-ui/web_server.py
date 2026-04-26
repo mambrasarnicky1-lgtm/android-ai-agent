@@ -17,6 +17,14 @@ app = FastAPI(title="Noir Sovereign ELITE v17.5 OMEGA-MESH")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# BRAIN-01: Integrasi Jalur Otak AI
+sys.path.append(os.path.join(BASE_DIR, "..", "noir-vps"))
+try:
+    from ai_router import AIRouter
+    from catalyst import catalyst
+    from temporal_memory import global_memory as memory
+except ImportError:
+    AIRouter = None # Fallback jika module belum siap
 
 # --- PROXY CONFIG ---
 CF_GATEWAY = os.environ.get("NOIR_GATEWAY_URL", "https://noir-agent-gateway.si-umkm-ikm-pbd.workers.dev").rstrip("/")
@@ -385,6 +393,57 @@ async def download_apk():
         from fastapi.responses import FileResponse
         return FileResponse(apk_path, media_type="application/vnd.android.package-archive", filename=os.path.basename(apk_path))
     return Response(content="⚠️ Build Artifact Not Ready.", status_code=404)
+
+# =============================================================================
+# NEURAL HUB & AI BRAIN ENDPOINTS
+# =============================================================================
+
+@app.post("/api/brain/chat")
+async def brain_chat(request: Request):
+    """Integrasi Neural Hub: Menerima perintah bahasa alami dan memprosesnya."""
+    if not AIRouter:
+        return {"response": "Brain Engine not found on VPS.", "status": "error"}
+    
+    try:
+        data = await request.json()
+        prompt = data.get("message", "")
+        
+        # 1. Tanya ke AI Router (Gemini/DeepSeek)
+        response = AIRouter.smart_query(prompt)
+        
+        # 2. Analisis apakah perintah butuh aksi ke HP
+        action = None
+        if any(x in response.lower() for x in ["screenshot", "layar", "capture"]):
+            action = {"type": "screenshot"}
+        elif any(x in response.lower() for x in ["tekan", "click", "tap"]):
+            # Logic koordinat menyusul via Vision Intelligence
+            pass
+            
+        if action:
+             with _commands_lock:
+                 local_state["commands"].append({
+                     "id": hex(int(time.time()))[2:].upper(),
+                     "action": action,
+                     "status": "pending",
+                     "target_device": "REDMI_NOTE_14"
+                 })
+
+        return {
+            "response": response,
+            "status": "success",
+            "autonomous_action": action
+        }
+    except Exception as e:
+        return {"response": f"Neural Link Error: {str(e)}", "status": "error"}
+
+@app.get("/api/brain/status")
+async def brain_status():
+    """Mendapatkan status memori dan pembelajaran AI."""
+    return {
+        "memory_size": len(memory.get_recent_context()) if 'memory' in globals() else 0,
+        "skills": catalyst.get_active_skills() if 'catalyst' in globals() else [],
+        "uptime": time.time()
+    }
 
 @app.get("/")
 async def get_index():
