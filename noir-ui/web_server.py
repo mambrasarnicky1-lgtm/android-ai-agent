@@ -5,7 +5,7 @@ Zero-Failure Gateway + Dashboard with Direct VPS Connection.
 The server itself IS the fallback gateway — APK talks directly here.
 """
 
-import os, json, time, sys, requests, httpx
+import os, json, time, sys, requests, httpx, asyncio
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -26,6 +26,8 @@ CF_HEADERS = {"Authorization": f"Bearer {CF_KEY}", "Content-Type": "application/
 # --- LOCAL AGENT STATE (Direct VPS Mode) ---
 # This dict persists in memory. When APK polls /agent/poll directly,
 # we track it here and expose it via /api/status as a fallback.
+import threading
+
 local_state = {
     "agents": {},       # device_id -> {last_seen, stats, last_screenshot}
     "commands": [],     # pending commands
@@ -33,9 +35,12 @@ local_state = {
     "cf_online": None,  # Cloudflare reachability cache
     "cf_checked_at": 0
 }
+# VPS-04 FIX: Lock untuk mencegah race condition pada commands list
+_commands_lock = threading.Lock()
 
 def _cf_is_reachable():
-    """Check Cloudflare with a short timeout and cache result for 30s."""
+    """VPS-02 FIX: Fungsi sync ini hanya dipanggil dari executor, bukan langsung dari async handler.
+    Cache result 30s untuk mengurangi frekuensi cek."""
     if time.time() - local_state["cf_checked_at"] < 30:
         return local_state["cf_online"]
     try:
@@ -46,11 +51,21 @@ def _cf_is_reachable():
     local_state["cf_checked_at"] = time.time()
     return local_state["cf_online"]
 
+async def _cf_reachable_async() -> bool:
+    """VPS-02 FIX: Async wrapper — jalankan sync check di thread executor agar event loop tidak diblokir."""
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, _cf_is_reachable)
+
 def _agent_is_online(device_id="REDMI_NOTE_14"):
-    """Check if device has reported in within the last 90 seconds."""
+    """LINK-02: Threshold 90s sudah konsisten dengan Cloudflare (kini juga 90s)."""
     agent = local_state["agents"].get(device_id, {})
     last = agent.get("last_seen", 0)
     return (time.time() - last) < 90
+
+def _verify_api_key(request: Request) -> bool:
+    """VPS-05 FIX: Validasi API key pada endpoint agent langsung."""
+    auth = request.headers.get("Authorization", "")
+    return auth == f"Bearer {CF_KEY}"
 
 # =============================================================================
 # HEALTH & DIRECT AGENT ENDPOINTS (For APK Direct Connection)
@@ -62,6 +77,9 @@ def health():
 
 @app.post("/agent/register")
 async def agent_register(request: Request):
+    # VPS-05 FIX: Validasi API key — tolak agen palsu
+    if not _verify_api_key(request):
+        return Response(status_code=401, content="Unauthorized")
     try:
         data = await request.json()
         did = data.get("device_id", "REDMI_NOTE_14")
@@ -73,7 +91,7 @@ async def agent_register(request: Request):
             "stats": data.get("stats", {})
         })
         # Also forward to Cloudflare if reachable
-        if _cf_is_reachable():
+        if await _cf_reachable_async():
             try:
                 requests.post(f"{CF_GATEWAY}/agent/register", headers=CF_HEADERS, json=data, timeout=3)
             except: pass
@@ -83,6 +101,9 @@ async def agent_register(request: Request):
 
 @app.api_route("/agent/poll", methods=["GET", "POST"])
 async def agent_poll(request: Request, device_id: str = "REDMI_NOTE_14", client_type: str = "main"):
+    # VPS-05 FIX: Validasi API key sebelum update state agent
+    if not _verify_api_key(request):
+        return Response(status_code=401, content="Unauthorized")
     # Update agent liveness
     if device_id not in local_state["agents"]:
         local_state["agents"][device_id] = {}
@@ -93,12 +114,13 @@ async def agent_poll(request: Request, device_id: str = "REDMI_NOTE_14", client_
             local_state["agents"][device_id]["stats"] = body.get("stats", {})
     except: pass
 
-    # Collect pending commands
-    cmds = [c for c in local_state["commands"] if c.get("target", "REDMI_NOTE_14") == device_id]
-    local_state["commands"] = [c for c in local_state["commands"] if c not in cmds]
+    # VPS-04 FIX: Gunakan lock saat membaca dan memodifikasi commands list
+    with _commands_lock:
+        cmds = [c for c in local_state["commands"] if c.get("target", "REDMI_NOTE_14") == device_id]
+        local_state["commands"] = [c for c in local_state["commands"] if c not in cmds]
 
     # Also try to forward to Cloudflare and merge commands
-    if _cf_is_reachable():
+    if await _cf_reachable_async():
         try:
             stats = local_state["agents"][device_id].get("stats", {})
             r = requests.post(f"{CF_GATEWAY}/agent/poll?device_id={device_id}&client_type={client_type}",
@@ -118,7 +140,7 @@ async def agent_log(request: Request):
         if len(local_state["logs"]) > 200:
             local_state["logs"] = local_state["logs"][-150:]
         # Forward to Cloudflare if reachable
-        if _cf_is_reachable():
+        if await _cf_reachable_async():
             try:
                 requests.post(f"{CF_GATEWAY}/agent/log", headers=CF_HEADERS, json=data, timeout=3)
             except: pass
@@ -136,7 +158,7 @@ async def agent_result(request: Request):
                 c["status"] = "done"
                 c["result"] = data
         # Forward to Cloudflare
-        if _cf_is_reachable():
+        if await _cf_reachable_async():
             try:
                 requests.post(f"{CF_GATEWAY}/agent/result", headers=CF_HEADERS, json=data, timeout=4)
             except: pass
@@ -146,11 +168,11 @@ async def agent_result(request: Request):
 
 @app.post("/agent/upload")
 async def agent_upload(request: Request):
-    """Proxy upload to Cloudflare R2, or store locally as fallback."""
+    """VPS-03 FIX: Proxy ke Cloudflare R2, atau simpan lokal sebagai fallback agar screenshot tidak hilang."""
+    device_id = request.query_params.get("device_id", "REDMI_NOTE_14")
+    body = await request.body()
     try:
-        if _cf_is_reachable():
-            body = await request.body()
-            device_id = request.query_params.get("device_id", "REDMI_NOTE_14")
+        if await _cf_reachable_async():
             async with httpx.AsyncClient() as client:
                 r = await client.post(f"{CF_GATEWAY}/agent/upload?device_id={device_id}",
                                       headers={"Authorization": f"Bearer {CF_KEY}"},
@@ -161,9 +183,25 @@ async def agent_upload(request: Request):
                         local_state["agents"][device_id] = {}
                     local_state["agents"][device_id]["last_screenshot"] = result["key"]
                 return result
-        return {"ok": False, "error": "CF unreachable"}
     except Exception as e:
-        return {"ok": False, "error": str(e)}
+        pass  # Fallthrough to local storage
+
+    # VPS-03 FIX: Local fallback — simpan ke disk VPS
+    try:
+        ss_dir = os.path.join(BASE_DIR, "screenshots")
+        os.makedirs(ss_dir, exist_ok=True)
+        local_key = f"local_ss_{int(time.time())}.jpg"
+        local_path = os.path.join(ss_dir, local_key)
+        with open(local_path, "wb") as f:
+            f.write(body)
+        # Update agent state dengan local key
+        if device_id not in local_state["agents"]:
+            local_state["agents"][device_id] = {}
+        local_state["agents"][device_id]["last_screenshot"] = f"local:{local_key}"
+        local_state["agents"][device_id]["last_seen"] = time.time()
+        return {"ok": True, "key": f"local:{local_key}", "mode": "local_fallback"}
+    except Exception as e:
+        return {"ok": False, "error": f"CF unreachable + local fallback failed: {e}"}
 
 # =============================================================================
 # DASHBOARD API ENDPOINTS
@@ -206,7 +244,7 @@ async def api_status():
 
 @app.get("/api/logs")
 async def api_logs(device_id: str = "REDMI_NOTE_14"):
-    if _cf_is_reachable():
+    if await _cf_reachable_async():
         try:
             async with httpx.AsyncClient() as client:
                 r = await client.get(f"{CF_GATEWAY}/agent/logs?device_id={device_id}", headers=CF_HEADERS, timeout=5.0)
@@ -226,27 +264,28 @@ async def api_command(request: Request):
         payload = {"action": action, "description": description, "target_device": target_device}
 
         # Try Cloudflare first
-        if _cf_is_reachable():
+        if await _cf_reachable_async():
             try:
                 async with httpx.AsyncClient() as client:
                     r = await client.post(f"{CF_GATEWAY}/agent/command", headers=CF_HEADERS, json=payload, timeout=5.0)
                     return r.json()
             except: pass
 
-        # Queue locally for direct pickup by APK
-        local_state["commands"].append({
-            "command_id": cmd_id,
-            "action": action,
-            "target": target_device,
-            "queued_at": time.time()
-        })
+        # VPS-04 FIX: Gunakan lock saat menambahkan command baru
+        with _commands_lock:
+            local_state["commands"].append({
+                "command_id": cmd_id,
+                "action": action,
+                "target": target_device,
+                "queued_at": time.time()
+            })
         return {"status": "queued_direct_vps", "command_id": cmd_id}
     except Exception as e:
         return {"error": str(e)}
 
 @app.get("/api/assets")
 async def api_assets():
-    if _cf_is_reachable():
+    if await _cf_reachable_async():
         try:
             async with httpx.AsyncClient() as client:
                 r = await client.get(f"{CF_GATEWAY}/agent/assets", headers=CF_HEADERS, timeout=5.0)
@@ -261,7 +300,7 @@ async def proxy_asset(key: str):
         agent = local_state["agents"].get("REDMI_NOTE_14", {})
         target_key = agent.get("last_screenshot")
         if not target_key:
-            if _cf_is_reachable():
+            if await _cf_reachable_async():
                 try:
                     async with httpx.AsyncClient() as client:
                         r = await client.get(f"{CF_GATEWAY}/agent/summary", headers=CF_HEADERS, timeout=5.0)
@@ -269,7 +308,7 @@ async def proxy_asset(key: str):
                 except: pass
         if not target_key:
             return Response(status_code=404, content="No screenshot available")
-    if _cf_is_reachable():
+    if await _cf_reachable_async():
         try:
             async with httpx.AsyncClient() as client:
                 r = await client.get(f"{CF_GATEWAY}/agent/asset/{target_key}", headers=CF_HEADERS, timeout=15.0)

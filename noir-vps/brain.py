@@ -7,7 +7,7 @@ knowledge refresh, dan Docker orchestration.
 Jalankan di VPS: python noir-vps/brain.py
 """
 
-import os, json, logging, time, sys, subprocess, base64
+import os, json, logging, time, sys, subprocess, base64, requests
 from Crypto.Cipher import AES
 from Crypto.Protocol.KDF import PBKDF2
 from pathlib import Path
@@ -219,7 +219,7 @@ class VisionEngine:
             img_data = base64.b64encode(img_resp.content).decode('utf-8')
             
             # Simpan sementara untuk VisionAnalyzer (lokal di container)
-            tmp_img = "last_vision_capture.png"
+            tmp_img = os.path.join(os.path.dirname(__file__), "last_vision_capture.png")
             with open(tmp_img, "wb") as f: f.write(img_resp.content)
             
             vision_result = ScreenVisionIntelligence.analyze_screen(tmp_img)
@@ -248,9 +248,15 @@ class VisionEngine:
             if "candidates" in data and len(data["candidates"]) > 0:
                 return data["candidates"][0]["content"]["parts"][0]["text"]
             else:
-                return f"[Vision Error] Model refused or failed. Reason: {data.get('promptFeedback', {}).get('blockReason', 'Unknown')}"
+                return f"[Vision Error] Model refused. Reason: {data.get('promptFeedback', {}).get('blockReason', 'Unknown')}"
         except Exception as e:
             return f"[Vision Error] {e}"
+        finally:
+            # BRAIN-02 FIX: Selalu hapus file vision sementara
+            try:
+                if 'tmp_img' in locals() and os.path.exists(tmp_img):
+                    os.remove(tmp_img)
+            except: pass
 
 # ─── SELF-LEARNING ENGINE ───
 class LearningEngine:
@@ -424,8 +430,10 @@ class DataArchiver:
         if now - DataArchiver._last_backup_time > 86400:
             log.info("💾 Data Archiver: Generating daily backup snapshot...")
             try:
-                os.makedirs("../logs/backups", exist_ok=True)
-                filename = f"../logs/backups/snapshot_{datetime.now().strftime('%Y%m%d')}.json"
+                # BRAIN-04 FIX: Gunakan path absolut agar tidak bergantung CWD
+                backup_dir = os.path.join(os.path.dirname(__file__), "..", "logs", "backups")
+                os.makedirs(backup_dir, exist_ok=True)
+                filename = os.path.join(backup_dir, f"snapshot_{datetime.now().strftime('%Y%m%d')}.json")
                 with open(filename, "w", encoding="utf-8") as f:
                     json.dump(gateway_data, f, indent=2)
                 DataArchiver._last_backup_time = now

@@ -14,6 +14,7 @@ Capabilities:
 """
 
 import os
+import re
 import time
 import threading
 import requests
@@ -274,6 +275,8 @@ class SovereignCore(App):
         Clock.schedule_once(lambda dt: self._unified_heartbeat_tick(0), 6)
         # Unified Heartbeat: Every 15 seconds (Stable Protocol)
         Clock.schedule_interval(self._unified_heartbeat_tick, 15)
+        # LINK-04 FIX: Start connectivity watchdog (was defined but never started)
+        threading.Thread(target=self._connectivity_watchdog, daemon=True).start()
         
         return self.root
 
@@ -295,8 +298,8 @@ class SovereignCore(App):
         else:
             self.show_active_ui()
 
-        # v16 Elite: Trigger initial registration
-        self._register() # Initial registration
+        # LINK-05 FIX: Pindahkan register() ke thread agar tidak blokir UI thread
+        threading.Thread(target=self._register, daemon=True).start()
         # v16.0.01: Immediate Vision Bridge Activation
         Clock.schedule_once(lambda dt: self._screen_share_tick(0), 1)
 
@@ -462,12 +465,13 @@ class SovereignCore(App):
                             continue
                         self._execute(cmd)
                 else:
-                    # Circuit Breaker: Increase backoff on failure
-                    self._poll_backoff = min(getattr(self, "_poll_backoff", 0) + 1, 10)
+                    # LINK-01 FIX: Circuit Breaker — max 3 skip (45s max silence vs 150s sebelumnya)
+                    self._poll_backoff = min(getattr(self, "_poll_backoff", 0) + 1, 3)
                     Clock.schedule_once(lambda dt: self._set_status_offline(), 0)
             except Exception as e:
                 DynamicGateway.reset()  # Force re-discovery on next heartbeat
-                self._poll_backoff = min(getattr(self, "_poll_backoff", 0) + 1, 10)
+                # LINK-01 FIX: Batasi backoff agar agent tidak hilang > 45 detik
+                self._poll_backoff = min(getattr(self, "_poll_backoff", 0) + 1, 3)
                 noir_log(f"[LINK] Sync Latency: {e}", level="WARNING")
                 Clock.schedule_once(lambda dt: self._set_status_offline(), 0)
         
@@ -494,19 +498,25 @@ class SovereignCore(App):
             self.show_active_ui()
 
     def _set_status_online(self):
-        """Dynamically update UI to show ONLINE state."""
+        """LINK-03 FIX: Gunakan regex agar tidak bergantung pada posisi baris."""
         try:
-            lines = self.log_label.text.split('\n')
-            lines[1] = "Status: [color=00ff88]NEURAL-LINK ACTIVE[/color]"
-            self.log_label.text = '\n'.join(lines)
+            updated = re.sub(
+                r'Status:.*',
+                'Status: [color=00ff88]NEURAL-LINK ACTIVE[/color]',
+                self.log_label.text, count=1
+            )
+            self.log_label.text = updated
         except: pass
 
     def _set_status_offline(self):
-        """Dynamically update UI to show OFFLINE/ERROR state."""
+        """LINK-03 FIX: Gunakan regex agar tidak bergantung pada posisi baris."""
         try:
-            lines = self.log_label.text.split('\n')
-            lines[1] = "Status: [color=ff4444]LINK SEVERED — Retrying...[/color]"
-            self.log_label.text = '\n'.join(lines)
+            updated = re.sub(
+                r'Status:.*',
+                'Status: [color=ff4444]LINK SEVERED \u2014 Retrying...[/color]',
+                self.log_label.text, count=1
+            )
+            self.log_label.text = updated
         except: pass
 
     def show_active_ui(self):

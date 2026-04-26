@@ -141,7 +141,9 @@ app.get('/agent/summary', async (c: Context<Env>) => {
   const agent = agentResults[0] || null;
   // Use Unix timestamps for reliable online check
   const last_seen_unix = agent ? new Date(agent.last_seen + 'Z').getTime() : 0;
-  const is_online = agent ? (Date.now() - last_seen_unix < 60000) : false;
+  // LINK-02 FIX: Seragamkan threshold ke 90s (sama dengan web_server.py)
+  // Heartbeat APK setiap 15s, max backoff kini 3 skip × 15s = 45s, aman di bawah 90s
+  const is_online = agent ? (Date.now() - last_seen_unix < 90000) : false;
 
   return c.json({
     online: is_online,
@@ -224,14 +226,20 @@ app.post('/agent/command', async (c: Context<Env>) => {
 });
 
 app.get('/admin/logs', async (c: Context<Env>) => {
+  // SEC-04 FIX: Gunakan c.env.API_KEY (sesuai Bindings type), bukan NOIR_API_KEY yang tidak terdefinisi
   const auth = c.req.header('Authorization');
-  if (auth !== `Bearer ${c.env.NOIR_API_KEY}`) return c.text('Unauthorized', 401);
+  if (auth !== `Bearer ${c.env.API_KEY}`) return c.text('Unauthorized', 401);
   
   const logs = await c.env.DB.prepare("SELECT * FROM logs ORDER BY created_at DESC LIMIT 50").all();
   return c.json(logs.results);
 });
 
+// SEC-03 FIX: /admin/migrate sebelumnya tanpa autentikasi — siapapun bisa alter schema
 app.get('/admin/migrate', async (c: Context<Env>) => {
+  // Wajib autentikasi dengan API_KEY yang sama
+  const auth = c.req.header('Authorization');
+  if (auth !== `Bearer ${c.env.API_KEY}`) return c.text('Unauthorized', 401);
+
   try {
     await c.env.DB.prepare(`
       ALTER TABLE commands ADD COLUMN target_device TEXT;
