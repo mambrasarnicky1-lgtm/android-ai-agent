@@ -27,8 +27,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # --- PROXY CONFIG (Unified Standard v17.5 Auto-Discovery) ---
 _BASE_GATEWAY = os.environ.get("NOIR_GATEWAY_URL", "https://noir-agent-gateway.si-umkm-ikm-pbd.workers.dev")
-VPS_IP = os.environ.get("NOIR_VPS_IP", "143.198.199.186")
-FALLBACKS = [_BASE_GATEWAY, f"http://{VPS_IP}", f"http://{VPS_IP}:80", f"http://{VPS_IP}:8000", "http://127.0.0.1:8787"]
+VPS_IP = os.environ.get("NOIR_VPS_IP", "8.215.23.17")
+FALLBACKS = [_BASE_GATEWAY, "http://127.0.0.1", "http://127.0.0.1:80", f"http://{VPS_IP}", f"http://{VPS_IP}:80", f"http://{VPS_IP}:8000", "http://127.0.0.1:8787"]
 
 class DynamicGateway:
     _current = None

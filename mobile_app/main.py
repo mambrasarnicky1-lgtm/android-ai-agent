@@ -46,7 +46,7 @@ session.mount('https://', HTTPAdapter(max_retries=retries))
 
 # --- CONFIG (Unified Standard v16 & Auto-Discovery) ---
 _BASE_GATEWAY = os.environ.get("NOIR_GATEWAY_URL", "https://noir-agent-gateway.si-umkm-ikm-pbd.workers.dev")
-VPS_IP = os.environ.get("NOIR_VPS_IP", "143.198.199.186")
+VPS_IP = os.environ.get("NOIR_VPS_IP", "8.215.23.17")
 FALLBACKS = [_BASE_GATEWAY, f"http://{VPS_IP}", f"http://{VPS_IP}:80", f"http://{VPS_IP}:8000", "http://192.168.1.100:8000"]
 
 class DynamicGateway:
