@@ -240,26 +240,31 @@ class BehavioralBiometrics:
         if len(self.patterns) > 50: self.patterns.pop(0)
 
     def on_start(self):
-        """OMEGA-SYNC: AI secara otomatis mencari jalur terbaik."""
-        self._connection_guardian()
-        Clock.schedule_interval(lambda dt: self._connection_guardian(), 60)
-        Clock.schedule_interval(self.poll_commands, 3)
+        """OMEGA-SYNC: AI secara otomatis mencari jalur terbaik dengan proteksi crash."""
+        try:
+            self._connection_guardian()
+            Clock.schedule_interval(lambda dt: self._connection_guardian(), 60)
+            Clock.schedule_interval(self.poll_commands, 3)
+        except Exception as e:
+            noir_log(f"Startup Guardian Error: {e}", level="ERROR")
 
     def _connection_guardian(self):
         """Guardian Pintar: Rotasi Gateway secara otonom."""
-        gateways = [
-            self.gateway,
-            "http://8.215.23.17", # Direct VPS
-            "http://10.0.2.2:5555" # PC Bridge
-        ]
-        for gw in gateways:
-            if not gw: continue
-            try:
-                r = requests.get(f"{gw}/health", timeout=3)
-                if r.status_code == 200:
-                    self.gateway = gw.rstrip("/")
-                    return True
-            except: continue
+        try:
+            gateways = [
+                getattr(self, 'gateway', ''),
+                "http://8.215.23.17", # Direct VPS
+                "http://10.0.2.2:5555" # PC Bridge
+            ]
+            for gw in gateways:
+                if not gw: continue
+                try:
+                    r = requests.get(f"{gw}/health", timeout=3)
+                    if r.status_code == 200:
+                        self.gateway = gw.rstrip("/")
+                        return True
+                except: continue
+        except: pass
         return False
         self.root = BoxLayout(orientation='vertical', padding=10, spacing=5)
         
