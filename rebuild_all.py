@@ -26,8 +26,8 @@ def run():
             
         # 2. Trigger Buildozer
         print('\n[2/2] Triggering APK Buildozer...')
-        build_cmd = "cd /root/noir-agent && rm -rf .buildozer && nohup sh -c 'yes | buildozer android release' > buildozer_final.log 2>&1 &"
-        stdin, stdout, stderr = ssh.exec_command(build_cmd)
+        build_cmd = "cd /root/noir-agent && nohup sh -c 'yes | buildozer android release' > buildozer_final.log 2>&1 &"
+        ssh.exec_command(build_cmd)
         print('APK Build triggered successfully! Monitoring is active at /root/noir-agent/buildozer_final.log')
         
         ssh.close()
