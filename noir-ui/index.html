@@ -187,7 +187,7 @@
     <div id="reconnect-ui" style="position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:9999; display:none; flex-direction:column; justify-content:center; align-items:center;">
         <h1 style="font-family:'Orbitron'; color:var(--danger); letter-spacing:10px; margin-bottom:20px;">LINK SEVERED</h1>
         <div class="pill" style="animation:pulse 1s infinite; margin-bottom:30px;">RE-ESTABLISHING NEURAL TUNNEL...</div>
-        <button onclick="document.getElementById('reconnect-ui').style.display='none'" class="btn-action" style="border-color:var(--accent); color:var(--accent); padding:15px 40px;">
+        <button onclick="activateBypass()" class="btn-action" style="border-color:var(--accent); color:var(--accent); padding:15px 40px;">
             ENTER NEURAL HUB (BYPASS)
         </button>
     </div>
@@ -240,6 +240,13 @@
         const API = "/api";
         let currentPage = 'vision';
         let isMirroring = false;
+        let bypassActive = false;
+
+        function activateBypass() {
+            bypassActive = true;
+            document.getElementById('reconnect-ui').style.display = 'none';
+            updateTerminal("NEURAL BYPASS ACTIVATED", "var(--gold)");
+        }
 
         function toggleMirror() {
             isMirroring = !isMirroring;
@@ -439,10 +446,11 @@
                 sync.style.color = d.online ? "var(--success)" : "var(--danger)";
                 sync.style.borderColor = d.online ? "var(--success)" : "var(--danger)";
 
-                if(!d.online) {
+                if(!d.online && !bypassActive) {
                     recon.style.display = 'flex';
-                } else {
+                } else if(d.online) {
                     recon.style.display = 'none';
+                    // BUG FIX: Do NOT auto-reset bypassActive. Manual control only.
                 }
 
                 if(d.agent) {
@@ -461,7 +469,7 @@
                 
                 if(currentPage === 'system') fetchLogs();
             } catch(e) {
-                document.getElementById('reconnect-ui').style.display = 'flex';
+                if(!bypassActive) document.getElementById('reconnect-ui').style.display = 'flex';
             }
         }
 

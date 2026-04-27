@@ -57,6 +57,23 @@ session = requests.Session()
 retries = Retry(total=5, backoff_factor=1, status_forcelist=[502, 503, 504])
 session.mount('https://', HTTPAdapter(max_retries=retries))
 
+import queue
+log_queue = queue.Queue()
+
+def _log_worker():
+    while True:
+        try:
+            msg = log_queue.get()
+            session.post(
+                f"{GATEWAY_URL}/agent/log",
+                headers={"Authorization": f"Bearer {API_KEY}"},
+                json={"device_id": DEVICE_ID, "level": msg["level"], "message": f"[BG-SERVICE] {msg['message']}"},
+                timeout=5
+            )
+        except: pass
+
+threading.Thread(target=_log_worker, daemon=True).start()
+
 def noir_log(message, level="INFO"):
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
     formatted_msg = f"[{timestamp}] [SERVICE-{level}] {message}"
@@ -68,16 +85,7 @@ def noir_log(message, level="INFO"):
             f.write(formatted_msg + "\n")
     except: pass
 
-    def _send():
-        try:
-            session.post(
-                f"{GATEWAY_URL}/agent/log",
-                headers={"Authorization": f"Bearer {API_KEY}"},
-                json={"device_id": DEVICE_ID, "level": level, "message": f"[BG-SERVICE] {message}"},
-                timeout=5
-            )
-        except: pass
-    threading.Thread(target=_send, daemon=True).start()
+    log_queue.put({"message": message, "level": level})
 
 def run_service():
     noir_log("NOIR ELITE SERVICE v17.2.2 [OMEGA-FIX]: INITIALIZING...")
@@ -97,8 +105,9 @@ def run_service():
         try:
             # 1. Connectivity Check
             try:
-                socket.create_connection(("8.8.8.8", 53), timeout=3)
-                is_online = True
+                # FIX: Check Gateway directly instead of Google DNS
+                r = session.get(f"{GATEWAY_URL}/health", timeout=3)
+                is_online = r.status_code == 200
             except:
                 is_online = False
 

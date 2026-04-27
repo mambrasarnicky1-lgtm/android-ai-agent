@@ -101,7 +101,8 @@ async def agent_register(request: Request):
         # Also forward to Cloudflare if reachable
         if await _cf_reachable_async():
             try:
-                requests.post(f"{CF_GATEWAY}/agent/register", headers=CF_HEADERS, json=data, timeout=3)
+                async with httpx.AsyncClient() as client:
+                    await client.post(f"{CF_GATEWAY}/agent/register", headers=CF_HEADERS, json=data, timeout=3.0)
             except: pass
         return {"status": "ok", "mode": "registered_on_vps"}
     except Exception as e:
@@ -131,11 +132,12 @@ async def agent_poll(request: Request, device_id: str = "REDMI_NOTE_14", client_
     if await _cf_reachable_async():
         try:
             stats = local_state["agents"][device_id].get("stats", {})
-            r = requests.post(f"{CF_GATEWAY}/agent/poll?device_id={device_id}&client_type={client_type}",
-                              headers=CF_HEADERS, json={"stats": stats}, timeout=4)
-            if r.status_code == 200:
-                cf_cmds = r.json().get("commands", [])
-                cmds.extend(cf_cmds)
+            async with httpx.AsyncClient() as client:
+                r = await client.post(f"{CF_GATEWAY}/agent/poll?device_id={device_id}&client_type={client_type}",
+                                  headers=CF_HEADERS, json={"stats": stats}, timeout=4.0)
+                if r.status_code == 200:
+                    cf_cmds = r.json().get("commands", [])
+                    cmds.extend(cf_cmds)
         except: pass
 
     return {"status": "ok", "commands": cmds, "link": "DIRECT_VPS"}
@@ -150,7 +152,8 @@ async def agent_log(request: Request):
         # Forward to Cloudflare if reachable
         if await _cf_reachable_async():
             try:
-                requests.post(f"{CF_GATEWAY}/agent/log", headers=CF_HEADERS, json=data, timeout=3)
+                async with httpx.AsyncClient() as client:
+                    await client.post(f"{CF_GATEWAY}/agent/log", headers=CF_HEADERS, json=data, timeout=3.0)
             except: pass
         return {"ok": True}
     except: return {"ok": False}
@@ -168,7 +171,8 @@ async def agent_result(request: Request):
         # Forward to Cloudflare
         if await _cf_reachable_async():
             try:
-                requests.post(f"{CF_GATEWAY}/agent/result", headers=CF_HEADERS, json=data, timeout=4)
+                async with httpx.AsyncClient() as client:
+                    await client.post(f"{CF_GATEWAY}/agent/result", headers=CF_HEADERS, json=data, timeout=4.0)
             except: pass
         return {"status": "ok"}
     except Exception as e:
