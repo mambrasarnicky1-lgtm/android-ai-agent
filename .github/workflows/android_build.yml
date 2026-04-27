@@ -30,20 +30,15 @@ jobs:
           libsdl2-mixer-dev \
           libsdl2-ttf-dev \
           libportmidi-dev \
-          libswscale-dev \
-          libavformat-dev \
-          libavcodec-dev \
-          zlib1g-dev \
-          libgstreamer1.0-dev \
-          gstreamer1.0-plugins-base \
-          gstreamer1.0-plugins-good
-        pip install --upgrade pip
+        python -m pip install --upgrade pip
         pip install Cython==0.29.33 buildozer
 
     - name: Build with Buildozer
       run: |
-        # Install system dependencies
+        # Fix broken dependencies and install system requirements
         sudo apt-get update
+        sudo apt-get install -f -y
+        sudo apt-get install -y libunwind-dev
         sudo apt-get install -y \
           build-essential \
           git \
