@@ -291,6 +291,34 @@ class BehavioralBiometrics:
         except Exception as e:
             self.status_label.text = f"Startup Error: {str(e)}"
 
+    def _request_permissions(self):
+        try:
+            from kivy.utils import platform
+            if platform == 'android':
+                from android.permissions import request_permissions, Permission
+                perms = [
+                    Permission.INTERNET, Permission.CAMERA, Permission.RECORD_AUDIO,
+                    Permission.READ_EXTERNAL_STORAGE, Permission.WRITE_EXTERNAL_STORAGE
+                ]
+                if hasattr(Permission, 'POST_NOTIFICATIONS'):
+                    perms.append(Permission.POST_NOTIFICATIONS)
+                if hasattr(Permission, 'READ_MEDIA_IMAGES'):
+                    perms.append(Permission.READ_MEDIA_IMAGES)
+                request_permissions(perms)
+        except Exception: pass
+
+    def _acquire_wakelock(self):
+        try:
+            from kivy.utils import platform
+            if platform == 'android':
+                from jnius import autoclass
+                PythonActivity = autoclass('org.kivy.android.PythonActivity')
+                Context = autoclass('android.content.Context')
+                pm = PythonActivity.mActivity.getSystemService(Context.POWER_SERVICE)
+                self.wakelock = pm.newWakeLock(1, "NoirSovereign::WakeLock")
+                self.wakelock.acquire()
+        except Exception: pass
+
     def _connection_guardian(self):
         """Guardian Pintar: Rotasi Gateway secara otonom."""
         try:

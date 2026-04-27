@@ -1,10 +1,10 @@
 [app]
-title = Noir Sovereign Elite v17.5
+title = Noir Sovereign Elite v18.0
 package.name = noir_sovereign
 package.domain = org.noir.sovereign
 source.dir = mobile_app
 source.include_exts = py,png,jpg,kv,atlas
-version = 17.5.7
+version = 18.0.0
 requirements = python3,kivy,requests,pillow,pyjnius,cython,pycryptodome,urllib3,certifi,idna,chardet,adb-shell,cryptography,setuptools
 p4a.branch = v2024.01.21
 orientation = portrait
