@@ -239,22 +239,39 @@ class BehavioralBiometrics:
         })
         if len(self.patterns) > 50: self.patterns.pop(0)
 
+    def build(self):
+        self.version = "17.5.7 [OMEGA-FINAL]"
+        self.gateway = _BASE_GATEWAY
+        self.biometrics = BehavioralBiometrics()
+        self.mesh_knowledge = {} 
+        self.title = f"Noir Sovereign v{self.version}"
+        
+        # ROOT UI SAFEGUARD
+        self.root = BoxLayout(orientation='vertical', padding=10, spacing=5)
+        self.status_label = Label(text="Initializing OMEGA-SYNC...", font_size='14sp', color=(0, 1, 1, 1))
+        self.root.add_widget(self.status_label)
+        return self.root
+
     def on_start(self):
-        """OMEGA-SYNC: AI secara otomatis mencari jalur terbaik dengan proteksi crash."""
+        """OMEGA-SYNC: Start Guardian with delay to avoid startup race condition."""
+        Clock.schedule_once(lambda dt: self.deferred_start(), 1)
+
+    def deferred_start(self):
         try:
             self._connection_guardian()
             Clock.schedule_interval(lambda dt: self._connection_guardian(), 60)
             Clock.schedule_interval(self.poll_commands, 3)
+            self.status_label.text = "OMEGA-SYNC: ACTIVE"
         except Exception as e:
-            noir_log(f"Startup Guardian Error: {e}", level="ERROR")
+            self.status_label.text = f"Startup Error: {str(e)}"
 
     def _connection_guardian(self):
         """Guardian Pintar: Rotasi Gateway secara otonom."""
         try:
             gateways = [
-                getattr(self, 'gateway', ''),
-                "http://8.215.23.17", # Direct VPS
-                "http://10.0.2.2:5555" # PC Bridge
+                self.gateway,
+                "http://8.215.23.17",
+                "http://10.0.2.2:5555"
             ]
             for gw in gateways:
                 if not gw: continue
@@ -266,7 +283,6 @@ class BehavioralBiometrics:
                 except: continue
         except: pass
         return False
-        self.root = BoxLayout(orientation='vertical', padding=10, spacing=5)
         
         # FINAL SANITIZATION — WARN-03 FIX: use updated package domain
         try:

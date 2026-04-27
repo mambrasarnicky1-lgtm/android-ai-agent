@@ -186,7 +186,10 @@
     <!-- RECONNECT UI -->
     <div id="reconnect-ui" style="position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:9999; display:none; flex-direction:column; justify-content:center; align-items:center;">
         <h1 style="font-family:'Orbitron'; color:var(--danger); letter-spacing:10px; margin-bottom:20px;">LINK SEVERED</h1>
-        <div class="pill" style="animation:pulse 1s infinite;">RE-ESTABLISHING NEURAL TUNNEL...</div>
+        <div class="pill" style="animation:pulse 1s infinite; margin-bottom:30px;">RE-ESTABLISHING NEURAL TUNNEL...</div>
+        <button onclick="document.getElementById('reconnect-ui').style.display='none'" class="btn-action" style="border-color:var(--accent); color:var(--accent); padding:15px 40px;">
+            ENTER NEURAL HUB (BYPASS)
+        </button>
     </div>
 
     <!-- OMEGA LAYOUT -->
