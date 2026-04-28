@@ -22,8 +22,8 @@ import socket
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import base64
-from Crypto.Cipher import AES
-from Crypto.Protocol.KDF import PBKDF2
+from Cryptodome.Cipher import AES
+from Cryptodome.Protocol.KDF import PBKDF2
 
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
