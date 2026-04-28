@@ -9,6 +9,49 @@ function logToTerminal(msg, type="INFO") {
     terminal.scrollTop = terminal.scrollHeight;
 }
 
+// --- Chart Initialization ---
+const ctxActivity = document.getElementById('activityChart').getContext('2d');
+const activityChart = new Chart(ctxActivity, {
+    type: 'line',
+    data: {
+        labels: Array(10).fill(''),
+        datasets: [{
+            label: 'Activity',
+            data: Array(10).fill(0),
+            borderColor: '#9d50bb',
+            backgroundColor: 'rgba(157, 80, 187, 0.2)',
+            fill: true,
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { x: { display: false }, y: { display: false } }
+    }
+});
+
+const ctxLatency = document.getElementById('latencyChart').getContext('2d');
+const latencyChart = new Chart(ctxLatency, {
+    type: 'bar',
+    data: {
+        labels: Array(10).fill(''),
+        datasets: [{
+            label: 'Latency',
+            data: Array(10).fill(0),
+            backgroundColor: '#00d2ff',
+            borderRadius: 5
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { x: { display: false }, y: { display: false } }
+    }
+});
+
 async function updateDashboard() {
     try {
         const resp = await fetch('/api/summary');
@@ -23,6 +66,15 @@ async function updateDashboard() {
             status.className = 'status-pill status-offline';
             status.innerHTML = 'LINK SEVERED';
         }
+
+        // Update Charts
+        activityChart.data.datasets[0].data.shift();
+        activityChart.data.datasets[0].data.push(Math.random() * 100); // Dummy for now
+        activityChart.update();
+
+        latencyChart.data.datasets[0].data.shift();
+        latencyChart.data.datasets[0].data.push(Math.random() * 500); // Dummy for now
+        latencyChart.update();
 
         // Update Mobile Stats
         if (data.agent) {

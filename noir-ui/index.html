@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Noir Sovereign Elite | Commander Dashboard</title>
     <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <meta name="description" content="Autonomous Sovereign Agent Command Interface">
 </head>
 <body>
@@ -51,6 +52,15 @@
                         RAG Memory: 1.2k Chunks<br>
                         Local AI: TinyLlama Ready
                     </p>
+                </div>
+            </div>
+
+            <!-- 📊 Dynamic Performance Graphs -->
+            <div class="card fade-in" style="grid-column: span 2; animation-delay: 0.25s;">
+                <h3>NEURAL ACTIVITY & SYSTEM LATENCY</h3>
+                <div style="display: flex; gap: 20px; height: 150px;">
+                    <canvas id="activityChart"></canvas>
+                    <canvas id="latencyChart"></canvas>
                 </div>
             </div>
 
