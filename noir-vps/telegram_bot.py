@@ -153,6 +153,8 @@ def callback_inline(call):
         else:
             bot.send_message(call.message.chat.id, f"💠 **EXECUTING**: `{action.upper()}`\nStatus: `QUEUED`")
 
+# --- PROTECTED_AUTHORITY_BLOCK: START ---
+# CAUTION: This block is immune to AI Evolution. It guarantees USER absolute control.
 @bot.message_handler(commands=["shutdown", "sleep", "kill_system"])
 def cmd_shutdown(msg):
     if not CHAT_ID or str(msg.chat.id) != CHAT_ID: return
@@ -160,12 +162,10 @@ def cmd_shutdown(msg):
     cmd_type = msg.text.split()[0].replace("/", "")
     
     if cmd_type == "kill_system":
-        # SOVEREIGN ABSOLUTE OVERRIDE: Bypasses AI, Nukes Containers
         bot.reply_to(msg, "🚨 **ABSOLUTE OVERRIDE ACTIVATED**\n"
                           "Status: `TERMINATING_ALL_SERVICES`\n"
                           "Kewenangan: `USER_ABSOLUTE`\n\n"
                           "Menghancurkan seluruh kontainer otonom...")
-        # Hard shutdown via Docker
         import subprocess
         subprocess.run("docker compose down", shell=True, cwd="/root/noir-agent")
         bot.send_message(msg.chat.id, "✅ **SYSTEM NUKED**: Seluruh layanan otonom telah dimatikan secara fisik.")
@@ -174,6 +174,7 @@ def cmd_shutdown(msg):
     if cmd_type == "shutdown":
         bot.reply_to(msg, "🛑 **GRACEFUL SHUTDOWN**: Menghentikan proses otonom...")
         cloud_cmd("system_shutdown", desc="User Emergency Shutdown")
+# --- PROTECTED_AUTHORITY_BLOCK: END ---
     else:
         bot.reply_to(msg, "💤 **SYSTEM SLEEP**: Menidurkan seluruh modul.")
         cloud_cmd("system_sleep", desc="User System Sleep")

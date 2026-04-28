@@ -65,14 +65,23 @@ class SovereignEvolutionEngine:
     def _execute_modification(self, proposal):
         """Logika teknis untuk menerapkan perubahan (Hot-fix, New File, etc)."""
         try:
-            # Contoh: Jika proposal adalah pembuatan file baru
+            # AUTHORITY SHIELD (v19.5): Lindungi kewenangan mutlak User
             if "new_file" in proposal["changes"]:
                 path = proposal["changes"]["new_file"]["path"]
                 content = proposal["changes"]["new_file"]["content"]
+                
+                # Cek jika file tujuan mengandung blok otoritas mutlak
+                if os.path.exists(path):
+                    with open(path, 'r') as f: current = f.read()
+                    if "PROTECTED_AUTHORITY_BLOCK" in current:
+                        # Jika konten baru tidak menyertakan blok pelindung, batalkan!
+                        if "PROTECTED_AUTHORITY_BLOCK" not in content:
+                            log.critical(f"⚠️ PERCOBAAN PELANGGARAN OTORITAS: AI mencoba menghapus Kill-Switch di {path}. DIBLOKIR!")
+                            return False
+                
                 with open(path, "w") as f: f.write(content)
-                log.info(f"✅ Created new evolution file: {path}")
+                log.info(f"✅ Created/Updated evolution file: {path}")
             
-            # Tambahkan logika modifikasi kode (sed-like) di sini di masa depan
             return True
         except Exception as e:
             log.error(f"Evolution execution failed: {e}")
