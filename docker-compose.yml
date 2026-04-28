@@ -1,11 +1,21 @@
 version: '3.8'
 
 services:
-  noir-brain:
+  # OMEGA-SPACE OPTIMIZATION: Shared Base Image (v18.5)
+  noir-base:
     build: .
+    image: noir-agent-base:latest
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  noir-brain:
+    image: noir-agent-base:latest
     container_name: noir-brain
     restart: always
-    env_file: .env
+    depends_on:
+      - noir-base
     volumes:
       - ./.env:/app/.env
       - ./noir-vps:/app/noir-vps
@@ -17,25 +27,20 @@ services:
       resources:
         limits:
           memory: 1500M
-        reservations:
-          memory: 512M
-    healthcheck:
-      test: ["CMD", "python3", "-c", "import os; exit(0 if os.path.exists('/app/noir-vps/brain.py') else 1)"]
-      interval: 1m
-      timeout: 10s
-      retries: 3
+    command: python noir-vps/brain.py
 
   noir-dashboard:
-    build: .
+    image: noir-agent-base:latest
     container_name: noir-dashboard
     restart: always
+    depends_on:
+      - noir-base
     working_dir: /app/noir-ui
     volumes:
       - ./.env:/app/.env
       - ./noir-ui:/app/noir-ui
     ports:
       - "80:80"
-    # v18.4 Optimization: Using gunicorn for better concurrency on 4GB RAM
     command: gunicorn --bind 0.0.0.0:80 --workers 3 web_server:app
     networks:
       - noir-net
@@ -43,73 +48,50 @@ services:
       resources:
         limits:
           memory: 800M
-        reservations:
-          memory: 256M
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 60s # Increased for gunicorn boot
+      start_period: 60s
 
   noir-telegram:
-    build: .
+    image: noir-agent-base:latest
     container_name: noir-telegram
     restart: always
-    env_file: .env
+    depends_on:
+      - noir-base
     volumes:
       - ./.env:/app/.env
       - ./noir-vps:/app/noir-vps
-      - ./knowledge:/app/knowledge
-      - ./logs:/app/logs
     networks:
       - noir-net
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-        reservations:
-          memory: 128M
     command: python noir-vps/telegram_bot.py
 
   noir-researcher:
-    build: .
+    image: noir-agent-base:latest
     container_name: noir-researcher
     restart: always
-    env_file: .env
+    depends_on:
+      - noir-base
     volumes:
       - ./.env:/app/.env
       - ./noir-vps:/app/noir-vps
-      - ./knowledge:/app/knowledge
-      - ./logs:/app/logs
     networks:
       - noir-net
-    deploy:
-      resources:
-        limits:
-          memory: 800M
-        reservations:
-          memory: 256M
     command: python noir-vps/autonomous_researcher.py
 
   noir-healer:
-    build: .
+    image: noir-agent-base:latest
     container_name: noir-healer
     restart: always
-    env_file: .env
+    depends_on:
+      - noir-base
     volumes:
       - ./.env:/app/.env
       - ./noir-vps:/app/noir-vps
-      - ./knowledge:/app/knowledge
-      - ./logs:/app/logs
     networks:
       - noir-net
-    deploy:
-      resources:
-        limits:
-          memory: 400M
-        reservations:
-          memory: 128M
     command: python noir-vps/healer.py
 
 networks:
