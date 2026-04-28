@@ -27,7 +27,7 @@ services:
       resources:
         limits:
           memory: 1500M
-    command: python noir-vps/brain.py
+    command: sh -c "python noir-vps/brain.py & python noir-vps/perpetual_evolution.py"
 
   noir-dashboard:
     image: noir-agent-base:latest

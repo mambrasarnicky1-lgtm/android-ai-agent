@@ -1,4 +1,4 @@
-name: Noir Sovereign V19.6 OMEGA-MESH Build
+name: Noir Sovereign V20.0 SINGULARITY Build
 
 on:
   push:
@@ -79,5 +79,5 @@ jobs:
       - name: Upload Release Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Noir-Sovereign-V19.6-OMEGA-APK
+          name: Noir-Sovereign-V20.0-SINGULARITY-APK
           path: bin/*.apk
