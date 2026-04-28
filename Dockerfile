@@ -22,7 +22,7 @@ RUN pip install --no-cache-dir \
 # Install CPU-only AI libraries to save disk space
 RUN pip install --no-cache-dir \
     torch torchvision --extra-index-url https://download.pytorch.org/whl/cpu \
-    sentence-transformers faiss-cpu
+    sentence-transformers faiss-cpu accelerate
 
 # Copy source code
 COPY . .

@@ -113,7 +113,13 @@ class AIRouter:
             except Exception as e:
                 log.error(f"Gemini failed: {e}")
                 
-        return "🚨 [CRITICAL] All Gemini models or keys failed."
+        # Final Fallback to Local AI
+        log.warning("🔄 All Cloud APIs failed. Switching to LOCAL AI FALLBACK.")
+        try:
+            from local_brain import LocalAI
+            return LocalAI.query(prompt)
+        except:
+            return "🚨 [CRITICAL] All Gemini models and Local AI failed."
 
     @staticmethod
     def query_deepseek(prompt: str) -> str:

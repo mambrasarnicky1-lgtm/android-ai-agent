@@ -38,8 +38,8 @@ class SecureVault:
         return base64.b64encode(cipher.nonce + tag + ciphertext).decode('utf-8')
 
 def pc_loop():
-    print(f"💻 [NOIR PC BRIDGE] Initialized as {DEVICE_ID}")
-    print(f"🔗 [GATEWAY] {GATEWAY}")
+    print(f"[INIT] [NOIR PC BRIDGE] Initialized as {DEVICE_ID}")
+    print(f"[LINK] [GATEWAY] {GATEWAY}")
     
     while True:
         try:
