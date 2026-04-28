@@ -148,26 +148,33 @@ class SovereignMaintenance:
 
 # ─── NEURAL INTELLIGENCE CORE ───
 class PCExecutor:
-    """Mengontrol PC dan HP via USB Debugging dari jarak jauh."""
+    """Mengontrol PC via Secure Bridge dari VPS."""
     @staticmethod
     def run_pc_task(cmd: str):
-        log.info(f"💻 Executing PC Task: {cmd}")
-        # Check if PC is reachable via bridge
+        log.info(f"💻 Sending task to PC Agent: {cmd}")
         try:
-            # Placeholder untuk SSH/Remote Execution logic
-            return f"PC Command '{cmd}' executed via Sovereign Link."
+            # Encrypt command for PC
+            encrypted_cmd = SecureVault.encrypt(cmd)
+            resp = requests.post(f"{GATEWAY}/agent/command", headers=HEADERS, json={
+                "target_device": "NOIR_PC_MASTER",
+                "action": {"type": "pc_shell", "cmd": encrypted_cmd},
+                "description": f"PC Action: {cmd}"
+            }, timeout=10)
+            return f"PC Command queued: {resp.status_code}"
         except Exception as e:
-            return f"PC Execution Error: {e}"
+            return f"PC Bridge Error: {e}"
 
     @staticmethod
     def health_check_pc():
-        """Verifikasi koneksi ke PC lokal (Bridge)."""
-        # Implementasi ping ke IP PC yang ada di .env
-        pc_ip = os.environ.get("LOCAL_PC_IP", "127.0.0.1")
-        log.info(f"🔍 Checking PC Bridge: {pc_ip}")
-        # dummy check
-        return True
-
+        """Verifikasi apakah PC Master sedang online di Gateway."""
+        try:
+            r = requests.get(f"{GATEWAY}/agent/summary", headers=HEADERS, timeout=10)
+            agents = r.json().get("agents", [])
+            for a in agents:
+                if a.get("device_id") == "NOIR_PC_MASTER":
+                    return a.get("online", False)
+            return False
+        except: return False
 # ─── SELF-LEARNING HUB ───
 
 # ResearchEngine moved to ai_router.py

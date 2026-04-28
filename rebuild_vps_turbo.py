@@ -33,9 +33,10 @@ def rebuild_vps():
         print("=== UPDATING CODEBASE ===")
         run_ssh(ssh, 'cd /root/noir-agent && git fetch origin && git reset --hard origin/main', 'Git Pull')
         
-        # 3. Clean up Docker images to ensure fresh build with gunicorn
-        print("=== CLEANING DOCKER ===")
-        run_ssh(ssh, 'docker system prune -f', 'Docker Prune')
+        # 3. Aggressive Docker Cleanup to free space for heavy AI libraries
+        print("=== AGGRESSIVE DOCKER CLEANUP ===")
+        run_ssh(ssh, 'docker system prune -a --volumes -f', 'Prune Everything')
+        run_ssh(ssh, 'docker builder prune -a -f', 'Prune Build Cache')
         
         # 4. Rebuild and restart with Turbo Config
         print("=== STARTING TURBO SERVICES (4GB RAM OPTIMIZED) ===")
