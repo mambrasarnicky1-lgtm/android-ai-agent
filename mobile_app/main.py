@@ -246,6 +246,8 @@ class BehavioralBiometrics:
         })
         if len(self.patterns) > 50: self.patterns.pop(0)
 
+class SovereignApp(App):
+    """NOIR SOVEREIGN MOBILE CORE - Kivy Application"""
     def build(self):
         self.version = "17.5.7 [OMEGA-FINAL]"
         self.gateway = _BASE_GATEWAY
@@ -1039,4 +1041,4 @@ if __name__ == '__main__':
             shutil.rmtree(d)
     except: pass
     
-    SovereignCore().run()
+    SovereignApp().run()
