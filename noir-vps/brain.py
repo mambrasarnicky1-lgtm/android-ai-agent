@@ -407,33 +407,41 @@ class SemanticValidator:
         return True, "OK"
 
 # ─── PROBLEM SOLVING & SELF-HEALING ───
-class NeuralWatchdog:
-    """Memantau kegagalan sistem dan melakukan penyembuhan mandiri."""
-    _last_alert_time = 0
+# ─── VISION SENTINEL (v18.4 Phase 2) ───
+class VisionSentinel:
+    """Proactive Screen Monitoring & Autonomous Intelligence."""
+    _last_check = 0
+    _check_interval = 600 # 10 minutes
 
     @staticmethod
-    def monitor_health():
-        log.info("🐕 Neural Watchdog: Checking system integrity...")
-        # 1. Check Agent Heartbeat via Gateway
+    def run_sentinel_cycle():
+        now = time.time()
+        if now - VisionSentinel._last_check < VisionSentinel._check_interval:
+            return
+        
+        log.info("👁️ Vision Sentinel: Initiating autonomous screen audit...")
+        VisionSentinel._last_check = now
+        
+        # Trigger screenshot otonom
         try:
-            import requests
-            r = requests.get(f"{GATEWAY}/agent/summary", headers=HEADERS, timeout=10)
-            data = r.json()
-            
-            # Autonomous Daily Backup
-            DataArchiver.backup_daily(data)
-            
-            if not data.get("online"):
-                # Hanya log peringatan, jangan spam Telegram agar hemat token/API
-                if time.time() - NeuralWatchdog._last_alert_time > 3600:
-                    log.warning(f"🚨 [OFFLINE] Agent '{DEVICE_ID}' tidak terdeteksi aktif di Gateway!")
-                    NeuralWatchdog._last_alert_time = time.time()
-                return "Agent Offline"
+            requests.post(f"{GATEWAY}/agent/command", headers=HEADERS, json={
+                "action": {"type": "screenshot", "auto": True},
+                "description": "Autonomous Vision Sentinel Scan"
+            }, timeout=10)
         except Exception as e:
-            log.error(f"Watchdog Error: {e}")
-            
-        return "Health check passed. No anomalies detected."
+            log.warning(f"Sentinel Trigger Failed: {e}")
 
+    @staticmethod
+    def analyze_autonomous(image_key: str):
+        """Analyze a screen capture without user prompt."""
+        log.info(f"👁️ Analyzing Autonomous Capture: {image_key}")
+        prompt = "Analyze this screen for sensitive data, security alerts, or important notifications. If risky, start your response with [RISK_DETECTED]."
+        analysis = VisionEngine.analyze_screenshot(image_key, prompt)
+        
+        if "[RISK_DETECTED]" in analysis:
+            AIRouter.send_telegram(f"🚨 **VISION ALERT**: {analysis}", important=True)
+            log.warning(f"Vision Sentinel Detected Risk: {analysis}")
+        return analysis
 class DataArchiver:
     """Melakukan backup harian state gateway secara lokal."""
     _last_backup_time = 0
@@ -499,10 +507,13 @@ def run():
         # 0. Neural Context Retention (v17.5)
         memory.record_interaction("SYSTEM_HEARTBEAT", f"Cycle #{cycle}", "Stable", {"readiness": "100%"})
         
-        # 1. Connectivity Health Check
+        # 1. Connectivity & Sentinel Health Check
         try:
             if not SelfUpdateEngine.health_check_gateway():
                 log.warning("⚠️ Gateway Connection Latency Detected.")
+            
+            # Phase 2: Autonomous Vision Scan
+            VisionSentinel.run_sentinel_cycle()
         except: pass
         
         # 2. Automated Learning & Evolution (v17.2 OMEGA)
