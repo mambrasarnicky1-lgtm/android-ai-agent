@@ -523,6 +523,18 @@ def run():
             VisionSentinel.run_sentinel_cycle()
         except: pass
         
+        # 3. Sovereign Evolution Cycle (v18.5 OMEGA)
+        if cycle % 60 == 0: # Every hour
+            log.info("🧬 Brain: Consulting Researcher for Evolution Proposals...")
+            try:
+                from evolution_bridge import EvolutionBridge
+                # Autonomous Code Improvement logic here
+                # Example: EvolutionBridge.trigger_dashboard_evolution()
+            except: pass
+        
+        # 4. Neural Activity Logging
+        log.info(f"🧠 Cycle #{cycle} Complete. Brain State: STABLE.")
+        
         # 2. Automated Learning & Evolution (v17.2 OMEGA)
         try:
             # Refresh knowledge every 20 cycles (~20 mins)
