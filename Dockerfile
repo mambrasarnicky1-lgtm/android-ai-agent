@@ -32,7 +32,9 @@ RUN pip install --no-cache-dir \
     scp \
     httpx \
     docker \
-    gunicorn
+    gunicorn \
+    sentence-transformers \
+    faiss-cpu
 
 # Copy source code
 COPY . .

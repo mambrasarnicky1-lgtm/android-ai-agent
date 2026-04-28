@@ -155,6 +155,16 @@ class AIRouter:
     @staticmethod
     def smart_query(prompt: str) -> str:
         p_lower = prompt.lower()
+        
+        # Phase 3: Check local Neural Knowledge Base first
+        try:
+            from knowledge_base import NeuralKnowledgeBase
+            local_context = NeuralKnowledgeBase.query(prompt)
+            if local_context:
+                prompt = f"LOCAL CONTEXT:\n{local_context}\n\nUSER QUESTION: {prompt}"
+                log.info("🧠 SmartQuery: Injected local RAG context.")
+        except: pass
+
         if any(x in p_lower for x in ["code", "python", "script"]): return AIRouter.query_qwen(prompt)
         if any(x in p_lower for x in ["mengapa", "analisis", "why"]): return AIRouter.query_deepseek(prompt)
         return AIRouter.query_gemini(prompt)
