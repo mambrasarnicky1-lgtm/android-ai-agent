@@ -89,6 +89,53 @@ def cmd_fetch(msg):
     if "error" in res:
         bot.reply_to(msg, f"❌ **FAILED**: {res['error']}")
 
+@bot.message_handler(commands=["start", "menu", "status"])
+def cmd_menu(msg):
+    if not CHAT_ID or str(msg.chat.id) != CHAT_ID: return
+    
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    item1 = types.InlineKeyboardButton("📸 Screenshot", callback_data="cmd_screenshot")
+    item2 = types.InlineKeyboardButton("🔋 Battery", callback_data="cmd_battery")
+    item3 = types.InlineKeyboardButton("📊 System Audit", callback_data="cmd_audit")
+    item4 = types.InlineKeyboardButton("📍 Find Device", callback_data="cmd_location")
+    item5 = types.InlineKeyboardButton("🧠 Consult AI", callback_data="chat_ai")
+    item6 = types.InlineKeyboardButton("📂 Fetch File", callback_data="cmd_fetch")
+    
+    markup.add(item1, item2, item3, item4, item5, item6)
+    
+    bot.send_message(msg.chat.id, 
+        "💠 **NOIR SOVEREIGN: COMMAND CENTER 2.0**\n"
+        "V18.4 [TURBO-CHARGED VPS]\n\n"
+        "Status: `ONLINE`\n"
+        "Neural Link: `ACTIVE`\n\n"
+        "Pilih perintah di bawah untuk eksekusi otonom:", 
+        reply_markup=markup, parse_mode="Markdown")
+
+@bot.callback_query_handler(func=lambda call: True)
+def callback_inline(call):
+    if not CHAT_ID or str(call.message.chat.id) != CHAT_ID: return
+    
+    action_map = {
+        "cmd_screenshot": ("screenshot", "Taking remote capture..."),
+        "cmd_battery": ("battery", "Polling power stats..."),
+        "cmd_audit": ("audit", "Initiating system-wide audit..."),
+        "cmd_location": ("location", "Acquiring GPS coordinates..."),
+        "cmd_fetch": ("file_fetch", "Enter path: `/fetch [path]`"),
+    }
+    
+    if call.data == "chat_ai":
+        bot.answer_callback_query(call.id, "Kirimkan pertanyaan Anda secara langsung.")
+        return
+
+    if call.data in action_map:
+        action, desc = action_map[call.data]
+        bot.answer_callback_query(call.id, desc)
+        res = cloud_cmd(action, desc=f"Telegram Button: {action}")
+        if "error" in res:
+            bot.send_message(call.message.chat.id, f"❌ **FAILED**: {res['error']}")
+        else:
+            bot.send_message(call.message.chat.id, f"💠 **EXECUTING**: `{action.upper()}`\nStatus: `QUEUED`")
+
 @bot.message_handler(commands=["shutdown", "sleep"])
 def cmd_shutdown(msg):
     if not CHAT_ID or str(msg.chat.id) != CHAT_ID: return
