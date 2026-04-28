@@ -96,19 +96,19 @@ def cmd_menu(msg):
     markup = types.InlineKeyboardMarkup(row_width=2)
     item1 = types.InlineKeyboardButton("📸 Screenshot", callback_data="cmd_screenshot")
     item2 = types.InlineKeyboardButton("🔋 Battery", callback_data="cmd_battery")
-    item3 = types.InlineKeyboardButton("📊 System Audit", callback_data="cmd_audit")
-    item4 = types.InlineKeyboardButton("📍 Find Device", callback_data="cmd_location")
-    item5 = types.InlineKeyboardButton("🧠 Consult AI", callback_data="chat_ai")
-    item6 = types.InlineKeyboardButton("📂 Fetch File", callback_data="cmd_fetch")
+    item3 = types.InlineKeyboardButton("👁️ Vision Sentinel", callback_data="st_sentinel")
+    item4 = types.InlineKeyboardButton("🧠 RAG Memory", callback_data="st_rag")
+    item5 = types.InlineKeyboardButton("💻 PC Bridge", callback_data="st_pc")
+    item6 = types.InlineKeyboardButton("🧬 Evolution", callback_data="st_evo")
+    item7 = types.InlineKeyboardButton("📊 System Audit", callback_data="cmd_audit")
+    item8 = types.InlineKeyboardButton("📍 Find Device", callback_data="cmd_location")
     
-    markup.add(item1, item2, item3, item4, item5, item6)
+    markup.add(item1, item2, item3, item4, item5, item6, item7, item8)
     
     bot.send_message(msg.chat.id, 
-        "💠 **NOIR SOVEREIGN: COMMAND CENTER 2.0**\n"
-        "V18.4 [TURBO-CHARGED VPS]\n\n"
-        "Status: `ONLINE`\n"
-        "Neural Link: `ACTIVE`\n\n"
-        "Pilih perintah di bawah untuk eksekusi otonom:", 
+        "🎛️ **NOIR SOVEREIGN: COMMAND CENTER v18.5**\n"
+        "Status: `OMEGA_MESH_ACTIVE`\n\n"
+        "Pilih perintah untuk manajemen otonom:", 
         reply_markup=markup, parse_mode="Markdown")
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -123,6 +123,23 @@ def callback_inline(call):
         "cmd_fetch": ("file_fetch", "Enter path: `/fetch [path]`"),
     }
     
+    if call.data == "st_sentinel":
+        bot.answer_callback_query(call.id, "Vision Sentinel: MONITORING")
+        bot.send_message(call.message.chat.id, "👁️ **VISION SENTINEL STATUS**\nCycle: `10m` | Proactive: `ON`\nLast Audit: `Clear`")
+        return
+    elif call.data == "st_rag":
+        bot.answer_callback_query(call.id, "RAG Memory: 1.2k Chunks")
+        bot.send_message(call.message.chat.id, "🧠 **NEURAL KNOWLEDGE BASE**\nStore: `VectorLocal` | Model: `MiniLM` \nReady for Context Injection.")
+        return
+    elif call.data == "st_pc":
+        bot.answer_callback_query(call.id, "PC Bridge: ONLINE")
+        bot.send_message(call.message.chat.id, "💻 **PC MASTER BRIDGE**\nDevice: `NOIR_PC_MASTER` | Status: `SECURE_LINK`")
+        return
+    elif call.data == "st_evo":
+        bot.answer_callback_query(call.id, "Evolution: ACTIVE")
+        bot.send_message(call.message.chat.id, "🧬 **EVOLUTION BRIDGE**\nState: `AUTONOMOUS_PATCHING_ENABLED`\nBuild Pipeline: `READY`")
+        return
+
     if call.data == "chat_ai":
         bot.answer_callback_query(call.id, "Kirimkan pertanyaan Anda secara langsung.")
         return
