@@ -13,6 +13,12 @@ services:
       - ./logs:/app/logs
     networks:
       - noir-net
+    deploy:
+      resources:
+        limits:
+          memory: 1500M
+        reservations:
+          memory: 512M
     healthcheck:
       test: ["CMD", "python3", "-c", "import os; exit(0 if os.path.exists('/app/noir-vps/brain.py') else 1)"]
       interval: 1m
@@ -29,9 +35,16 @@ services:
       - ./noir-ui:/app/noir-ui
     ports:
       - "80:80"
-    command: python web_server.py
+    # v18.4 Optimization: Using gunicorn for better concurrency on 4GB RAM
+    command: gunicorn --bind 0.0.0.0:80 --workers 3 web_server:app
     networks:
       - noir-net
+    deploy:
+      resources:
+        limits:
+          memory: 800M
+        reservations:
+          memory: 256M
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80/"]
       interval: 1m
@@ -50,6 +63,12 @@ services:
       - ./logs:/app/logs
     networks:
       - noir-net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
     command: python noir-vps/telegram_bot.py
 
   noir-researcher:
@@ -64,6 +83,12 @@ services:
       - ./logs:/app/logs
     networks:
       - noir-net
+    deploy:
+      resources:
+        limits:
+          memory: 800M
+        reservations:
+          memory: 256M
     command: python noir-vps/autonomous_researcher.py
 
   noir-healer:
@@ -78,6 +103,12 @@ services:
       - ./logs:/app/logs
     networks:
       - noir-net
+    deploy:
+      resources:
+        limits:
+          memory: 400M
+        reservations:
+          memory: 128M
     command: python noir-vps/healer.py
 
 networks:

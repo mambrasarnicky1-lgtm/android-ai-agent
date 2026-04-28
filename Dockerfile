@@ -31,7 +31,8 @@ RUN pip install --no-cache-dir \
     paramiko \
     scp \
     httpx \
-    docker
+    docker \
+    gunicorn
 
 # Copy source code
 COPY . .
