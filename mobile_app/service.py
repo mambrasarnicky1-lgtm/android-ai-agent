@@ -115,22 +115,25 @@ def run_service():
                 time.sleep(30)
                 continue
 
-            # 2. Unified Poll (Shared with main.py)
+            # 2. Adaptive Polling & Gateway Rotation
             headers = {"Authorization": f"Bearer {API_KEY}"}
-            resp = session.get(
-                f"{GATEWAY_URL}/agent/poll",
-                headers=headers,
-                params={"device_id": DEVICE_ID, "client_type": "service"},
-                timeout=20
-            )
+            try:
+                resp = session.get(
+                    f"{GATEWAY_URL}/agent/poll",
+                    headers=headers,
+                    params={"device_id": DEVICE_ID, "client_type": "service"},
+                    timeout=15
+                )
+            except:
+                DynamicGateway.reset() # Rotate gateway on failure
+                time.sleep(10)
+                continue
 
             if resp.status_code == 200:
                 data = resp.json()
                 commands = data.get("commands", [])
                 if commands:
                     noir_log(f"Received {len(commands)} background commands")
-                    # Note: Service only handles light background tasks.
-                    # Complex tasks (vision, etc) are handled by main.py
                     for cmd in commands:
                         try:
                             action = cmd.get("action", {})
@@ -138,9 +141,7 @@ def run_service():
                             if atype == "shell":
                                 cmd_str = action.get("cmd", "")
                                 noir_log(f"Executing BG Shell: {cmd_str}")
-                                # v17.2: Use robust shell bridge
                                 res = run_robust_shell(cmd_str)
-                                # Report back if possible
                                 session.post(
                                     f"{GATEWAY_URL}/agent/result",
                                     headers=headers,
@@ -149,8 +150,9 @@ def run_service():
                                 )
                         except Exception as e:
                             noir_log(f"BG Exec Error: {e}", level="ERROR")
-                    poll_interval = 5
+                    poll_interval = 3 # Fast poll when active
                 else:
+                    # Adaptive Backoff: idle longer but check at least every 30s
                     poll_interval = min(poll_interval + 2, 30)
             
             time.sleep(poll_interval)

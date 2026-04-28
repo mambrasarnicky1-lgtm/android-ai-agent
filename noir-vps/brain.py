@@ -362,12 +362,27 @@ class SecureVault:
         except Exception as e:
             return f"[DECRYPT_ERROR] {e}"
 
-# ─── RATE LIMITER (v14.0) ───
+# ─── RATE LIMITER (v18.4 Turbo) ───
 class RateLimiter:
     """Membatasi jumlah request AI untuk mencegah biaya bengkak."""
     _requests = []
-    _limit_per_hour = 50
+    _limit_per_hour = 500 # 4GB RAM allows for higher parallel throughput
 
+# ─── NEURAL CACHE (v18.4) ───
+class NeuralCache:
+    """Caching AI responses in memory to save tokens and improve speed."""
+    _cache = {}
+    _max_size = 1000 # Store up to 1000 responses in RAM
+    
+    @classmethod
+    def get(cls, key):
+        return cls._cache.get(key)
+    
+    @classmethod
+    def set(cls, key, val):
+        if len(cls._cache) >= cls._max_size:
+            cls._cache.pop(next(iter(cls._cache))) # FIFO eviction
+        cls._cache[key] = val
     @classmethod
     def check(cls):
         now = time.time()

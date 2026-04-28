@@ -423,22 +423,39 @@ class SovereignApp(App):
         self._log("[SMC] Runtime Permissions: REQUESTED")
 
     def _acquire_wakelock(self):
-        """Prevent CPU from sleeping when screen is off."""
+        """OMEGA-FIX: Absolute persistence using PowerManager and Foreground Service."""
         try:
             from jnius import autoclass
             PythonActivity = autoclass('org.kivy.android.PythonActivity')
+            activity = PythonActivity.mActivity
             Context = autoclass('android.content.Context')
             PowerManager = autoclass('android.os.PowerManager')
-
-            activity = PythonActivity.mActivity
+            
             pm = activity.getSystemService(Context.POWER_SERVICE)
-            self.wakelock = pm.newWakeLock(
-                PowerManager.PARTIAL_WAKE_LOCK, "NoirSMC::WakeLock"
-            )
+            self.wakelock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "NoirSovereign:SentinelLock")
             self.wakelock.acquire()
-            self._log("[SMC] WakeLock: ACTIVE")
+            noir_log("[SMC] WakeLock: ACTIVE")
+
+            # NEW: Start Background Service as Foreground
+            self._start_foreground_service()
         except Exception as e:
-            self._log(f"[SMC] WakeLock Error: {e}")
+            noir_log(f"[SMC] WakeLock/Service Error: {e}", level="ERROR")
+
+    def _start_foreground_service(self):
+        """v18.4 Optimization: Ensure background service is never killed by HyperOS."""
+        try:
+            from jnius import autoclass
+            service = autoclass('org.noir.sovereign.ServiceNoir_sovereign')
+            PythonActivity = autoclass('org.kivy.android.PythonActivity')
+            activity = PythonActivity.mActivity
+            service.start(activity, "")
+            noir_log("[SMC] Foreground Service: STARTING")
+        except:
+            noir_log("[SMC] Foreground Service: Fallback to standard start")
+            try:
+                from android import service
+                service.start_service("noir_sovereign", "noir_sovereign", "")
+            except: pass
 
     def _unified_heartbeat_tick(self, dt):
         """Single-Pipe Protocol: Telemetry + Polling in one request."""
