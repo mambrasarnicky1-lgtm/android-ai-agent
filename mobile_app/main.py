@@ -22,8 +22,14 @@ import socket
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import base64
-from Cryptodome.Cipher import AES
-from Cryptodome.Protocol.KDF import PBKDF2
+try:
+    from Cryptodome.Cipher import AES
+    from Cryptodome.Protocol.KDF import PBKDF2
+    HAS_CRYPTO = True
+except (ImportError, AttributeError, OSError):
+    HAS_CRYPTO = False
+    AES = None
+    PBKDF2 = None
 
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
@@ -186,6 +192,7 @@ class SecureVault:
     """NEURAL MESH STEALTH TUNNEL v18.0 [QUANTUM-READY]"""
     @staticmethod
     def _get_key(rotation_factor=0):
+        if not HAS_CRYPTO: return None
         # Rotating key based on time-block for 'Quantum Stealth'
         time_block = int(time.time() / 3600) + rotation_factor
         password = (API_KEY + str(time_block)).encode()
