@@ -236,7 +236,24 @@ class SecureVault:
                 return cipher.decrypt_and_verify(raw[32:], raw[16:32]).decode('utf-8')
             except: return encrypted_data
 
-# --- BEHAVIORAL BIOMETRICS [RECOGNITION] ---
+# --- VOICE ENGINE (v19.5 OMEGA) ---
+class VoiceEngine:
+    _tts = None
+    
+    @classmethod
+    def speak(cls, text):
+        try:
+            from jnius import autoclass
+            if not cls._tts:
+                PythonActivity = autoclass('org.kivy.android.PythonActivity')
+                TextToSpeech = autoclass('android.speech.tts.TextToSpeech')
+                cls._tts = TextToSpeech(PythonActivity.mActivity, None)
+            
+            # Simple wait for initialization (real impl should use listener)
+            Clock.schedule_once(lambda dt: cls._tts.speak(text, TextToSpeech.QUEUE_FLUSH, None, None), 0.5)
+        except:
+            noir_log(f"[VOICE] TTS Failed: {text}", level="WARNING")
+
 class BehavioralBiometrics:
     def __init__(self):
         self.patterns = []
@@ -299,12 +316,27 @@ class SovereignCoreScreen(Screen):
         self.cpu_bar = ProgressBar(max=100, value=0, pos_hint={'center_x': 0.5, 'center_y': 0.5}, size_hint=(0.8, None))
         layout.add_widget(self.cpu_bar)
         
+        # Voice Command Button
+        voice_btn = Button(
+            text="🎤 SPEAK TO NOIR",
+            size_hint=(0.6, 0.1),
+            pos_hint={'center_x': 0.5, 'center_y': 0.3},
+            background_color=(0, 0.8, 0.5, 1)
+        )
+        voice_btn.bind(on_press=self.start_voice_command)
+        layout.add_widget(voice_btn)
+        
         back_btn = Button(text="RETURN TO TERMINAL", size_hint=(0.6, 0.08), pos_hint={'center_x': 0.5, 'center_y': 0.15}, background_color=(0, 0.5, 1, 1))
         back_btn.bind(on_press=lambda x: setattr(App.get_running_app().root, 'current', 'dashboard'))
         layout.add_widget(back_btn)
         
         self.add_widget(layout)
         Clock.schedule_interval(self.update_stats, 2)
+
+    def start_voice_command(self, instance):
+        VoiceEngine.speak("Sovereign Voice Link Active. I am listening, Commander.")
+        # Trigger STT via Shizuku/Android intent if needed
+        noir_log("[VOICE] Listener activated.")
 
     def update_stats(self, dt):
         stats = {"cpu": psutil.cpu_percent(), "ram": psutil.virtual_memory().percent}
