@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NOIR SOVEREIGN: NEURAL MAP v20.0</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Inter', sans-serif; }
+        #ui {
+            position: absolute; top: 20px; left: 20px; color: #00d2ff;
+            pointer-events: none; text-transform: uppercase; letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(0, 210, 255, 0.5);
+        }
+        .node-info { font-size: 10px; color: rgba(0, 210, 255, 0.7); margin-top: 5px; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <h1>Neural Map v20.0</h1>
+        <div class="node-info">Status: MESH_SYNCHRONIZED</div>
+        <div class="node-info">Nodes Active: 5 [VPS, MOBILE, PC, GATEWAY, BRAIN]</div>
+    </div>
+    <script>
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, Window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Starfield
+        const starGeometry = new THREE.BufferGeometry();
+        const starCount = 1500;
+        const posArray = new Float32Array(starCount * 3);
+        for(let i=0; i<starCount*3; i++) {
+            posArray[i] = (Math.random() - 0.5) * 100;
+        }
+        starGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        const starMaterial = new THREE.PointsMaterial({ size: 0.05, color: 0xffffff });
+        const stars = new THREE.Points(starGeometry, starMaterial);
+        scene.add(stars);
+
+        // Neural Nodes
+        const nodeGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+        const nodeMaterial = new THREE.MeshBasicMaterial({ color: 0x00d2ff, wireframe: true });
+        
+        const nodes = [];
+        const nodePositions = [
+            [0, 0, 0],    // Brain
+            [5, 3, -2],   // Mobile
+            [-5, -2, 4],  // PC
+            [3, -5, -3],  // Gateway
+            [-4, 4, 2]    // Sentinel
+        ];
+
+        nodePositions.forEach(pos => {
+            const node = new THREE.Mesh(nodeGeometry, nodeMaterial);
+            node.position.set(...pos);
+            scene.add(node);
+            nodes.push(node);
+        });
+
+        // Neural Connections
+        const lineMaterial = new THREE.LineBasicMaterial({ color: 0x00d2ff, transparent: true, opacity: 0.3 });
+        nodes.forEach((n1, i) => {
+            nodes.forEach((n2, j) => {
+                if(i < j) {
+                    const geometry = new THREE.BufferGeometry().setFromPoints([n1.position, n2.position]);
+                    const line = new THREE.Line(geometry, lineMaterial);
+                    scene.add(line);
+                }
+            });
+        });
+
+        camera.position.z = 15;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            stars.rotation.y += 0.001;
+            nodes.forEach(n => {
+                n.rotation.x += 0.01;
+                n.rotation.y += 0.01;
+            });
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

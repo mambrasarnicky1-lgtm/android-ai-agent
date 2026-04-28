@@ -72,6 +72,31 @@ class RateLimiter:
         cls._requests.append(now)
         return True
 
+class StealthTransport:
+    """NEURAL STEALTH ROUTER (v20.0): Masking AI traffic patterns."""
+    
+    USER_AGENTS = [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+    ]
+
+    @staticmethod
+    def get_stealth_headers():
+        import random
+        return {
+            "User-Agent": random.choice(StealthTransport.USER_AGENTS),
+            "Accept-Language": "en-US,en;q=0.9",
+            "Referer": "https://www.google.com/",
+            "Connection": "keep-alive"
+        }
+
+    @staticmethod
+    def jitter():
+        import time, random
+        # Randomized delay to break traffic analysis
+        time.sleep(random.uniform(0.1, 0.8))
+
 class AIRouter:
     """Routes queries to the best available free AI model with Auto-Rotation."""
 
@@ -159,7 +184,11 @@ class AIRouter:
         except: return AIRouter.query_gemini(prompt)
 
     @staticmethod
-    def smart_query(prompt: str) -> str:
+    def smart_query(prompt: str):
+        """Routes query to the best model with STEALTH TRANSPORT (v20.0)."""
+        StealthTransport.jitter() # Anti-pattern delay
+        headers = StealthTransport.get_stealth_headers()
+        
         p_lower = prompt.lower()
         
         # Phase 3: Check local Neural Knowledge Base first

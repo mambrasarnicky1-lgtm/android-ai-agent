@@ -17,9 +17,14 @@
                 <h1>NOIR SOVEREIGN</h1>
                 <p style="color: var(--text-secondary); font-size: 0.8rem; letter-spacing: 3px;">V18.5 OMEGA MESH</p>
             </div>
-            <div id="connection-status" class="status-pill status-online">
-                <div class="pulse"></div>
-                LINK ACTIVE
+            <div style="display: flex; gap: 10px;">
+                <div id="connection-status" class="status-pill status-online">
+                    <div class="pulse"></div>
+                    LINK ACTIVE
+                </div>
+                <div class="status-pill" onclick="window.location.href='/neural_map.html'" style="cursor: pointer; border: 1px solid #00d2ff; background: rgba(0,210,255,0.1);">
+                    NEURAL MAP 3D
+                </div>
             </div>
         </header>
 
@@ -87,9 +92,10 @@
             <div class="card fade-in" style="grid-column: span 2; animation-delay: 0.5s;">
                 <h3>SYSTEM LOGS & EVOLUTION</h3>
                 <div id="terminal" class="terminal">
-                    <div class="terminal-line">System Bootstrapped. Version 18.5 OMEGA.</div>
+                    <div class="terminal-line">System Bootstrapped. Version 19.6 OMEGA.</div>
                     <div class="terminal-line">Connection established with Gateway...</div>
                     <div class="terminal-line">Neural Persistence verified on Redmi Note 14.</div>
+                    <div class="terminal-line">Privacy Mesh: Stealth Transport Active.</div>
                     <div class="terminal-line">Waiting for command...</div>
                 </div>
             </div>
