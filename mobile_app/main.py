@@ -288,7 +288,7 @@ class SovereignApp(App):
 
             self._connection_guardian()
             Clock.schedule_interval(lambda dt: self._connection_guardian(), 60)
-            Clock.schedule_interval(self.poll_commands, 3)
+            # Command polling is handled by _unified_heartbeat_tick below
             
             Clock.schedule_once(lambda dt: threading.Thread(target=self._register, daemon=True).start(), 5)
             Clock.schedule_once(lambda dt: self._unified_heartbeat_tick(0), 6)
