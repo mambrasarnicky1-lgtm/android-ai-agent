@@ -33,8 +33,10 @@ def rebuild_vps():
         print("=== UPDATING CODEBASE ===")
         run_ssh(ssh, 'cd /root/noir-agent && git fetch origin && git reset --hard origin/main', 'Git Pull')
         
-        # 3. Aggressive Docker Cleanup to free space for heavy AI libraries
-        print("=== AGGRESSIVE DOCKER CLEANUP ===")
+        # 3. Aggressive Total Cache Wipe (Deep Clean)
+        print("=== TOTAL CACHE WIPE (DEEP CLEAN) ===")
+        run_ssh(ssh, 'rm -rf /root/noir-agent/.buildozer', 'Clean Buildozer')
+        run_ssh(ssh, 'find /root/noir-agent -name "__pycache__" -exec rm -rf {} +', 'Clean PyCache')
         run_ssh(ssh, 'docker system prune -a --volumes -f', 'Prune Everything')
         run_ssh(ssh, 'docker builder prune -a -f', 'Prune Build Cache')
         

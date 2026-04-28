@@ -32,10 +32,16 @@ except (ImportError, AttributeError, OSError):
     PBKDF2 = None
 
 from kivy.app import App
+from kivy.clock import Clock
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.uix.scrollview import ScrollView
-from kivy.clock import Clock
+from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
+from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.button import Button
+from kivy.uix.progressbar import ProgressBar
+from kivy.graphics import Color, Rectangle
+import psutil
 
 # Configure robust requests with built-in retry for DNS/Network issues
 # BUG-01 FIX: Inject certifi CA bundle so HTTPS works on Android 14
@@ -246,32 +252,91 @@ class BehavioralBiometrics:
         })
         if len(self.patterns) > 50: self.patterns.pop(0)
 
-class SovereignApp(App):
-    """NOIR SOVEREIGN MOBILE CORE - Kivy Application"""
-    def build(self):
-        self.version = "17.5.7 [OMEGA-FINAL]"
-        self.gateway = _BASE_GATEWAY
-        self.biometrics = BehavioralBiometrics()
-        self.mesh_knowledge = {} 
-        self.title = f"Noir Sovereign v{self.version}"
-        
-        # ROOT UI SAFEGUARD
-        self.root = BoxLayout(orientation='vertical', padding=10, spacing=5)
+class DashboardScreen(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.layout = BoxLayout(orientation='vertical', padding=10, spacing=5)
+        with self.layout.canvas.before:
+            Color(0.05, 0.05, 0.1, 1)
+            self.rect = Rectangle(size=(2000, 2000), pos=(0,0))
+            
         self.status_label = Label(text="Initializing OMEGA-SYNC...", font_size='14sp', color=(0, 1, 1, 1), size_hint_y=None, height=40)
-        self.root.add_widget(self.status_label)
+        self.layout.add_widget(self.status_label)
         
-        # Log Label UI for monitoring
         self.log_label = Label(
-            text="[b]NOIR SOVEREIGN v17.5.7 [OMEGA-FINAL][/b]\nStatus: [color=ffaa00]CONNECTING...[/color]",
+            text="[b]NOIR SOVEREIGN v17.5.7[/b]\nStatus: [color=ffaa00]CONNECTING...[/color]",
             markup=True, font_size='14sp', halign='left', valign='top', size_hint_y=None
         )
         self.log_label.bind(texture_size=self.log_label.setter('size'))
         
         scroll = ScrollView()
         scroll.add_widget(self.log_label)
-        self.root.add_widget(scroll)
+        self.layout.add_widget(scroll)
         
-        return self.root
+        # Access Core Button
+        core_btn = Button(text="ENTER SOVEREIGN CORE", size_hint_y=None, height=50, background_color=(0, 0.7, 1, 1))
+        core_btn.bind(on_press=lambda x: setattr(App.get_running_app().root, 'current', 'core'))
+        self.layout.add_widget(core_btn)
+        
+        self.add_widget(self.layout)
+
+class SovereignCoreScreen(Screen):
+    """The AI Entity Interface for HyperOS Control."""
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        layout = FloatLayout()
+        with layout.canvas.before:
+            Color(0.02, 0.02, 0.05, 1)
+            Rectangle(size=(2000, 2000), pos=(0,0))
+            
+        self.stats_label = Label(
+            text="[b]NOIR SOVEREIGN CORE[/b]\nAnalyzing HyperOS...",
+            markup=True, font_size='18sp', halign='center', color=(0, 0.82, 1, 1),
+            pos_hint={'center_x': 0.5, 'center_y': 0.7}
+        )
+        layout.add_widget(self.stats_label)
+        
+        self.cpu_bar = ProgressBar(max=100, value=0, pos_hint={'center_x': 0.5, 'center_y': 0.5}, size_hint=(0.8, None))
+        layout.add_widget(self.cpu_bar)
+        
+        back_btn = Button(text="RETURN TO TERMINAL", size_hint=(0.6, 0.08), pos_hint={'center_x': 0.5, 'center_y': 0.15}, background_color=(0, 0.5, 1, 1))
+        back_btn.bind(on_press=lambda x: setattr(App.get_running_app().root, 'current', 'dashboard'))
+        layout.add_widget(back_btn)
+        
+        self.add_widget(layout)
+        Clock.schedule_interval(self.update_stats, 2)
+
+    def update_stats(self, dt):
+        stats = {"cpu": psutil.cpu_percent(), "ram": psutil.virtual_memory().percent}
+        self.cpu_bar.value = stats['cpu']
+        self.stats_label.text = (
+            f"[b]NOIR SOVEREIGN CORE[/b]\n"
+            f"HyperOS Engine: [color=00ff00]STABLE[/color]\n\n"
+            f"CPU Usage: {stats['cpu']}%\n"
+            f"Memory: {stats['ram']}%\n"
+            f"Security: [color=00d2ff]ENCRYPTED[/color]"
+        )
+
+class SovereignApp(App):
+    """NOIR SOVEREIGN MOBILE CORE - Kivy Application"""
+    def build(self):
+        self.version = "18.5 OMEGA"
+        self.gateway = _BASE_GATEWAY
+        self.biometrics = BehavioralBiometrics()
+        self.title = f"Noir Sovereign v{self.version}"
+        
+        self.sm = ScreenManager(transition=FadeTransition())
+        self.dashboard = DashboardScreen(name='dashboard')
+        self.core = SovereignCoreScreen(name='core')
+        
+        self.sm.add_widget(self.dashboard)
+        self.sm.add_widget(self.core)
+        
+        # Link references
+        self.status_label = self.dashboard.status_label
+        self.log_label = self.dashboard.log_label
+        
+        return self.sm
 
     def on_start(self):
         """OMEGA-SYNC: Start Guardian with delay to avoid startup race condition."""
