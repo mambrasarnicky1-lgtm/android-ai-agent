@@ -7,8 +7,12 @@ def run_ssh(ssh, cmd, desc=""):
     exit_code = stdout.channel.recv_exit_status()
     out = stdout.read().decode('utf-8', errors='ignore')
     err = stderr.read().decode('utf-8', errors='ignore')
-    if out: print(out[-1000:])
-    if err and 'warning' not in err.lower(): print(f"ERR: {err[-500:]}")
+    try:
+        if out: print(out[-2000:])
+        if err and 'warning' not in err.lower(): print(f"ERR: {err[-1000:]}")
+    except UnicodeEncodeError:
+        if out: print(out[-2000:].encode('ascii', 'ignore').decode('ascii'))
+        if err: print(err[-1000:].encode('ascii', 'ignore').decode('ascii'))
     print(f"Exit: {exit_code}\n")
     return exit_code
 

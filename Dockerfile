@@ -14,28 +14,15 @@ RUN apt-get update && apt-get install -y \
 
 # Install python dependencies directly to avoid requirement mismatches
 RUN pip install --no-cache-dir \
-    requests \
-    fastapi \
-    uvicorn \
-    python-dotenv \
-    pyTelegramBotAPI \
-    numpy \
-    pandas \
-    Pillow \
-    opencv-python-headless \
-    scikit-image \
-    playwright \
-    youtube-transcript-api \
-    beautifulsoup4 \
-    pycryptodome \
-    paramiko \
-    scp \
-    httpx \
-    docker \
-    gunicorn \
-    --index-url https://download.pytorch.org/whl/cpu torch torchvision \
-    sentence-transformers \
-    faiss-cpu
+    requests fastapi uvicorn python-dotenv pyTelegramBotAPI \
+    numpy pandas Pillow opencv-python-headless scikit-image \
+    playwright youtube-transcript-api beautifulsoup4 \
+    pycryptodome paramiko scp httpx docker gunicorn
+
+# Install CPU-only AI libraries to save disk space
+RUN pip install --no-cache-dir \
+    torch torchvision --index-url https://download.pytorch.org/whl/cpu \
+    sentence-transformers faiss-cpu
 
 # Copy source code
 COPY . .
