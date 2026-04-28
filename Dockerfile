@@ -33,6 +33,7 @@ RUN pip install --no-cache-dir \
     httpx \
     docker \
     gunicorn \
+    --index-url https://download.pytorch.org/whl/cpu torch torchvision \
     sentence-transformers \
     faiss-cpu
 
