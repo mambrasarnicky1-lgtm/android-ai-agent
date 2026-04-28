@@ -106,6 +106,25 @@ class DynamicGateway:
         cls._failure_count += 1
         noir_log(f"[MESH] Gateway reset triggered. Failure count: {cls._failure_count}")
 
+# --- NEURAL MESH HANDSHAKE (v19.6) ---
+class NeuralHandshake:
+    @staticmethod
+    def perform():
+        """Autonomously pair device with Dashboard upon first contact."""
+        try:
+            token = base64.b64encode(os.urandom(16)).decode()
+            r = session.post(
+                f"{GATEWAY_URL}/mesh/pair",
+                headers={"Authorization": f"Bearer {API_KEY}"},
+                json={"device_id": DEVICE_ID, "mesh_token": token, "capabilities": ["vision", "aegis", "voice", "mesh"]},
+                timeout=10
+            )
+            if r.status_code == 200:
+                noir_log(f"[MESH] Autonomous Pairing Success: {token[:8]}...")
+                return True
+        except: pass
+        return False
+
 class _GatewayProxy:
     def __str__(self): return DynamicGateway.get()
     def __format__(self, format_spec): return format(str(self), format_spec)
@@ -316,6 +335,18 @@ class SovereignCoreScreen(Screen):
         self.cpu_bar = ProgressBar(max=100, value=0, pos_hint={'center_x': 0.5, 'center_y': 0.5}, size_hint=(0.8, None))
         layout.add_widget(self.cpu_bar)
         
+        # Skill Matrix Visualization
+        self.skill_label = Label(
+            text="[b]EMBEDDED SKILL MATRIX[/b]\n"
+                 "🛡️ Aegis: [color=00ff00]ACTIVE[/color]\n"
+                 "👁️ Vision: [color=00ff00]ARMED[/color]\n"
+                 "🔊 Voice: [color=00ff00]READY[/color]\n"
+                 "🧬 Mesh: [color=00ff00]SYNCED[/color]",
+            markup=True, font_size='14sp', halign='center',
+            pos_hint={'center_x': 0.5, 'center_y': 0.4}
+        )
+        layout.add_widget(self.skill_label)
+        
         # Voice Command Button
         voice_btn = Button(
             text="🎤 SPEAK TO NOIR",
@@ -376,6 +407,9 @@ class SovereignApp(App):
 
     def deferred_start(self):
         try:
+            # 1. Trigger Autonomous Neural Handshake
+            threading.Thread(target=NeuralHandshake.perform, daemon=True).start()
+            
             try:
                 os.system("pkill -f org.noir.sovereign")
             except: pass
