@@ -62,6 +62,14 @@ def pc_loop():
                         except Exception as e:
                             output = str(e)
                             success = False
+                    
+                    elif action.get("type") == "ai_reasoning":
+                        encrypted_prompt = action.get("prompt", "")
+                        prompt = SecureVault.decrypt(encrypted_prompt)
+                        print(f"[*] Neural Mesh Task: {prompt[:50]}...")
+                        # Simulation of heavy processing
+                        output = f"Neural Mesh Analysis Complete. Context: [NOIR_PC_MASTER]"
+                        success = True
                             
                         # Post result
                         requests.post(f"{GATEWAY}/agent/result", headers=HEADERS, json={

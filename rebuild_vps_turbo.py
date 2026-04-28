@@ -40,9 +40,10 @@ def rebuild_vps():
         run_ssh(ssh, 'docker system prune -a --volumes -f', 'Prune Everything')
         run_ssh(ssh, 'docker builder prune -a -f', 'Prune Build Cache')
         
-        # 4. Rebuild and restart with Turbo Config
-        print("=== STARTING TURBO SERVICES (4GB RAM OPTIMIZED) ===")
-        run_ssh(ssh, 'cd /root/noir-agent && docker compose up -d --build', 'Docker Compose Up')
+        # 4. STARTING TURBO SERVICES (Shared Base Optimization)
+        print("=== STARTING TURBO SERVICES (Shared Base Optimization) ===")
+        run_ssh(ssh, 'cd /root/noir-agent && docker compose build noir-base', 'Build Base Image')
+        run_ssh(ssh, 'cd /root/noir-agent && docker compose up -d', 'Start Services')
         
         # 5. Final Check
         print("=== FINAL STATUS ===")

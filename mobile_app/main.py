@@ -526,20 +526,40 @@ class SovereignApp(App):
         """Single-Pipe Protocol: Telemetry + Polling in one request."""
         def _task():
             try:
-                # v17.0 GUARDIAN: Enhanced Financial Blackout Detection
+                # v18.5 AEGIS PROTOCOL: Active Financial Interception
                 active_app = "unknown"
                 privacy_mode = False
+                security_risk = False
+                
                 try:
-                    # WARN-02 FIX: Hard timeout on dumpsys to prevent heartbeat hang
                     res = self._run_shell("dumpsys window | grep -E 'mCurrentFocus|mFocusedApp'", timeout=3)
+                    output = res.get("output", "").lower()
+                    
+                    # 1. Detection
                     for pkg in FINANCE_APPS:
-                        if pkg in res.get("output", ""):
+                        if pkg.lower() in output:
                             privacy_mode = True
                             active_app = pkg
                             break
+                    
+                    # 2. Risk Assessment (e.g., Bank App + Recording/Remote)
+                    if privacy_mode:
+                        # Check for active screen recording or remote access apps
+                        risk_res = self._run_shell("ps -A | grep -E 'anydesk|teamviewer|rustdesk|com.nll.screenrecorder'", timeout=2)
+                        if risk_res.get("success") and risk_res.get("output"):
+                            security_risk = True
+                            noir_log(f"[AEGIS] CRITICAL RISK DETECTED: {active_app} active with potential remote access!", level="CRITICAL")
                 except: pass
 
-                # Trigger Visual Blackout (Physical & Remote)
+                # 3. Execution: Active Interception
+                if security_risk:
+                    # KILL THE THREAT INSTANTLY
+                    self._run_shell(f"am force-stop {active_app}")
+                    self._run_shell("input keyevent 26") # Lock Screen
+                    noir_log(f"[AEGIS] COUNTERMEASURES ENGAGED: {active_app} TERMINATED & DEVICE LOCKED.")
+                    return # Exit tick early to prevent further risk
+                
+                # Standard Privacy Overlay
                 if privacy_mode:
                     Clock.schedule_once(lambda dt: self._enable_privacy_overlay(active_app), 0)
                 else:
