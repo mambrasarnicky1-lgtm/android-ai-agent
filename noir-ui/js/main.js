@@ -242,10 +242,12 @@ async function sendChatMsg() {
         });
         const data = await r.json();
         document.getElementById(typingId)?.remove();
-        addChatBubble('ai', data.response || 'No response from Neural Brain.');
+        const provider = data.provider ? `<span style="font-size:.65rem;opacity:.5;display:block;margin-top:.4rem;">via ${data.provider}</span>` : '';
+        addChatBubble('ai', (data.response || 'No response.') + provider);
 
         if (data.autonomous_action) {
-            addLog('AI', `Autonomous action triggered: ${data.autonomous_action.type}`);
+            addChatBubble('system', `⚡ Autonomous action triggered: <strong>${data.autonomous_action.type}</strong>`);
+            addLog('AI', `Autonomous action: ${data.autonomous_action.type}`);
         }
     } catch(e) {
         document.getElementById(typingId)?.remove();

@@ -494,45 +494,166 @@ async def brain_status():
 # ── NEW: Chat History & Relay ──────────────────────────
 _chat_history = []
 
+# ── MULTI-PROVIDER AI ENGINE (V21.0 AEGIS) ──────────────
+_SYSTEM_PROMPT = (
+    "You are Noir Sovereign, an elite AI Agent controlling an Android device (Redmi Note 14). "
+    "You have capabilities: screenshot, GPS tracking, shell commands, camera, audio recording, app control. "
+    "Answer concisely. If the user asks you to perform a device action, mention it clearly. "
+    "Always respond in the same language as the user (Indonesian or English)."
+)
+
+async def _try_groq(prompt: str, history: list) -> str | None:
+    """Provider 1: Groq — Free, ultra-fast, llama-3.3-70b"""
+    key = os.environ.get("GROQ_API_KEY", "")
+    if not key:
+        return None
+    messages = [{"role": "system", "content": _SYSTEM_PROMPT}]
+    for h in history[-6:]:  # last 3 exchanges
+        messages.append({"role": h["role"], "content": h["msg"]})
+    messages.append({"role": "user", "content": prompt})
+    try:
+        async with httpx.AsyncClient() as client:
+            r = await client.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+                json={"model": "llama-3.3-70b-versatile", "messages": messages, "max_tokens": 1024, "temperature": 0.7},
+                timeout=20.0
+            )
+            if r.status_code == 200:
+                return r.json()["choices"][0]["message"]["content"]
+            print(f"[GROQ] HTTP {r.status_code}: {r.text[:200]}")
+    except Exception as e:
+        print(f"[GROQ] Error: {e}")
+    return None
+
+async def _try_gemini(prompt: str, model: str = "gemini-1.5-flash") -> str | None:
+    """Provider 2/3: Gemini API — Flash then Pro"""
+    key = os.environ.get("GEMINI_API_KEY", "")
+    if not key:
+        return None
+    try:
+        async with httpx.AsyncClient() as client:
+            r = await client.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}",
+                json={"contents": [{"parts": [{"text": f"{_SYSTEM_PROMPT}\n\nUser: {prompt}"}]}],
+                      "generationConfig": {"maxOutputTokens": 1024, "temperature": 0.7}},
+                timeout=20.0
+            )
+            if r.status_code == 200:
+                return r.json()["candidates"][0]["content"]["parts"][0]["text"]
+            err = r.json()
+            print(f"[GEMINI/{model}] HTTP {r.status_code}: {err.get('error',{}).get('message','')[:100]}")
+    except Exception as e:
+        print(f"[GEMINI/{model}] Error: {e}")
+    return None
+
+async def _try_openrouter(prompt: str) -> str | None:
+    """Provider 4: OpenRouter — Free tier (mistral-7b, llama-3 etc)"""
+    key = os.environ.get("OPENROUTER_API_KEY", "")
+    if not key:
+        return None
+    try:
+        async with httpx.AsyncClient() as client:
+            r = await client.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json",
+                         "HTTP-Referer": "https://noir-sovereign.ai", "X-Title": "Noir Sovereign"},
+                json={"model": "mistralai/mistral-7b-instruct:free",
+                      "messages": [{"role": "system", "content": _SYSTEM_PROMPT}, {"role": "user", "content": prompt}],
+                      "max_tokens": 1024},
+                timeout=20.0
+            )
+            if r.status_code == 200:
+                return r.json()["choices"][0]["message"]["content"]
+            print(f"[OPENROUTER] HTTP {r.status_code}: {r.text[:200]}")
+    except Exception as e:
+        print(f"[OPENROUTER] Error: {e}")
+    return None
+
+def _local_intelligence(prompt: str) -> str:
+    """Provider 5: Local rule-based fallback — always available."""
+    p = prompt.lower()
+    if any(w in p for w in ["screenshot", "capture", "layar", "tangkap"]):
+        return "Baik, saya akan mengambil screenshot layar Redmi Note 14 sekarang."
+    elif any(w in p for w in ["lokasi", "gps", "location", "posisi"]):
+        return "Mengambil data lokasi GPS dari perangkat..."
+    elif any(w in p for w in ["gallery", "foto", "galeri", "gambar"]):
+        return "Menyinkronkan galeri dari Redmi Note 14 ke Loot Vault..."
+    elif any(w in p for w in ["audio", "rekam", "record", "suara"]):
+        return "Memulai rekaman audio dari mikrofon perangkat..."
+    elif any(w in p for w in ["status", "kondisi", "health"]):
+        return "Sistem Noir Sovereign V21.0 AEGIS aktif. Semua modul: Vision Sentinel, Aegis Guardian, Neural Mesh — ONLINE."
+    elif any(w in p for w in ["halo", "hello", "hi", "hey", "hai"]):
+        return "Salam. Saya Noir Sovereign AI Agent V21.0 AEGIS. Siap menerima perintah Anda."
+    else:
+        return (f"Perintah '{prompt[:50]}' diterima dan sedang diproses. "
+                "Neural Engine saat ini dalam mode lokal — tambahkan GROQ_API_KEY atau OPENROUTER_API_KEY "
+                "di file .env untuk mengaktifkan AI penuh.")
+
+_active_provider = "INITIALIZING"
+
 @app.post("/api/brain/chat")
 async def brain_chat_v2(request: Request):
-    """AI Chat Relay — Uses Gemini API with local fallback."""
+    """AI Chat Relay — Multi-Provider Fallback Chain V21.0 AEGIS.
+    Priority: Groq → Gemini-Flash → Gemini-Pro → OpenRouter → Local
+    """
+    global _active_provider
     try:
         data = await request.json()
-        prompt = data.get("message", "")
+        prompt = data.get("message", "").strip()
         device_id = data.get("device_id", "REDMI_NOTE_14")
+        if not prompt:
+            return {"response": "Perintah kosong.", "status": "ok", "provider": "N/A"}
 
-        # Try Gemini API
-        gemini_key = os.environ.get("GEMINI_API_KEY", "")
         response_text = None
+        provider_used = "local"
 
-        if gemini_key:
-            try:
-                async with httpx.AsyncClient() as client:
-                    r = await client.post(
-                        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}",
-                        json={"contents": [{"parts": [{"text": f"You are Noir Sovereign AI Agent. Answer concisely in the same language as the user: {prompt}"}]}]},
-                        timeout=15.0
-                    )
-                    if r.status_code == 200:
-                        response_text = r.json()["candidates"][0]["content"]["parts"][0]["text"]
-            except Exception as e:
-                print(f"[BRAIN] Gemini error: {e}")
+        # ── Chain: Try each provider in order ──
+        r = await _try_groq(prompt, _chat_history)
+        if r:
+            response_text = r
+            provider_used = "Groq / LLaMA-3.3-70b"
 
-        # Fallback response
         if not response_text:
-            response_text = f"[Noir Sovereign — Local Mode] Perintah '{prompt}' diterima. Neural Brain sedang menganalisis. Pastikan GEMINI_API_KEY dikonfigurasi untuk respons AI penuh."
+            r = await _try_gemini(prompt, "gemini-1.5-flash")
+            if r:
+                response_text = r
+                provider_used = "Gemini 1.5 Flash"
 
-        # Store chat history
+        if not response_text:
+            r = await _try_gemini(prompt, "gemini-1.0-pro")
+            if r:
+                response_text = r
+                provider_used = "Gemini 1.0 Pro"
+
+        if not response_text:
+            r = await _try_openrouter(prompt)
+            if r:
+                response_text = r
+                provider_used = "OpenRouter / Mistral-7b"
+
+        if not response_text:
+            response_text = _local_intelligence(prompt)
+            provider_used = "Local Intelligence"
+
+        _active_provider = provider_used
+        print(f"[BRAIN] Provider: {provider_used}")
+
+        # ── Store history ──
         _chat_history.append({"role": "user", "msg": prompt, "ts": time.strftime("%H:%M:%S")})
-        _chat_history.append({"role": "ai", "msg": response_text, "ts": time.strftime("%H:%M:%S")})
+        _chat_history.append({"role": "assistant", "msg": response_text, "ts": time.strftime("%H:%M:%S")})
         if len(_chat_history) > 200:
             _chat_history[:] = _chat_history[-200:]
 
-        # Check if response implies device action
+        # ── Autonomous Device Action Detection ──
         action = None
-        kw_map = {"screenshot": "screenshot", "capture": "screenshot", "lokasi": "location", "gps": "location",
-                  "vibrate": "vibrate", "gallery": "gallery_sync", "audio": "audio_record"}
+        kw_map = {
+            "screenshot": "screenshot", "capture": "screenshot", "tangkap layar": "screenshot",
+            "lokasi": "location", "gps": "location", "location": "location",
+            "vibrate": "vibrate", "getarkan": "vibrate",
+            "gallery": "gallery_sync", "galeri": "gallery_sync",
+            "audio": "audio_record", "rekam": "audio_record"
+        }
         for kw, atype in kw_map.items():
             if kw in prompt.lower():
                 action = {"type": atype}
@@ -540,14 +661,26 @@ async def brain_chat_v2(request: Request):
                     local_state["commands"].append({
                         "id": hex(int(time.time()))[2:].upper(),
                         "action": action, "status": "pending",
-                        "target_device": device_id
+                        "target_device": device_id,
+                        "description": f"AI Chat triggered: {atype}"
                     })
                 break
 
-        return {"response": response_text, "status": "success", "autonomous_action": action}
+        return {
+            "response": response_text,
+            "status": "success",
+            "provider": provider_used,
+            "autonomous_action": action
+        }
 
     except Exception as e:
-        return {"response": f"Error: {str(e)}", "status": "error"}
+        return {"response": f"System Error: {str(e)}", "status": "error", "provider": "error"}
+
+@app.get("/api/brain/provider")
+async def get_active_provider():
+    """Returns which AI provider is currently active."""
+    return {"provider": _active_provider}
+
 
 @app.get("/api/chat/history")
 async def get_chat_history():
@@ -625,9 +758,5 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"[WARN] Port {port} unavailable: {e}")
             if port == ports[-1]:
-                print("[FATAL] No available ports found.")
-
-
-
                 print("[FATAL] No available ports found.")
 
