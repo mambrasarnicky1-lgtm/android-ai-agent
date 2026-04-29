@@ -339,15 +339,30 @@ async def api_command(request: Request):
 
 @app.get("/api/assets")
 async def api_assets():
+    all_assets = []
+    # 1. Get local assets
+    ss_dir = os.path.join(BASE_DIR, "screenshots")
+    if os.path.exists(ss_dir):
+        import glob
+        local_files = [os.path.basename(f) for f in glob.glob(os.path.join(ss_dir, "*"))]
+        for f in local_files:
+            all_assets.append({"key": f"local:{f}", "type": "image", "ts": os.path.getmtime(os.path.join(ss_dir, f))})
+
+    # 2. Get Cloudflare assets
     if await _cf_reachable_async():
         try:
             async with httpx.AsyncClient() as client:
                 r = await client.get(f"{CF_GATEWAY}/agent/assets", headers=CF_HEADERS, timeout=5.0)
-                return r.json()
+                cf_assets = r.json()
+                if isinstance(cf_assets, list):
+                    all_assets.extend(cf_assets)
         except: pass
-    return []
+    
+    # Sort by timestamp
+    all_assets.sort(key=lambda x: x.get("ts", 0), reverse=True)
+    return all_assets
 
-@app.get("/api/asset/{key}")
+@app.get("/api/asset/{key:path}")
 async def proxy_asset(key: str):
     target_key = key
     if key == "latest":
@@ -362,6 +377,17 @@ async def proxy_asset(key: str):
                 except: pass
         if not target_key:
             return Response(status_code=404, content="No screenshot available")
+    
+    # Handle local keys
+    if target_key.startswith("local:"):
+        local_filename = target_key.replace("local:", "")
+        local_path = os.path.join(BASE_DIR, "screenshots", local_filename)
+        if os.path.exists(local_path):
+            from fastapi.responses import FileResponse
+            return FileResponse(local_path)
+        return Response(status_code=404, content="Local asset not found")
+
+    # Handle remote keys
     if await _cf_reachable_async():
         try:
             async with httpx.AsyncClient() as client:
@@ -369,6 +395,13 @@ async def proxy_asset(key: str):
                 if r.status_code == 200:
                     return Response(content=r.content, media_type=r.headers.get("content-type", "image/png"))
         except: pass
+    
+    # Final fallback: check if it's a local filename without prefix
+    local_path = os.path.join(BASE_DIR, "screenshots", target_key)
+    if os.path.exists(local_path):
+        from fastapi.responses import FileResponse
+        return FileResponse(local_path)
+
     return Response(status_code=502, content="Asset unavailable")
 
 @app.get("/api/memory")
