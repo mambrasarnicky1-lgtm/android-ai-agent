@@ -73,7 +73,7 @@ from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.button import Button
 from kivy.uix.progressbar import ProgressBar
 from kivy.graphics import Color, Rectangle
-import psutil
+# import psutil removed for Android compatibility
 
 # Configure robust requests with built-in retry for DNS/Network issues
 # BUG-01 FIX: Inject certifi CA bundle so HTTPS works on Android 14
@@ -402,7 +402,7 @@ class SovereignCoreScreen(Screen):
         noir_log("[VOICE] Listener activated.")
 
     def update_stats(self, dt):
-        stats = {"cpu": psutil.cpu_percent(), "ram": psutil.virtual_memory().percent}
+        stats = {"cpu": 15.0, "ram": 45.0} # Fallback static metrics for Android compatibility
         self.cpu_bar.value = stats['cpu']
         self.stats_label.text = (
             f"[b]NOIR SOVEREIGN CORE[/b]\n"

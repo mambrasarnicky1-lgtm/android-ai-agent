@@ -1,0 +1,35 @@
+import paramiko
+
+host = '8.215.23.17'
+port = 22
+username = 'root'
+password = 'N!colay_No1r.Ai@Agent#Secure'
+
+def run_remote(cmd):
+    try:
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(host, port, username, password, timeout=60)
+        stdin, stdout, stderr = ssh.exec_command(cmd)
+        out = stdout.read().decode('utf-8', errors='replace').strip()
+        err = stderr.read().decode('utf-8', errors='replace').strip()
+        ssh.close()
+        return out if out else err
+    except Exception as e:
+        return f"SSH Error: {e}"
+
+print("=== DEPLOYING CLEANUP TO VPS ===")
+
+cmds = [
+    "cd /root/noir-agent && git fetch --all",
+    "cd /root/noir-agent && git reset --hard origin/main",
+    "cd /root/noir-agent && git clean -fd"
+]
+
+for cmd in cmds:
+    print(f"\nRunning: {cmd}")
+    res = run_remote(cmd)
+    if res:
+        print(res)
+
+print("\n=== VPS CLEANUP COMPLETE ===")
