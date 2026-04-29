@@ -31,6 +31,38 @@ except (ImportError, AttributeError, OSError):
     AES = None
     PBKDF2 = None
 
+import sys
+import os
+import traceback
+
+# --- CRASH PROTECTOR (v20.0) ---
+CRASH_LOG = "/sdcard/noir_debug.txt"
+try:
+    with open(CRASH_LOG, "a") as f:
+        f.write("\n--- BOOTING NOIR SOVEREIGN ---\n")
+except: pass
+
+def log_crash(msg):
+    try:
+        with open(CRASH_LOG, "a") as f:
+            f.write(f"{msg}\n")
+    except: print(msg)
+
+sys.excepthook = lambda *args: log_crash("".join(traceback.format_exception(*args)))
+
+# Dependency Check
+try:
+    log_crash("Checking Kivy...")
+    import kivy
+    log_crash("Checking PyJnius...")
+    from jnius import autoclass
+    log_crash("Checking Requests...")
+    import requests
+    log_crash("Dependencies OK.")
+except Exception as e:
+    log_crash(f"DEPENDENCY ERROR: {str(e)}")
+    sys.exit(1)
+
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.uix.boxlayout import BoxLayout
