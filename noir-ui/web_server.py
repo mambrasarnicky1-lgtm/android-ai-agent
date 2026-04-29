@@ -107,7 +107,7 @@ async def mesh_pair(request: Request):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "version": "19.6-OMEGA-MESH", "mode": "direct_vps", "mesh": "ACTIVE"}
+    return {"status": "ok", "version": "21.0-AEGIS-SINGULARITY", "mode": "direct_vps", "mesh": "ACTIVE"}
 
 @app.post("/agent/register")
 async def agent_register(request: Request):

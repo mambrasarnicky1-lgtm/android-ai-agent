@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-NOIR AGENT v16.0 ELITE — VPS BRAIN SERVICE
+NOIR AGENT v21.0 AEGIS — VPS BRAIN SERVICE
 ===================================================
 Otak komputasi berat: AI model routing, self-learning,
 knowledge refresh, dan Docker orchestration.

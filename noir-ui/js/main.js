@@ -53,7 +53,20 @@ async function updateDashboard() {
         if (data.agent) {
             const stats = data.agent.stats || {};
             
-            // Battery
+            // Update Shizuku
+            const shizuku = stats.shizuku || "UNKNOWN";
+            const sElem = document.getElementById('shizuku-status');
+            if (sElem) {
+                sElem.innerHTML = `<i class="fas fa-shield-cat"></i> SHIZUKU: ${shizuku}`;
+                sElem.style.color = shizuku === "AUTHORIZED" ? "var(--accent)" : "var(--text-dim)";
+            }
+            
+            // Update Agent Version
+            const version = stats.version || "V21.0?";
+            const vElem = document.getElementById('agent-version');
+            if (vElem) vElem.innerHTML = `<i class="fas fa-code-branch"></i> AGENT: ${version}`;
+
+            // Update Battery
             const bat = stats.battery || stats.bat || 0;
             document.getElementById('bat-text').innerText = `${bat}%`;
             document.getElementById('bat-bar').style.width = `${bat}%`;
@@ -69,6 +82,7 @@ async function updateDashboard() {
             document.getElementById('ram-bar').style.width = `${ram}%`;
 
             // 3. Vision Sentinel Feed
+
             if (data.agent.last_screenshot && data.agent.last_screenshot !== lastAssetId) {
                 lastAssetId = data.agent.last_screenshot;
                 document.getElementById('last-screenshot').src = `/api/asset/${lastAssetId}`;
