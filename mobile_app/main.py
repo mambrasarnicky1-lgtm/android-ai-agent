@@ -1,5 +1,5 @@
 """
-NOIR SOVEREIGN MOBILE CORE (SMC) v17.2 [OMEGA]
+NOIR SOVEREIGN MOBILE CORE (SMC) v21.0 [AEGIS]
 =====================================================
 Framework: Kivy + Buildozer (Android Native)
 Target: Redmi Note 14 (HyperOS / arm64-v8a)
@@ -415,7 +415,7 @@ class SovereignCoreScreen(Screen):
 class SovereignApp(App):
     """NOIR SOVEREIGN MOBILE CORE - Kivy Application"""
     def build(self):
-        self.version = "18.5 OMEGA"
+        self.version = "21.0 AEGIS"
         self.gateway = _BASE_GATEWAY
         self.biometrics = BehavioralBiometrics()
         self.title = f"Noir Sovereign v{self.version}"
@@ -599,10 +599,33 @@ class SovereignApp(App):
             self.wakelock.acquire()
             noir_log("[SMC] WakeLock: ACTIVE")
 
+            # --- AEGIS GUARDIAN (Shizuku Powered) ---
+            if getattr(self, "shizuku_status", "") == "AUTHORIZED":
+                threading.Thread(target=self._apply_aegis_optimizations, daemon=True).start()
+
             # NEW: Start Background Service as Foreground
             self._start_foreground_service()
         except Exception as e:
             noir_log(f"[SMC] WakeLock/Service Error: {e}", level="ERROR")
+
+    def _apply_aegis_optimizations(self):
+        """Use Shizuku to bypass HyperOS battery restrictions and set high priority."""
+        try:
+            noir_log("[AEGIS] Applying Shizuku-Native Optimizations...")
+            
+            # 1. Disable Battery Optimization for this app
+            pkg = "org.noir.sovereign.noir_sovereign"
+            self._run_shell(f"dumpsys deviceidle whitelist +{pkg}")
+            self._run_shell(f"cmd notification allow_dnd {pkg}")
+            
+            # 2. Set high process priority (OOM Score adjustment if possible via shell)
+            # This helps prevent the OS from killing the process during low memory
+            self._run_shell(f"echo -1000 > /proc/$(pidof {pkg})/oom_score_adj")
+            
+            noir_log("[AEGIS] Persistent Guardian Active: Battery restrictions bypassed.")
+        except Exception as e:
+            noir_log(f"[AEGIS] Optimization Failed: {e}", level="WARNING")
+
 
     def _start_foreground_service(self):
         """v18.4 Optimization: Ensure background service is never killed by HyperOS."""

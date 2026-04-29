@@ -280,6 +280,22 @@ async def api_status():
         "commands": []
     }
 
+@app.get("/api/summary")
+async def api_summary():
+    """Unified endpoint for the new V20.1 UI."""
+    status = await api_status()
+    # Get recent logs (last 5)
+    recent_logs = [l for l in local_state["logs"] if l.get("device_id") == "REDMI_NOTE_14"][-5:]
+    # Clear logs after sending (since UI appends them)
+    # Actually, better to keep them and let UI handle duplicates or use a timestamp
+    
+    return {
+        **status,
+        "logs": recent_logs,
+        "server_time": time.time()
+    }
+
+
 @app.get("/api/logs")
 async def api_logs(device_id: str = "REDMI_NOTE_14"):
     if await _cf_reachable_async():

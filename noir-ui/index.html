@@ -3,105 +3,196 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Noir Sovereign Elite | Commander Dashboard</title>
+    <title>NOIR SOVEREIGN | Mission Control</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <meta name="description" content="Autonomous Sovereign Agent Command Interface">
 </head>
 <body>
-    <div class="bg-mesh"></div>
+    <div class="neural-overlay"></div>
     
-    <div class="container">
-        <header class="fade-in">
-            <div class="logo">
-                <h1>NOIR SOVEREIGN</h1>
-                <p style="color: var(--text-secondary); font-size: 0.8rem; letter-spacing: 3px;">V18.5 OMEGA MESH</p>
-            </div>
-            <div style="display: flex; gap: 10px;">
-                <div id="connection-status" class="status-pill status-online">
-                    <div class="pulse"></div>
-                    LINK ACTIVE
+    <div class="app-shell fade-in">
+        <!-- 🛰️ Unified Top Bar -->
+        <header class="top-bar">
+            <div class="brand">
+                <div class="brand-icon">N</div>
+                <div class="brand-text">
+                    <h1>NOIR SOVEREIGN</h1>
+                    <p>SINGULARITY V20.1</p>
                 </div>
-                <div class="status-pill" onclick="window.location.href='/neural_map.html'" style="cursor: pointer; border: 1px solid #00d2ff; background: rgba(0,210,255,0.1);">
-                    NEURAL MAP 3D
+            </div>
+            
+            <div class="system-meta">
+                <div id="connection-status" class="meta-item" style="color: var(--success); border-color: rgba(16, 185, 129, 0.2);">
+                    <i class="fas fa-link"></i>
+                    NEURAL LINK: ACTIVE
+                </div>
+                <div class="meta-item" style="color: var(--gold); border-color: rgba(255, 204, 51, 0.2);">
+                    <i class="fas fa-microchip"></i>
+                    REDMI NOTE 14
+                </div>
+                <div class="meta-item">
+                    <i class="fas fa-clock"></i>
+                    <span id="system-time">02:45:10</span>
                 </div>
             </div>
         </header>
 
-        <div class="grid">
-            <!-- 📱 Mobile Agent Core -->
-            <div class="card fade-in" style="animation-delay: 0.1s;">
-                <h3><span style="color: var(--accent-blue);">01</span> REDMI NOTE 14</h3>
-                <div id="mobile-stats">
-                    <p style="font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem;">98% <span style="font-size: 1rem; color: var(--text-secondary);">BATTERY</span></p>
-                    <p style="color: var(--success); font-size: 0.9rem;">+ NEURAL PERSISTENCE ACTIVE</p>
+        <!-- 🏢 Main Workspace -->
+        <main class="workspace">
+            
+            <!-- 📱 Left Panel: Device Monitor -->
+            <section class="panel">
+                <div class="panel-header">
+                    <h2><i class="fas fa-satellite-dish"></i> Device Monitor</h2>
+                    <span id="ping-rate" style="font-size: 0.6rem; color: var(--text-dim);">LATENCY: 42ms</span>
                 </div>
-                <div style="margin-top: 2rem;">
-                    <button onclick="sendCommand('screenshot')">CAPTURE SCREEN</button>
-                    <button onclick="sendCommand('location')" style="background: rgba(255,255,255,0.05);">GET GPS LOCATION</button>
-                </div>
-            </div>
-
-            <!-- 🧠 VPS Brain Intelligence -->
-            <div class="card fade-in" style="animation-delay: 0.2s;">
-                <h3><span style="color: var(--accent-purple);">02</span> NEURAL BRAIN (4GB)</h3>
-                <div id="brain-stats">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <span>RAM UTILIZATION</span>
-                        <span>42%</span>
+                <div class="panel-content">
+                    <div class="device-card">
+                        <div class="stat-group">
+                            <div class="stat-label">Power Level <span id="bat-text">98%</span></div>
+                            <div class="stat-bar-bg"><div id="bat-bar" class="stat-bar-fill" style="width: 98%;"></div></div>
+                        </div>
+                        <div class="stat-group">
+                            <div class="stat-label">Neural Processing <span id="cpu-text">15%</span></div>
+                            <div class="stat-bar-bg"><div id="cpu-bar" class="stat-bar-fill" style="width: 15%;"></div></div>
+                        </div>
+                        <div class="stat-group" style="margin-bottom: 0;">
+                            <div class="stat-label">Memory Allocation <span id="ram-text">45%</span></div>
+                            <div class="stat-bar-bg"><div id="ram-bar" class="stat-bar-fill" style="width: 45%; background: var(--purple);"></div></div>
+                        </div>
                     </div>
-                    <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px;">
-                        <div style="width: 42%; height: 100%; background: var(--accent-purple); border-radius: 3px;"></div>
+
+                    <div style="margin-bottom: 1.5rem;">
+                        <h3 style="font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; margin-bottom: 1rem;">Direct Commands</h3>
+                        <div class="action-bar" style="padding: 0;">
+                            <button class="btn" onclick="sendCommand('screenshot')"><i class="fas fa-camera"></i> Capture</button>
+                            <button class="btn" onclick="sendCommand('location')"><i class="fas fa-location-dot"></i> GPS</button>
+                            <button class="btn" onclick="sendCommand('vibrate')"><i class="fas fa-bell"></i> Alert</button>
+                            <button class="btn" onclick="sendCommand('refresh_knowledge')"><i class="fas fa-sync"></i> Sync</button>
+                        </div>
                     </div>
-                    <p style="margin-top: 1rem; font-size: 0.85rem; color: var(--text-secondary);">
-                        RAG Memory: 1.2k Chunks<br>
-                        Local AI: TinyLlama Ready
-                    </p>
                 </div>
-            </div>
-
-            <!-- 📊 Dynamic Performance Graphs -->
-            <div class="card fade-in" style="grid-column: span 2; animation-delay: 0.25s;">
-                <h3>NEURAL ACTIVITY & SYSTEM LATENCY</h3>
-                <div style="display: flex; gap: 20px; height: 150px;">
-                    <canvas id="activityChart"></canvas>
-                    <canvas id="latencyChart"></canvas>
+                <div class="action-bar">
+                    <button class="btn btn-primary" style="grid-column: span 2;" onclick="sendCommand('shield_on')"><i class="fas fa-shield-halved"></i> Activate Aegis Shield</button>
                 </div>
-            </div>
+            </section>
 
-            <!-- 💻 PC Bridge -->
-            <div class="card fade-in" style="animation-delay: 0.3s;">
-                <h3><span style="color: var(--accent-blue);">03</span> PC MASTER BRIDGE</h3>
-                <div id="pc-status" style="margin-bottom: 1.5rem;">
-                    <div class="status-pill status-online">SECURE TUNNEL: ACTIVE</div>
+            <!-- 👁️ Center Panel: Vision & Intel -->
+            <section class="panel" style="background: transparent; border: none;">
+                <div class="panel" style="margin-bottom: 1.5rem; flex: 2;">
+                    <div class="panel-header">
+                        <h2><i class="fas fa-eye"></i> Vision Sentinel</h2>
+                        <span style="font-size: 0.6rem; color: var(--text-dim);">REAL-TIME FEED</span>
+                    </div>
+                    <div class="panel-content" style="padding: 1rem; display: flex; align-items: center; justify-content: center; background: #000;">
+                        <div class="vision-box">
+                            <img id="last-screenshot" src="https://via.placeholder.com/1920x1080/050505/00f2ff?text=WAITING+FOR+NEURAL+FEED">
+                            <div class="scanline"></div>
+                        </div>
+                    </div>
+                    <div class="panel-header" style="border-top: 1px solid var(--border); border-bottom: none;">
+                        <p id="vision-analysis" style="font-size: 0.8rem; color: var(--text-dim); font-style: italic;">
+                            <i class="fas fa-info-circle" style="color: var(--accent);"></i>
+                            Monitoring screen for potential security risks...
+                        </p>
+                    </div>
                 </div>
-                <input type="text" id="pc-command" placeholder="Enter shell command...">
-                <button onclick="sendPCCommand()">EXECUTE ON PC</button>
-            </div>
 
-            <!-- 👁️ Vision Sentinel Feed -->
-            <div class="card fade-in" style="grid-column: span 1; animation-delay: 0.4s;">
-                <h3><span style="color: var(--danger);">04</span> VISION SENTINEL</h3>
-                <img id="last-screenshot" src="https://via.placeholder.com/800x450/050505/00d2ff?text=WAITING+FOR+SENTINEL+FEED" class="vision-img" alt="Sentinel View">
-                <p id="vision-analysis" style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-secondary); font-style: italic;">
-                    No risks detected in last scan.
-                </p>
-            </div>
-
-            <!-- 📟 Terminal Console -->
-            <div class="card fade-in" style="grid-column: span 2; animation-delay: 0.5s;">
-                <h3>SYSTEM LOGS & EVOLUTION</h3>
-                <div id="terminal" class="terminal">
-                    <div class="terminal-line">System Bootstrapped. Version 19.6 OMEGA.</div>
-                    <div class="terminal-line">Connection established with Gateway...</div>
-                    <div class="terminal-line">Neural Persistence verified on Redmi Note 14.</div>
-                    <div class="terminal-line">Privacy Mesh: Stealth Transport Active.</div>
-                    <div class="terminal-line">Waiting for command...</div>
+                <div class="panel" style="flex: 1;">
+                    <div class="panel-header">
+                        <h2><i class="fas fa-terminal"></i> Command Console</h2>
+                    </div>
+                    <div class="panel-content" style="padding: 0;">
+                        <div id="terminal" class="console">
+                            <div class="log-entry">
+                                <span class="log-ts">[02:41:46]</span>
+                                <span class="log-msg">Sovereign Mission Control Initialized.</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="directive-input">
+                        <input type="text" id="terminal-input" placeholder="Enter global directive...">
+                        <button class="btn btn-primary" style="width: auto; padding: 0 1.5rem;" onclick="executeDirective()">SEND</button>
+                    </div>
                 </div>
-            </div>
-        </div>
+            </section>
+
+            <!-- 🧠 Right Panel: Neural Intelligence -->
+            <section class="panel">
+                <div class="panel-header">
+                    <h2><i class="fas fa-brain"></i> Neural Intelligence</h2>
+                </div>
+                <div class="panel-content">
+                    <div style="margin-bottom: 2rem;">
+                        <p style="font-size: 0.65rem; color: var(--text-dim); margin-bottom: 0.5rem; text-transform: uppercase;">Current Objective</p>
+                        <h3 style="font-size: 1.1rem; color: #fff; font-weight: 800;">AUTONOMOUS EVOLUTION</h3>
+                        <p style="font-size: 0.75rem; color: var(--success); margin-top: 0.25rem;">Handshake: STABLE</p>
+                    </div>
+
+                    <div style="margin-bottom: 2rem;">
+                        <h3 style="font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; margin-bottom: 1rem;">Active Skill Matrix</h3>
+                        <div id="skill-list" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                            <div class="meta-item" style="justify-content: flex-start; background: rgba(0,242,255,0.05);"><i class="fas fa-shield"></i> Aegis Interception</div>
+                            <div class="meta-item" style="justify-content: flex-start;"><i class="fas fa-eye"></i> Vision Sentinel</div>
+                            <div class="meta-item" style="justify-content: flex-start;"><i class="fas fa-microphone"></i> Voice Link</div>
+                            <div class="meta-item" style="justify-content: flex-start;"><i class="fas fa-dna"></i> Neural Mesh</div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 style="font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; margin-bottom: 1rem;">Learning Progress</h3>
+                        <div style="height: 150px;">
+                            <canvas id="learningChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="action-bar" style="border-top: 1px solid var(--border);">
+                    <button class="btn" style="grid-column: span 2;" onclick="window.location.href='/neural_map.html'"><i class="fas fa-map"></i> Open 3D Neural Map</button>
+                </div>
+            </section>
+        </main>
     </div>
 
     <script src="js/main.js"></script>
+    <script>
+        // Update Time
+        setInterval(() => {
+            document.getElementById('system-time').innerText = new Date().toLocaleTimeString();
+        }, 1000);
+
+        // Chart Initialization
+        const ctx = document.getElementById('learningChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['', '', '', '', '', ''],
+                datasets: [{
+                    data: [65, 78, 72, 85, 92, 99],
+                    borderColor: '#00f2ff',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { x: { display: false }, y: { display: false } }
+            }
+        });
+
+        function executeDirective() {
+            const input = document.getElementById('terminal-input');
+            const val = input.value;
+            if(!val) return;
+            logToTerminal(`USER: ${val}`, "DIRECTIVE");
+            if(window.sendCommand) {
+                window.sendCommand('raw_shell', {cmd: val});
+            }
+            input.value = '';
+        }
+    </script>
 </body>
 </html>

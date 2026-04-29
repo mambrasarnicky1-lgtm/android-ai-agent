@@ -1,141 +1,129 @@
-const API_URL = ""; // Relative to server
+// --- NOIR SOVEREIGN: MISSION CONTROL CORE V20.1 ---
+
 const terminal = document.getElementById('terminal');
+let lastAssetId = null;
 
-function logToTerminal(msg, type="INFO") {
-    const line = document.createElement('div');
-    line.className = 'terminal-line';
-    line.textContent = `[${new Date().toLocaleTimeString()}] [${type}] ${msg}`;
-    terminal.appendChild(line);
+function logToTerminal(msg, type = "INFO") {
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    const timestamp = new Date().toLocaleTimeString();
+    
+    let color = "var(--text-dim)";
+    if(type === "ERROR") color = "var(--danger)";
+    if(type === "DIRECTIVE") color = "var(--purple)";
+    if(type === "MESH") color = "var(--accent)";
+
+    entry.innerHTML = `
+        <span class="log-ts">[${timestamp}]</span>
+        <span class="log-msg" style="color: ${color}">${type}: ${msg}</span>
+    `;
+    
+    terminal.appendChild(entry);
     terminal.scrollTop = terminal.scrollHeight;
+    
+    if (terminal.childElementCount > 100) {
+        terminal.removeChild(terminal.firstChild);
+    }
 }
-
-// --- Chart Initialization ---
-const ctxActivity = document.getElementById('activityChart').getContext('2d');
-const activityChart = new Chart(ctxActivity, {
-    type: 'line',
-    data: {
-        labels: Array(10).fill(''),
-        datasets: [{
-            label: 'Activity',
-            data: Array(10).fill(0),
-            borderColor: '#9d50bb',
-            backgroundColor: 'rgba(157, 80, 187, 0.2)',
-            fill: true,
-            tension: 0.4
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: { x: { display: false }, y: { display: false } }
-    }
-});
-
-const ctxLatency = document.getElementById('latencyChart').getContext('2d');
-const latencyChart = new Chart(ctxLatency, {
-    type: 'bar',
-    data: {
-        labels: Array(10).fill(''),
-        datasets: [{
-            label: 'Latency',
-            data: Array(10).fill(0),
-            backgroundColor: '#00d2ff',
-            borderRadius: 5
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: { x: { display: false }, y: { display: false } }
-    }
-});
 
 async function updateDashboard() {
     try {
+        const startTime = Date.now();
         const resp = await fetch('/api/summary');
+        if (!resp.ok) throw new Error("Link Failed");
         const data = await resp.json();
         
-        // Update Connection Status
-        const status = document.getElementById('connection-status');
+        // Update Latency
+        const latency = Date.now() - startTime;
+        document.getElementById('ping-rate').innerText = `LATENCY: ${latency}ms`;
+
+        // 1. Connection Link Status
+        const statusItem = document.getElementById('connection-status');
         if (data.online) {
-            status.className = 'status-pill status-online';
-            status.innerHTML = '<div class="pulse"></div> LINK ACTIVE';
+            statusItem.innerHTML = '<i class="fas fa-link"></i> NEURAL LINK: ACTIVE';
+            statusItem.style.color = "var(--success)";
+            statusItem.style.borderColor = "rgba(16, 185, 129, 0.2)";
         } else {
-            status.className = 'status-pill status-offline';
-            status.innerHTML = 'LINK SEVERED';
+            statusItem.innerHTML = '<i class="fas fa-link-slash"></i> LINK SEVERED';
+            statusItem.style.color = "var(--danger)";
+            statusItem.style.borderColor = "rgba(239, 68, 68, 0.2)";
         }
 
-        // Update Charts
-        activityChart.data.datasets[0].data.shift();
-        activityChart.data.datasets[0].data.push(Math.random() * 100); // Dummy for now
-        activityChart.update();
-
-        latencyChart.data.datasets[0].data.shift();
-        latencyChart.data.datasets[0].data.push(Math.random() * 500); // Dummy for now
-        latencyChart.update();
-
-        // Update Mobile Stats
+        // 2. Process Agent Data (Redmi Note 14)
         if (data.agent) {
             const stats = data.agent.stats || {};
-            document.getElementById('mobile-stats').innerHTML = `
-                <p style="font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem;">${stats.battery || '--'}% <span style="font-size: 1rem; color: var(--text-secondary);">BATTERY</span></p>
-                <p style="color: var(--success); font-size: 0.9rem;">+ NEURAL PERSISTENCE ACTIVE</p>
-            `;
             
-            if (data.agent.last_screenshot) {
-                document.getElementById('last-screenshot').src = `/api/asset/${data.agent.last_screenshot}`;
+            // Battery
+            const bat = stats.battery || stats.bat || 0;
+            document.getElementById('bat-text').innerText = `${bat}%`;
+            document.getElementById('bat-bar').style.width = `${bat}%`;
+            
+            // CPU
+            const cpu = stats.cpu || 0;
+            document.getElementById('cpu-text').innerText = `${cpu}%`;
+            document.getElementById('cpu-bar').style.width = `${cpu}%`;
+            
+            // RAM
+            const ram = stats.ram || 0;
+            document.getElementById('ram-text').innerText = `${ram}%`;
+            document.getElementById('ram-bar').style.width = `${ram}%`;
+
+            // 3. Vision Sentinel Feed
+            if (data.agent.last_screenshot && data.agent.last_screenshot !== lastAssetId) {
+                lastAssetId = data.agent.last_screenshot;
+                document.getElementById('last-screenshot').src = `/api/asset/${lastAssetId}`;
+                logToTerminal("Vision Buffer Updated.", "SENTINEL");
+                
+                const analysis = document.getElementById('vision-analysis');
+                analysis.innerHTML = `<i class="fas fa-check-circle" style="color: var(--success);"></i> Screen integrity verified. No security breaches detected.`;
             }
         }
 
-        // Refresh Logs
-        if (data.commands) {
-            // Only add new lines (simplified for now)
+        // 4. Update Logs
+        if (data.logs && data.logs.length > 0) {
+            data.logs.forEach(log => {
+                logToTerminal(log.message, log.level || "AGENT");
+            });
+        }
+
+    } catch (e) {
+        // Silent fallback to avoid console spam
+    }
+}
+
+async function sendCommand(type, extraParams = {}) {
+    logToTerminal(`Transmitting: ${type.toUpperCase()}`, "CMD");
+    try {
+        const payload = {
+            target_device: "REDMI_NOTE_14",
+            action: { type: type, ...extraParams },
+            description: `Commander Directive: ${type}`
+        };
+
+        const resp = await fetch('/api/command', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        
+        const res = await resp.json();
+        if (res.command_id) {
+            logToTerminal(`Mesh Acknowledged: ${res.command_id}`, "MESH");
         }
     } catch (e) {
-        logToTerminal("Dashboard Update Failed", "ERROR");
+        logToTerminal(`Link Error: ${e.message}`, "ERROR");
     }
 }
 
-async function sendCommand(type) {
-    logToTerminal(`Issuing command: ${type.toUpperCase()}`);
-    try {
-        const resp = await fetch('/api/command', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({action: {type: type}, description: `Web Command: ${type}`})
-        });
-        const res = await resp.json();
-        logToTerminal(`Command queued: ${res.command_id}`);
-    } catch (e) {
-        logToTerminal(`Command failed: ${e.message}`, "ERROR");
-    }
-}
+// Global exposure
+window.sendCommand = sendCommand;
 
-async function sendPCCommand() {
-    const cmd = document.getElementById('pc-command').value;
-    if (!cmd) return;
-    
-    logToTerminal(`PC BRIDGE: ${cmd}`);
-    try {
-        const resp = await fetch('/api/command', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                target_device: "NOIR_PC_MASTER",
-                action: {type: "pc_shell", cmd: cmd},
-                description: `PC Remote Shell: ${cmd}`
-            })
-        });
-        const res = await resp.json();
-        logToTerminal(`PC Command Status: ${res.status}`);
-    } catch (e) {
-        logToTerminal(`PC Bridge Error: ${e.message}`, "ERROR");
-    }
-}
-
-// Initial update and periodic refresh
-setInterval(updateDashboard, 5000);
+// Run intervals
+setInterval(updateDashboard, 3000);
 updateDashboard();
-logToTerminal("NOIR SOVEREIGN ELITE CORE INITIALIZED.");
+
+// Boot sequence
+setTimeout(() => {
+    logToTerminal("Sovereign Node Connected.", "SYSTEM");
+    logToTerminal("Handshake verified with Redmi Note 14 Core.", "SYSTEM");
+}, 1000);

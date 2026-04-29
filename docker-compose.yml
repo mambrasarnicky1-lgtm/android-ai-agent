@@ -92,7 +92,7 @@ services:
       - ./noir-vps:/app/noir-vps
     networks:
       - noir-net
-    command: python noir-vps/healer.py
+    command: python noir-vps/self_healer.py
 
 networks:
   noir-net:
