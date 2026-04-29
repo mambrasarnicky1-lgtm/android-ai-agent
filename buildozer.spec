@@ -1,5 +1,5 @@
 [app]
-title = Noir Sovereign Elite v18.3
+title = Noir Sovereign V21.0 AEGIS
 package.name = noir_sovereign
 package.domain = org.noir.sovereign
 source.dir = mobile_app

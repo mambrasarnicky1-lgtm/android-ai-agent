@@ -416,6 +416,7 @@ class SovereignApp(App):
     """NOIR SOVEREIGN MOBILE CORE - Kivy Application"""
     def build(self):
         self.version = "21.0 AEGIS"
+        self.start_time = time.time()
         self.gateway = _BASE_GATEWAY
         self.biometrics = BehavioralBiometrics()
         self.title = f"Noir Sovereign v{self.version}"
@@ -459,26 +460,33 @@ class SovereignApp(App):
             
             threading.Thread(target=self._connectivity_watchdog, daemon=True).start()
             
-            self.status_label.text = "OMEGA-SYNC: ACTIVE"
+            self.status_label.text = f"NOIR SOVEREIGN v{self.version}"
         except Exception as e:
             self.status_label.text = f"Startup Error: {str(e)}"
 
     def _connection_guardian(self):
-        """Guardian Pintar: Rotasi Gateway secara otonom."""
+        """Guardian Pintar: Rotasi Gateway secara otonom — V21.0 AEGIS."""
+        all_gateways = [
+            _BASE_GATEWAY,
+            "http://8.215.23.17",
+            "http://8.215.23.17:80",
+            "http://8.215.23.17:8000",
+        ]
+        for gw in all_gateways:
+            try:
+                r = requests.get(f"{gw}/health", timeout=5)
+                if r.status_code == 200:
+                    gw = gw.rstrip("/")
+                    DynamicGateway._current = gw
+                    DynamicGateway._last_discovery = time.time()
+                    self._log(f"[AEGIS] Gateway locked: {gw}")
+                    try:
+                        self.status_label.text = "STATUS: ONLINE"
+                    except: pass
+                    return True
+            except: continue
         try:
-            gateways = [
-                self.gateway,
-                "http://8.215.23.17",
-                "http://10.0.2.2:5555"
-            ]
-            for gw in gateways:
-                if not gw: continue
-                try:
-                    r = requests.get(f"{gw}/health", timeout=3)
-                    if r.status_code == 200:
-                        self.gateway = gw.rstrip("/")
-                        return True
-                except: continue
+            self.status_label.text = "STATUS: LINK SEVERED — Retrying..."
         except: pass
         return False
         
@@ -548,42 +556,55 @@ class SovereignApp(App):
             pass
 
     def _request_permissions(self):
-        """Request all necessary Android permissions with Shizuku Native Check."""
-        from android.permissions import request_permissions, Permission
-        perms = [
-            Permission.READ_EXTERNAL_STORAGE,
-            Permission.WRITE_EXTERNAL_STORAGE,
-            Permission.CAMERA,
-            Permission.RECORD_AUDIO,
-            Permission.ACCESS_FINE_LOCATION
-        ]
-        request_permissions(perms)
-        
-        # v16.0 Elite: Robust Shizuku Strategy
+        """Request all necessary Android permissions — V21.0 AEGIS."""
         try:
-            import subprocess
-            # Try multiple methods to detect Shizuku
-            shizuku_paths = ["shizuku", "/system/bin/shizuku", "/data/local/tmp/shizuku", "rish"]
-            self.shizuku_status = "RESTRICTED"
-            
-            for path in shizuku_paths:
-                try:
-                    r = subprocess.run(f"{path} shell id", shell=True, capture_output=True, text=True, timeout=2)
-                    if r.returncode == 0:
-                        self.shizuku_status = "AUTHORIZED"
-                        self.shizuku_binary = path
-                        noir_log(f"[SMC] Shizuku Link Established: {path.upper()}")
-                        break
-                except: continue
-                
-            if self.shizuku_status != "AUTHORIZED":
-                noir_log("[SMC] Shizuku CLI restricted. Ensure Shizuku is running and authorized.", level="WARNING")
+            from android.permissions import request_permissions, Permission
+            perms = [
+                Permission.READ_EXTERNAL_STORAGE,
+                Permission.WRITE_EXTERNAL_STORAGE,
+                Permission.CAMERA,
+                Permission.RECORD_AUDIO,
+                Permission.ACCESS_FINE_LOCATION
+            ]
+            request_permissions(perms)
+            self._log("[SMC] Runtime Permissions: REQUESTED")
         except Exception as e:
-            self.shizuku_status = "ERROR"
-            noir_log(f"[SMC] Shizuku bridge check failed: {e}", level="ERROR")
-        
-        self._log(f"[SMC] Shizuku Status: {self.shizuku_status}")
-        self._log("[SMC] Runtime Permissions: REQUESTED")
+            self._log(f"[SMC] Permissions Error: {e}")
+
+        # Shizuku V21.0 Hardened Detection
+        import subprocess
+        self.shizuku_status = "RESTRICTED"
+        self.shizuku_binary = None
+
+        # Ordered by most likely to work on Shizuku-authorized device
+        shizuku_candidates = [
+            "rish",
+            "sh /data/user_de/0/moe.shizuku.privileged.api/start.sh",
+            "shizuku",
+            "/data/local/tmp/rish",
+            "/data/local/tmp/shizuku",
+        ]
+        for candidate in shizuku_candidates:
+            try:
+                probe = subprocess.run(
+                    candidate.split()[0] + " -c id" if "rish" in candidate else f"{candidate} id",
+                    shell=True, capture_output=True, text=True, timeout=3
+                )
+                if "uid=" in probe.stdout or probe.returncode == 0:
+                    self.shizuku_status = "AUTHORIZED"
+                    self.shizuku_binary = candidate.split()[0]
+                    noir_log(f"[AEGIS] Shizuku Authorized via: {candidate}")
+                    break
+            except Exception:
+                continue
+
+        if self.shizuku_status != "AUTHORIZED":
+            # Final attempt: use standard app shell and mark as STANDARD
+            self.shizuku_status = "STANDARD"
+            self.shizuku_binary = "sh"
+            noir_log("[AEGIS] Shizuku unavailable — using standard shell fallback.")
+
+        self._log(f"[AEGIS] Shell Engine: {self.shizuku_status}")
 
     def _acquire_wakelock(self):
         """OMEGA-FIX: Absolute persistence using PowerManager and Foreground Service."""

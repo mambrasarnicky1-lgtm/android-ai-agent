@@ -1,4 +1,4 @@
-name: Noir Sovereign V20.1 SINGULARITY Build
+name: Noir Sovereign V21.0 AEGIS Build
 
 on:
   push:
@@ -65,5 +65,5 @@ jobs:
       - name: Upload Release Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Noir-Sovereign-V20.0-SINGULARITY-APK
+          name: Noir-Sovereign-V21.0-AEGIS-APK
           path: bin/*.apk
