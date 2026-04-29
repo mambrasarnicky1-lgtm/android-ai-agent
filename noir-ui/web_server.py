@@ -464,7 +464,6 @@ async def brain_chat(request: Request):
         if any(x in response.lower() for x in ["screenshot", "layar", "capture"]):
             action = {"type": "screenshot"}
         elif any(x in response.lower() for x in ["tekan", "click", "tap"]):
-            # Logic koordinat menyusul via Vision Intelligence
             pass
             
         if action:
@@ -486,16 +485,133 @@ async def brain_chat(request: Request):
 
 @app.get("/api/brain/status")
 async def brain_status():
-    """Mendapatkan status memori dan pembelajaran AI."""
     return {
-        "memory_size": len(memory.get_recent_context()) if 'memory' in globals() else 0,
-        "skills": catalyst.get_active_skills() if 'catalyst' in globals() else [],
+        "memory_size": 0,
+        "skills": ["Aegis", "Vision", "Voice", "Mesh", "RAG"],
         "uptime": time.time()
     }
 
+# ── NEW: Chat History & Relay ──────────────────────────
+_chat_history = []
+
+@app.post("/api/brain/chat")
+async def brain_chat_v2(request: Request):
+    """AI Chat Relay — Uses Gemini API with local fallback."""
+    try:
+        data = await request.json()
+        prompt = data.get("message", "")
+        device_id = data.get("device_id", "REDMI_NOTE_14")
+
+        # Try Gemini API
+        gemini_key = os.environ.get("GEMINI_API_KEY", "")
+        response_text = None
+
+        if gemini_key:
+            try:
+                async with httpx.AsyncClient() as client:
+                    r = await client.post(
+                        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}",
+                        json={"contents": [{"parts": [{"text": f"You are Noir Sovereign AI Agent. Answer concisely in the same language as the user: {prompt}"}]}]},
+                        timeout=15.0
+                    )
+                    if r.status_code == 200:
+                        response_text = r.json()["candidates"][0]["content"]["parts"][0]["text"]
+            except Exception as e:
+                print(f"[BRAIN] Gemini error: {e}")
+
+        # Fallback response
+        if not response_text:
+            response_text = f"[Noir Sovereign — Local Mode] Perintah '{prompt}' diterima. Neural Brain sedang menganalisis. Pastikan GEMINI_API_KEY dikonfigurasi untuk respons AI penuh."
+
+        # Store chat history
+        _chat_history.append({"role": "user", "msg": prompt, "ts": time.strftime("%H:%M:%S")})
+        _chat_history.append({"role": "ai", "msg": response_text, "ts": time.strftime("%H:%M:%S")})
+        if len(_chat_history) > 200:
+            _chat_history[:] = _chat_history[-200:]
+
+        # Check if response implies device action
+        action = None
+        kw_map = {"screenshot": "screenshot", "capture": "screenshot", "lokasi": "location", "gps": "location",
+                  "vibrate": "vibrate", "gallery": "gallery_sync", "audio": "audio_record"}
+        for kw, atype in kw_map.items():
+            if kw in prompt.lower():
+                action = {"type": atype}
+                with _commands_lock:
+                    local_state["commands"].append({
+                        "id": hex(int(time.time()))[2:].upper(),
+                        "action": action, "status": "pending",
+                        "target_device": device_id
+                    })
+                break
+
+        return {"response": response_text, "status": "success", "autonomous_action": action}
+
+    except Exception as e:
+        return {"response": f"Error: {str(e)}", "status": "error"}
+
+@app.get("/api/chat/history")
+async def get_chat_history():
+    return {"history": _chat_history[-50:]}
+
+# ── NEW: Evolution Proposals ──────────────────────────
+@app.get("/api/evolutions")
+async def get_evolutions():
+    """Return pending evolution proposals from commands queue."""
+    evo = [c for c in local_state.get("commands", []) if "evolution" in str(c.get("description", "")).lower()]
+    # Also check CF
+    if await _cf_reachable_async():
+        try:
+            async with httpx.AsyncClient() as client:
+                r = await client.get(f"{CF_GATEWAY}/agent/summary", headers=CF_HEADERS, timeout=5.0)
+                cf_cmds = r.json().get("commands", [])
+                cf_evo = [c for c in cf_cmds if "evolution" in str(c.get("description","")).lower()]
+                evo.extend(cf_evo)
+        except: pass
+    return {"evolutions": evo}
+
+# ── NEW: Log Visibility Control ───────────────────────
+_log_visibility = {"visible": True}
+
+@app.post("/api/log-visibility")
+async def set_log_visibility(request: Request):
+    data = await request.json()
+    _log_visibility["visible"] = data.get("visible", True)
+    # Push command to APK to suppress UI log display
+    with _commands_lock:
+        local_state["commands"].append({
+            "id": hex(int(time.time()))[2:].upper(),
+            "action": {"type": "log_visibility", "visible": _log_visibility["visible"]},
+            "status": "pending",
+            "target_device": "REDMI_NOTE_14"
+        })
+    return {"ok": True, "visible": _log_visibility["visible"]}
+
+@app.get("/api/log-visibility")
+async def get_log_visibility():
+    return _log_visibility
+
+# ── Static File Serving ───────────────────────────────
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+@app.get("/css/{filename}")
+async def serve_css(filename: str):
+    path = os.path.join(BASE_DIR, "css", filename)
+    if os.path.exists(path):
+        return FileResponse(path, media_type="text/css")
+    return Response(status_code=404)
+
+@app.get("/js/{filename}")
+async def serve_js(filename: str):
+    path = os.path.join(BASE_DIR, "js", filename)
+    if os.path.exists(path):
+        return FileResponse(path, media_type="application/javascript")
+    return Response(status_code=404)
+
 @app.get("/")
 async def get_index():
-    with open(os.path.join(BASE_DIR, "index.html"), "r", encoding="utf-8") as f:
+    path = os.path.join(BASE_DIR, "index.html")
+    with open(path, "r", encoding="utf-8") as f:
         return HTMLResponse(content=f.read())
 
 if __name__ == "__main__":
@@ -503,11 +619,15 @@ if __name__ == "__main__":
     ports = [80, 8000, 5000, 9090]
     for port in ports:
         try:
-            print(f"[START] Noir Commander v17.5 on Port {port}...")
+            print(f"[START] Noir Sovereign v21.0 AEGIS on Port {port}...")
             uvicorn.run(app, host="0.0.0.0", port=port)
             break
         except Exception as e:
             print(f"[WARN] Port {port} unavailable: {e}")
             if port == ports[-1]:
+                print("[FATAL] No available ports found.")
+
+
+
                 print("[FATAL] No available ports found.")
 

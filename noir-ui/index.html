@@ -5,203 +5,204 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NOIR SOVEREIGN | Mission Control</title>
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="neural-overlay"></div>
-    
-    <div class="app-shell fade-in">
-        <!-- 🛰️ Unified Top Bar -->
-        <header class="top-bar">
-            <div class="brand">
+
+    <div class="app-shell">
+        <!-- ═══ SIDEBAR NAV ═══ -->
+        <nav class="sidebar">
+            <div class="sidebar-brand">
                 <div class="brand-icon">N</div>
-                <div class="brand-text">
-                    <h1>NOIR SOVEREIGN</h1>
-                    <p>SINGULARITY V20.1</p>
-                </div>
             </div>
-            
-            <div class="system-meta">
-                <div id="connection-status" class="meta-item" style="color: var(--success); border-color: rgba(16, 185, 129, 0.2);">
-                    <i class="fas fa-link"></i>
-                    NEURAL LINK: ACTIVE
-                </div>
-                <div class="meta-item" style="color: var(--gold); border-color: rgba(255, 204, 51, 0.2);">
-                    <i class="fas fa-microchip"></i>
-                    REDMI NOTE 14
-                </div>
-                <div id="shizuku-status" class="meta-item" style="color: var(--text-dim);">
-                    <i class="fas fa-shield-cat"></i>
-                    SHIZUKU: CHECKING...
-                </div>
-                <div id="agent-version" class="meta-item" style="color: var(--text-dim);">
-                    <i class="fas fa-code-branch"></i>
-                    AGENT: V?
-                </div>
-                <div class="meta-item">
-                    <i class="fas fa-clock"></i>
-                    <span id="system-time">02:45:10</span>
-                </div>
-
+            <div class="sidebar-nav">
+                <button class="nav-btn active" data-panel="control" title="Mission Control">
+                    <i class="fas fa-satellite-dish"></i>
+                </button>
+                <button class="nav-btn" data-panel="chat" title="AI Chat">
+                    <i class="fas fa-comments"></i>
+                    <span class="nav-badge" id="chat-badge" style="display:none;">0</span>
+                </button>
+                <button class="nav-btn" data-panel="media" title="Loot Vault">
+                    <i class="fas fa-photo-film"></i>
+                    <span class="nav-badge" id="media-badge" style="display:none;">0</span>
+                </button>
+                <button class="nav-btn" data-panel="evolution" title="Evolution Proposals">
+                    <i class="fas fa-dna"></i>
+                    <span class="nav-badge" id="evo-badge" style="display:none;">0</span>
+                </button>
+                <button class="nav-btn" data-panel="logs" title="System Logs">
+                    <i class="fas fa-terminal"></i>
+                </button>
             </div>
-        </header>
+            <div class="sidebar-footer">
+                <div id="agent-dot" class="status-dot offline" title="Agent Offline"></div>
+            </div>
+        </nav>
 
-        <!-- 🏢 Main Workspace -->
-        <main class="workspace">
-            
-            <!-- 📱 Left Panel: Device Monitor -->
-            <section class="panel">
-                <div class="panel-header">
-                    <h2><i class="fas fa-satellite-dish"></i> Device Monitor</h2>
-                    <span id="ping-rate" style="font-size: 0.6rem; color: var(--text-dim);">LATENCY: 42ms</span>
-                </div>
-                <div class="panel-content">
-                    <div class="device-card">
-                        <div class="stat-group">
-                            <div class="stat-label">Power Level <span id="bat-text">98%</span></div>
-                            <div class="stat-bar-bg"><div id="bat-bar" class="stat-bar-fill" style="width: 98%;"></div></div>
-                        </div>
-                        <div class="stat-group">
-                            <div class="stat-label">Neural Processing <span id="cpu-text">15%</span></div>
-                            <div class="stat-bar-bg"><div id="cpu-bar" class="stat-bar-fill" style="width: 15%;"></div></div>
-                        </div>
-                        <div class="stat-group" style="margin-bottom: 0;">
-                            <div class="stat-label">Memory Allocation <span id="ram-text">45%</span></div>
-                            <div class="stat-bar-bg"><div id="ram-bar" class="stat-bar-fill" style="width: 45%; background: var(--purple);"></div></div>
-                        </div>
-                    </div>
+        <!-- ═══ MAIN CONTENT ═══ -->
+        <main class="main-content">
 
-                    <div style="margin-bottom: 1.5rem;">
-                        <h3 style="font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; margin-bottom: 1rem;">Direct Commands</h3>
-                        <div class="action-bar" style="padding: 0;">
-                            <button class="btn" onclick="sendCommand('screenshot')"><i class="fas fa-camera"></i> Capture</button>
-                            <button class="btn" onclick="sendCommand('location')"><i class="fas fa-location-dot"></i> GPS</button>
-                            <button class="btn" onclick="sendCommand('vibrate')"><i class="fas fa-bell"></i> Alert</button>
-                            <button class="btn" onclick="sendCommand('refresh_knowledge')"><i class="fas fa-sync"></i> Sync</button>
-                        </div>
-                    </div>
+            <!-- ── TOP BAR ── -->
+            <header class="topbar">
+                <div class="topbar-left">
+                    <h1 id="panel-title">MISSION CONTROL</h1>
+                    <span class="topbar-sub" id="panel-sub">SINGULARITY V21.0 AEGIS</span>
                 </div>
-                <div class="action-bar">
-                    <button class="btn btn-primary" style="grid-column: span 2;" onclick="sendCommand('shield_on')"><i class="fas fa-shield-halved"></i> Activate Aegis Shield</button>
+                <div class="topbar-right">
+                    <div id="connection-status" class="status-chip offline"><div class="pulse-dot"></div> LINK SEVERED</div>
+                    <div id="shizuku-chip" class="status-chip neutral"><i class="fas fa-shield-cat"></i> SHIZUKU: ...</div>
+                    <div id="agent-ver-chip" class="status-chip neutral"><i class="fas fa-code-branch"></i> V?</div>
+                    <div class="status-chip neutral"><i class="fas fa-clock"></i> <span id="sys-time">--:--:--</span></div>
                 </div>
-            </section>
+            </header>
 
-            <!-- 👁️ Center Panel: Vision & Intel -->
-            <section class="panel" style="background: transparent; border: none;">
-                <div class="panel" style="margin-bottom: 1.5rem; flex: 2;">
-                    <div class="panel-header">
-                        <h2><i class="fas fa-eye"></i> Vision Sentinel</h2>
-                        <span style="font-size: 0.6rem; color: var(--text-dim);">REAL-TIME FEED</span>
-                    </div>
-                    <div class="panel-content" style="padding: 1rem; display: flex; align-items: center; justify-content: center; background: #000;">
-                        <div class="vision-box">
-                            <img id="last-screenshot" src="https://via.placeholder.com/1920x1080/050505/00f2ff?text=WAITING+FOR+NEURAL+FEED">
-                            <div class="scanline"></div>
-                        </div>
-                    </div>
-                    <div class="panel-header" style="border-top: 1px solid var(--border); border-bottom: none;">
-                        <p id="vision-analysis" style="font-size: 0.8rem; color: var(--text-dim); font-style: italic;">
-                            <i class="fas fa-info-circle" style="color: var(--accent);"></i>
-                            Monitoring screen for potential security risks...
-                        </p>
-                    </div>
-                </div>
-
-                <div class="panel" style="flex: 1;">
-                    <div class="panel-header">
-                        <h2><i class="fas fa-terminal"></i> Command Console</h2>
-                    </div>
-                    <div class="panel-content" style="padding: 0;">
-                        <div id="terminal" class="console">
-                            <div class="log-entry">
-                                <span class="log-ts">[02:41:46]</span>
-                                <span class="log-msg">Sovereign Mission Control Initialized.</span>
+            <!-- ══ PANEL: MISSION CONTROL ══ -->
+            <section class="panel active" id="panel-control">
+                <div class="panel-grid">
+                    <!-- Device Stats -->
+                    <div class="card span-2">
+                        <div class="card-hd"><i class="fas fa-mobile-screen-button"></i> REDMI NOTE 14 — LIVE TELEMETRY</div>
+                        <div class="telemetry-row">
+                            <div class="tele-block">
+                                <div class="tele-value" id="bat-val">--</div>
+                                <div class="tele-label">BATTERY</div>
+                                <div class="tele-bar"><div class="tele-fill" id="bat-bar" style="width:0%"></div></div>
+                            </div>
+                            <div class="tele-block">
+                                <div class="tele-value" id="cpu-val">--</div>
+                                <div class="tele-label">CPU LOAD</div>
+                                <div class="tele-bar"><div class="tele-fill" id="cpu-bar" style="width:0%; background:var(--accent-purple)"></div></div>
+                            </div>
+                            <div class="tele-block">
+                                <div class="tele-value" id="ram-val">--</div>
+                                <div class="tele-label">MEMORY</div>
+                                <div class="tele-bar"><div class="tele-fill" id="ram-bar" style="width:0%; background:var(--accent-gold)"></div></div>
+                            </div>
+                            <div class="tele-block">
+                                <div class="tele-value" id="ping-val">--</div>
+                                <div class="tele-label">LATENCY</div>
+                                <div class="tele-bar"><div class="tele-fill" id="ping-bar" style="width:0%; background:var(--success)"></div></div>
                             </div>
                         </div>
                     </div>
-                    <div class="directive-input">
-                        <input type="text" id="terminal-input" placeholder="Enter global directive...">
-                        <button class="btn btn-primary" style="width: auto; padding: 0 1.5rem;" onclick="executeDirective()">SEND</button>
+
+                    <!-- Vision Sentinel -->
+                    <div class="card span-2">
+                        <div class="card-hd"><i class="fas fa-eye"></i> VISION SENTINEL FEED <span id="log-toggle-btn" class="badge-btn" onclick="toggleLogVisibility()">LOG: VISIBLE</span></div>
+                        <div class="vision-frame">
+                            <img id="vision-img" src="https://via.placeholder.com/1280x720/050508/00f2ff?text=AWAITING+NEURAL+FEED" alt="Vision Feed">
+                            <div class="vision-scan"></div>
+                            <div class="vision-meta">
+                                <span id="vision-time">--</span>
+                                <span id="vision-status">NO SIGNAL</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Commands -->
+                    <div class="card">
+                        <div class="card-hd"><i class="fas fa-gamepad"></i> DIRECT CONTROL</div>
+                        <div class="cmd-grid">
+                            <button class="cmd-btn" onclick="sendCmd('screenshot')"><i class="fas fa-camera"></i> Capture</button>
+                            <button class="cmd-btn" onclick="sendCmd('location')"><i class="fas fa-location-dot"></i> GPS Trace</button>
+                            <button class="cmd-btn" onclick="sendCmd('vibrate')"><i class="fas fa-bell"></i> Alert</button>
+                            <button class="cmd-btn" onclick="sendCmd('gallery_sync')"><i class="fas fa-images"></i> Gallery Sync</button>
+                            <button class="cmd-btn danger" onclick="sendCmd('shield_on')"><i class="fas fa-shield-halved"></i> Aegis Shield</button>
+                            <button class="cmd-btn" onclick="sendCmd('heal')"><i class="fas fa-heart-pulse"></i> Self Heal</button>
+                        </div>
+                        <div class="cmd-input-row">
+                            <input type="text" id="shell-input" placeholder="Execute shell command..." class="cmd-input">
+                            <button class="cmd-btn primary" onclick="sendShell()"><i class="fas fa-paper-plane"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- Neural Intelligence -->
+                    <div class="card">
+                        <div class="card-hd"><i class="fas fa-brain"></i> NEURAL INTELLIGENCE</div>
+                        <div class="intel-rows">
+                            <div class="intel-row"><span>Mission</span><span class="tag-accent">AUTONOMOUS EVOLUTION</span></div>
+                            <div class="intel-row"><span>Handshake</span><span id="hs-status" class="tag-success">CHECKING...</span></div>
+                            <div class="intel-row"><span>Active Skills</span><span class="tag-accent">9 Modules</span></div>
+                            <div class="intel-row"><span>Brain Uptime</span><span id="brain-uptime">--</span></div>
+                        </div>
+                        <div style="height: 100px; margin-top:1rem;">
+                            <canvas id="neural-chart"></canvas>
+                        </div>
                     </div>
                 </div>
             </section>
 
-            <!-- 🧠 Right Panel: Neural Intelligence -->
-            <section class="panel">
-                <div class="panel-header">
-                    <h2><i class="fas fa-brain"></i> Neural Intelligence</h2>
-                </div>
-                <div class="panel-content">
-                    <div style="margin-bottom: 2rem;">
-                        <p style="font-size: 0.65rem; color: var(--text-dim); margin-bottom: 0.5rem; text-transform: uppercase;">Current Objective</p>
-                        <h3 style="font-size: 1.1rem; color: #fff; font-weight: 800;">AUTONOMOUS EVOLUTION</h3>
-                        <p style="font-size: 0.75rem; color: var(--success); margin-top: 0.25rem;">Handshake: STABLE</p>
+            <!-- ══ PANEL: AI CHAT ══ -->
+            <section class="panel" id="panel-chat">
+                <div class="chat-layout">
+                    <div class="chat-window" id="chat-window">
+                        <div class="chat-msg system"><div class="chat-bubble">NOIR SOVEREIGN AI AGENT — Online. Kirim perintah atau pertanyaan Anda.</div></div>
                     </div>
-
-                    <div style="margin-bottom: 2rem;">
-                        <h3 style="font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; margin-bottom: 1rem;">Active Skill Matrix</h3>
-                        <div id="skill-list" style="display: flex; flex-direction: column; gap: 0.75rem;">
-                            <div class="meta-item" style="justify-content: flex-start; background: rgba(0,242,255,0.05);"><i class="fas fa-shield"></i> Aegis Interception</div>
-                            <div class="meta-item" style="justify-content: flex-start;"><i class="fas fa-eye"></i> Vision Sentinel</div>
-                            <div class="meta-item" style="justify-content: flex-start;"><i class="fas fa-microphone"></i> Voice Link</div>
-                            <div class="meta-item" style="justify-content: flex-start;"><i class="fas fa-dna"></i> Neural Mesh</div>
-                        </div>
+                    <div class="chat-input-bar">
+                        <input type="text" id="chat-input" class="chat-input" placeholder="Ketik perintah atau tanya sesuatu...">
+                        <button class="cmd-btn primary" onclick="sendChatMsg()"><i class="fas fa-paper-plane"></i> KIRIM</button>
                     </div>
-
-                    <div>
-                        <h3 style="font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; margin-bottom: 1rem;">Learning Progress</h3>
-                        <div style="height: 150px;">
-                            <canvas id="learningChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-                <div class="action-bar" style="border-top: 1px solid var(--border);">
-                    <button class="btn" style="grid-column: span 2;" onclick="window.location.href='/neural_map.html'"><i class="fas fa-map"></i> Open 3D Neural Map</button>
                 </div>
             </section>
+
+            <!-- ══ PANEL: LOOT MEDIA VAULT ══ -->
+            <section class="panel" id="panel-media">
+                <div class="media-toolbar">
+                    <button class="tab-btn active" onclick="switchMediaTab(this,'screenshots')"><i class="fas fa-camera"></i> Screenshots</button>
+                    <button class="tab-btn" onclick="switchMediaTab(this,'audio')"><i class="fas fa-microphone"></i> Audio</button>
+                    <button class="tab-btn" onclick="switchMediaTab(this,'gallery')"><i class="fas fa-images"></i> Gallery Sync</button>
+                    <div style="flex:1"></div>
+                    <button class="cmd-btn" onclick="sendCmd('screenshot'); refreshMedia()"><i class="fas fa-camera-rotate"></i> Capture Now</button>
+                    <button class="cmd-btn" onclick="sendCmd('gallery_sync'); refreshMedia()"><i class="fas fa-sync"></i> Sync Gallery</button>
+                </div>
+                <div id="media-grid" class="media-grid">
+                    <div class="media-empty"><i class="fas fa-photo-film"></i><p>No media captured yet.<br>Use controls above to capture or sync.</p></div>
+                </div>
+            </section>
+
+            <!-- ══ PANEL: EVOLUTION PROPOSALS ══ -->
+            <section class="panel" id="panel-evolution">
+                <div class="evo-header">
+                    <h2>AUTONOMOUS EVOLUTION PROPOSALS</h2>
+                    <p>Proposal pengembangan mandiri yang diajukan oleh AI Agent.</p>
+                </div>
+                <div id="evo-list" class="evo-list">
+                    <div class="evo-empty"><i class="fas fa-dna"></i><p>Tidak ada proposal aktif saat ini.</p></div>
+                </div>
+            </section>
+
+            <!-- ══ PANEL: LOGS ══ -->
+            <section class="panel" id="panel-logs">
+                <div class="log-toolbar">
+                    <span class="card-hd"><i class="fas fa-terminal"></i> SYSTEM CONSOLE</span>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <select id="log-filter" class="log-select" onchange="filterLogs()">
+                            <option value="all">ALL</option>
+                            <option value="INFO">INFO</option>
+                            <option value="WARNING">WARNING</option>
+                            <option value="ERROR">ERROR</option>
+                            <option value="AEGIS">AEGIS</option>
+                        </select>
+                        <button class="cmd-btn" onclick="clearLogs()"><i class="fas fa-trash"></i> Clear</button>
+                    </div>
+                </div>
+                <div id="log-console" class="log-console"></div>
+            </section>
+
         </main>
     </div>
 
+    <!-- ── Media Lightbox ── -->
+    <div id="lightbox" class="lightbox hidden" onclick="closeLightbox()">
+        <div class="lightbox-inner">
+            <img id="lightbox-img" src="">
+            <audio id="lightbox-audio" controls></audio>
+        </div>
+    </div>
+
     <script src="js/main.js"></script>
-    <script>
-        // Update Time
-        setInterval(() => {
-            document.getElementById('system-time').innerText = new Date().toLocaleTimeString();
-        }, 1000);
-
-        // Chart Initialization
-        const ctx = document.getElementById('learningChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: ['', '', '', '', '', ''],
-                datasets: [{
-                    data: [65, 78, 72, 85, 92, 99],
-                    borderColor: '#00f2ff',
-                    borderWidth: 2,
-                    tension: 0.4,
-                    pointRadius: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: { x: { display: false }, y: { display: false } }
-            }
-        });
-
-        function executeDirective() {
-            const input = document.getElementById('terminal-input');
-            const val = input.value;
-            if(!val) return;
-            logToTerminal(`USER: ${val}`, "DIRECTIVE");
-            if(window.sendCommand) {
-                window.sendCommand('raw_shell', {cmd: val});
-            }
-            input.value = '';
-        }
-    </script>
 </body>
 </html>
