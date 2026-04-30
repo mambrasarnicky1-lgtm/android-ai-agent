@@ -752,9 +752,88 @@ async def set_log_visibility(request: Request):
         })
     return {"ok": True, "visible": _log_visibility["visible"]}
 
-@app.get("/api/log-visibility")
-async def get_log_visibility():
     return _log_visibility
+
+# ── Live Mirror Frame ─────────────────────────────────
+_latest_mirror_frame = {"key": None, "width": None, "height": None, "ts": 0}
+
+@app.get("/api/screen/frame")
+async def get_screen_frame():
+    """Returns the latest mirror frame metadata for the dashboard to pull."""
+    # First check local agent state
+    for agent in local_state["agents"].values():
+        if agent.get("last_screenshot"):
+            _latest_mirror_frame["key"] = agent["last_screenshot"]
+            _latest_mirror_frame["ts"]  = time.time()
+    # Also check CF
+    if _latest_mirror_frame["key"]:
+        return _latest_mirror_frame
+    # Fallback: ask CF gateway for latest screenshot
+    try:
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(None, lambda: requests.get(f"{CF_GATEWAY}/agent/summary", headers=CF_HEADERS, timeout=4).json())
+        agent = result.get("agent") or {}
+        shot  = agent.get("last_screenshot")
+        if shot:
+            _latest_mirror_frame["key"] = shot
+    except: pass
+    return _latest_mirror_frame
+
+@app.post("/api/screen/frame")
+async def update_screen_frame(request: Request):
+    """APK can push latest frame info here directly."""
+    d = await request.json()
+    _latest_mirror_frame.update(d)
+    _latest_mirror_frame["ts"] = time.time()
+    return {"ok": True}
+
+# ── Media Assets List ─────────────────────────────────
+@app.get("/api/assets")
+async def list_assets():
+    """Aggregate media assets from CF R2 and local state."""
+    assets = []
+    try:
+        loop = asyncio.get_event_loop()
+        r = await loop.run_in_executor(None, lambda: requests.get(f"{CF_GATEWAY}/agent/assets", headers=CF_HEADERS, timeout=5))
+        if r.ok:
+            assets = r.json()
+    except: pass
+    return assets
+
+@app.get("/api/asset/{key}")
+async def proxy_asset(key: str):
+    """Proxy an asset from CF R2 to dashboard."""
+    try:
+        async with httpx.AsyncClient() as client:
+            r = await client.get(f"{CF_GATEWAY}/agent/asset/{key}", headers=CF_HEADERS, timeout=15.0)
+            if r.status_code == 200:
+                ct = r.headers.get("content-type", "image/jpeg")
+                return Response(content=r.content, media_type=ct)
+    except Exception as e:
+        pass
+    return Response(status_code=404)
+
+# ── Auto-Update Trigger ───────────────────────────────
+@app.post("/api/auto-update")
+async def trigger_auto_update():
+    """Trigger autonomous update on both APK (via command) and VPS."""
+    with _commands_lock:
+        local_state["commands"].append({
+            "id": hex(int(time.time()))[2:].upper(),
+            "action": {"type": "auto_update"},
+            "status": "pending",
+            "target_device": "REDMI_NOTE_14",
+            "description": "Dashboard-triggered auto-update"
+        })
+    # Also try to pull latest code on VPS side
+    import subprocess
+    try:
+        subprocess.Popen(["git", "-C", "/root/noir-agent", "pull", "origin", "main"],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except: pass
+    return {"ok": True, "msg": "Auto-update command dispatched to agent and VPS."}
+
+
 
 # ── Static File Serving ───────────────────────────────
 from fastapi.staticfiles import StaticFiles
