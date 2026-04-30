@@ -6,7 +6,7 @@ The server itself IS the fallback gateway — APK talks directly here.
 """
 
 import os, json, time, sys, requests, httpx, asyncio
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response, UploadFile, File
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -219,15 +219,19 @@ async def agent_result(request: Request):
 
 @app.post("/agent/upload")
 async def agent_upload(request: Request):
-    """VPS-03 FIX: Proxy ke Cloudflare R2, atau simpan lokal sebagai fallback agar screenshot tidak hilang."""
+    """VPS-03 FIX: Proxy to Cloudflare R2, with Content-Type forwarding for proper multipart parsing."""
     device_id = request.query_params.get("device_id", "REDMI_NOTE_14")
     body = await request.body()
+    # BUG-FIX: Must forward the original Content-Type (multipart/form-data; boundary=...)
+    # Without this, Cloudflare cannot parse the file from the multipart body.
+    content_type = request.headers.get("content-type", "application/octet-stream")
     try:
         if await _cf_reachable_async():
             async with httpx.AsyncClient() as client:
-                r = await client.post(f"{CF_GATEWAY}/agent/upload?device_id={device_id}",
-                                      headers={"Authorization": f"Bearer {CF_KEY}"},
-                                      content=body, timeout=20.0)
+                r = await client.post(
+                    f"{CF_GATEWAY}/agent/upload?device_id={device_id}",
+                    headers={"Authorization": f"Bearer {CF_KEY}", "Content-Type": content_type},
+                    content=body, timeout=20.0)
                 result = r.json()
                 if result.get("key"):
                     if device_id not in local_state["agents"]:
@@ -668,11 +672,12 @@ async def brain_chat_v2(request: Request):
         for kw, atype in kw_map.items():
             if kw in prompt.lower():
                 action = {"type": atype}
+                cmd_id = f"AI_{hex(int(time.time()))[2:].upper()}"
                 with _commands_lock:
                     local_state["commands"].append({
-                        "id": hex(int(time.time()))[2:].upper(),
+                        "command_id": cmd_id,  # BUG-FIX: was 'id', APK reads 'command_id'
                         "action": action, "status": "pending",
-                        "target_device": device_id,
+                        "target": device_id,
                         "description": f"AI Chat triggered: {atype}"
                     })
                 break
@@ -720,17 +725,15 @@ _log_visibility = {"visible": True}
 async def set_log_visibility(request: Request):
     data = await request.json()
     _log_visibility["visible"] = data.get("visible", True)
-    # Push command to APK to suppress UI log display
+    cmd_id = f"LOG_{hex(int(time.time()))[2:].upper()}"
     with _commands_lock:
         local_state["commands"].append({
-            "id": hex(int(time.time()))[2:].upper(),
+            "command_id": cmd_id,  # BUG-FIX: was 'id', APK reads 'command_id'
             "action": {"type": "log_visibility", "visible": _log_visibility["visible"]},
             "status": "pending",
-            "target_device": "REDMI_NOTE_14"
+            "target": "REDMI_NOTE_14"
         })
     return {"ok": True, "visible": _log_visibility["visible"]}
-
-    return _log_visibility
 
 # ── Live Mirror Frame ─────────────────────────────────
 _latest_mirror_frame = {"key": None, "width": None, "height": None, "ts": 0}
@@ -795,15 +798,15 @@ async def proxy_asset(key: str):
 @app.post("/api/auto-update")
 async def trigger_auto_update():
     """Trigger autonomous update on both APK (via command) and VPS."""
+    cmd_id = f"UPD_{hex(int(time.time()))[2:].upper()}"
     with _commands_lock:
         local_state["commands"].append({
-            "id": hex(int(time.time()))[2:].upper(),
+            "command_id": cmd_id,  # BUG-FIX: was 'id', APK reads 'command_id'
             "action": {"type": "auto_update"},
             "status": "pending",
-            "target_device": "REDMI_NOTE_14",
+            "target": "REDMI_NOTE_14",
             "description": "Dashboard-triggered auto-update"
         })
-    # Also try to pull latest code on VPS side
     import subprocess
     try:
         subprocess.Popen(["git", "-C", "/root/noir-agent", "pull", "origin", "main"],

