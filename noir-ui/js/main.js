@@ -271,15 +271,46 @@ async function sendCmd(type, extra = {}) {
             body: JSON.stringify({ target_device: 'REDMI_NOTE_14', action: { type, ...extra }, description: `Dashboard→${type}` })
         });
         const d = await r.json();
-        addLog('MESH', `Queued: ${(d.command_id || '').substring(0, 8)}`);
+        const cid = d.command_id;
+        if (!cid) return d;
         
-        // BUG#5 FIX: Handle GPS response — display in log and chat
-        if (type === 'location' && d.data) {
-            const { lat, lon, accuracy } = d.data;
-            addLog('GPS', `📍 Location: ${lat}, ${lon} (±${accuracy}m)`);
-            const mapsUrl = `https://maps.google.com/?q=${lat},${lon}`;
-            addChatBubble('ai', `📍 <b>GPS Trace Result:</b><br>Lat: ${lat}<br>Lon: ${lon}<br>Accuracy: ±${accuracy}m<br><a href="${mapsUrl}" target="_blank" style="color:var(--accent)">📌 Open in Maps</a>`);
-        }
+        addLog('MESH', `Queued: ${cid.substring(0, 8)}`);
+
+        // Wait for the mobile agent to execute and return result
+        let attempts = 0;
+        const pollResult = setInterval(async () => {
+            attempts++;
+            if (attempts > 12) { // 36 seconds timeout
+                clearInterval(pollResult);
+                addLog('ERROR', `Timeout waiting for ${type} result.`);
+                return;
+            }
+            try {
+                const resFetch = await fetch(`/api/command/result/${cid}`);
+                if (!resFetch.ok) return;
+                const cmdState = await resFetch.json();
+                
+                if (cmdState.status === 'done' && cmdState.result) {
+                    clearInterval(pollResult);
+                    const out = cmdState.result;
+                    
+                    if (out.success) {
+                        addLog('SUCCESS', out.output || `${type} completed.`);
+                        
+                        // Handle GPS specifically
+                        if (type === 'location' && out.data) {
+                            const { lat, lon, accuracy } = out.data;
+                            addLog('GPS', `📍 Location: ${lat}, ${lon} (±${accuracy}m)`);
+                            const mapsUrl = `https://maps.google.com/?q=${lat},${lon}`;
+                            addChatBubble('system', `📍 <b>GPS Trace Result:</b><br>Lat: ${lat}<br>Lon: ${lon}<br>Accuracy: ±${accuracy}m<br><a href="${mapsUrl}" target="_blank" style="color:var(--accent)">📌 Open in Maps</a>`);
+                        }
+                    } else {
+                        addLog('ERROR', out.error || `${type} failed.`);
+                    }
+                }
+            } catch (err) {}
+        }, 3000); // Check every 3s
+        
         return d;
     } catch (e) { addLog('ERROR', `Command failed: ${e.message}`); }
 }

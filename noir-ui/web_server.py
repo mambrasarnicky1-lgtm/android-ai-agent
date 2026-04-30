@@ -155,9 +155,14 @@ async def agent_poll(request: Request, device_id: str = "REDMI_NOTE_14", client_
     except: pass
 
     # VPS-04 FIX: Gunakan lock saat membaca dan memodifikasi commands list
+    # DO NOT DELETE immediately, so we can store the result!
+    dispatched = []
     with _commands_lock:
-        cmds = [c for c in local_state["commands"] if c.get("target", "REDMI_NOTE_14") == device_id]
-        local_state["commands"] = [c for c in local_state["commands"] if c not in cmds]
+        for c in local_state["commands"]:
+            if c.get("target", "REDMI_NOTE_14") == device_id and c.get("status", "queued") == "queued":
+                c["status"] = "dispatched"
+                dispatched.append(c)
+    cmds = dispatched
 
     # Also try to forward to Cloudflare and merge commands
     if await _cf_reachable_async():
@@ -360,13 +365,25 @@ async def api_command(request: Request):
         with _commands_lock:
             local_state["commands"].append({
                 "command_id": cmd_id,
+                "status": "queued",
                 "action": action,
                 "target": target_device,
-                "queued_at": time.time()
+                "queued_at": time.time(),
+                "result": None
             })
         return {"status": "queued_direct_vps", "command_id": cmd_id}
     except Exception as e:
         return {"error": str(e)}
+
+@app.get("/api/command/result/{cmd_id}")
+async def api_command_result(cmd_id: str):
+    """Allow dashboard to poll for the result of a specific command."""
+    with _commands_lock:
+        for c in local_state["commands"]:
+            if c.get("command_id") == cmd_id:
+                return c
+    return {"status": "not_found"}
+
 
 @app.get("/api/assets")
 async def api_assets():
