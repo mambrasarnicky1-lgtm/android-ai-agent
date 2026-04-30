@@ -241,7 +241,10 @@ async def agent_upload(request: Request):
                 if b"Content-Disposition" in part and b'name="file"' in part:
                     if b"\r\n\r\n" in part:
                         headers_raw, file_body = part.split(b"\r\n\r\n", 1)
-                        file_data = file_body.rstrip(b"\r\n")
+                        if file_body.endswith(b"\r\n"):
+                            file_data = file_body[:-2]
+                        else:
+                            file_data = file_body
                         import re as _re
                         fn_match = _re.search(r'filename="([^"]+)"', headers_raw.decode("utf-8", errors="ignore"))
                         if fn_match:

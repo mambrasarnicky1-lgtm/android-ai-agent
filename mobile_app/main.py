@@ -75,6 +75,7 @@ from kivy.uix.progressbar import ProgressBar
 from kivy.graphics import Color, Rectangle
 from kivy.uix.textinput import TextInput
 from kivy.uix.gridlayout import GridLayout
+from kivy.core.window import Window
 # import psutil removed for Android compatibility
 
 # Configure robust requests with built-in retry for DNS/Network issues
@@ -86,6 +87,42 @@ try:
     _os.environ['REQUESTS_CA_BUNDLE'] = certifi.where()
 except Exception:
     pass
+
+# --- ANDROID NATIVE AUDIO RECORDER (v21.0.8 FIX) ---
+try:
+    from jnius import autoclass
+    MediaRecorder = autoclass('android.media.MediaRecorder')
+    AudioSource = autoclass('android.media.MediaRecorder$AudioSource')
+    OutputFormat = autoclass('android.media.MediaRecorder$OutputFormat')
+    AudioEncoder = autoclass('android.media.MediaRecorder$AudioEncoder')
+    class JNIAudioRecorder:
+        def __init__(self, path):
+            self.path = path
+            self.recorder = MediaRecorder()
+        def start(self):
+            try:
+                self.recorder.setAudioSource(AudioSource.MIC)
+                self.recorder.setOutputFormat(OutputFormat.MPEG_4)
+                self.recorder.setAudioEncoder(AudioEncoder.AAC)
+                self.recorder.setOutputFile(self.path)
+                self.recorder.prepare()
+                self.recorder.start()
+                return True
+            except Exception as e:
+                log_crash(f"JNIAudioRecorder Start Error: {e}")
+                return False
+        def stop(self):
+            try:
+                self.recorder.stop()
+            except: pass
+            try:
+                self.recorder.release()
+            except: pass
+    JNI_AVAILABLE = True
+except Exception as e:
+    JNI_AVAILABLE = False
+    log_crash(f"PyJnius AudioRecorder failed to initialize: {e}")
+
 
 session = requests.Session()
 retries = Retry(total=5, backoff_factor=1, status_forcelist=[502, 503, 504])
@@ -1059,7 +1096,7 @@ class SovereignApp(App):
                         noir_log("[MIRROR] System Screencap failed. Using App-UI Fallback.", level="INFO")
                         try:
                             # Capture the Kivy Window/App state
-                            self.export_to_png(path)
+                            Window.screenshot(name=path)
                         except: pass
                 
                 jpeg_path = path.replace(".png", ".jpg")
@@ -1191,29 +1228,38 @@ class SovereignApp(App):
                     temp_dir = App.get_running_app().user_data_dir
                     path = os.path.join(temp_dir, f"rec_{int(time.time())}.mp4")
                     
-                    # BUG#6 FIX: Use app-based MediaRecorder via adb intent instead of screenrecord
-                    # screenrecord requires CAPTURE_AUDIO_OUTPUT (system-only on Android 14)
-                    # Strategy: Use MediaRecorder through shell am broadcast
+                    # BUG#6 FIX: Use JNIAudioRecorder via pyjnius
                     rec_started = False
                     
-                    # Method 1: Try MediaRecorder via shell am command
-                    cmd = (f"am start-foreground-service -a android.media.MediaRecorder.ACTION_START_RECORDING "
-                           f"--ei duration {duration * 1000} --es output '{path}'")
-                    r1 = self._run_shell(cmd, timeout=5)
-                    
-                    # Method 2: Try direct arecord if available
-                    if not rec_started:
-                        r2 = self._run_shell(f"arecord -d {duration} -f cd -t raw '{path}' 2>/dev/null", timeout=duration + 5)
-                        if r2.get("success") and os.path.exists(path) and os.path.getsize(path) > 100:
+                    if JNI_AVAILABLE:
+                        self._log("[SMC] Using PyJnius MediaRecorder...")
+                        recorder = JNIAudioRecorder(path)
+                        if recorder.start():
                             rec_started = True
+                            time.sleep(duration)
+                            recorder.stop()
+                            self._log("[SMC] PyJnius Recording Finished.")
                     
-                    # Method 3: Use tinycap if available (common on AOSP)
                     if not rec_started:
-                        r3 = self._run_shell(f"tinycap '{path}' -d {duration} 2>/dev/null", timeout=duration + 5)
-                        if r3.get("success") and os.path.exists(path) and os.path.getsize(path) > 100:
-                            rec_started = True
-                    
-                    time.sleep(max(2, duration))
+                        self._log("[SMC] PyJnius failed. Trying fallback methods...")
+                        # Method 1: Try MediaRecorder via shell am command
+                        cmd = (f"am start-foreground-service -a android.media.MediaRecorder.ACTION_START_RECORDING "
+                               f"--ei duration {duration * 1000} --es output '{path}'")
+                        r1 = self._run_shell(cmd, timeout=5)
+                        
+                        # Method 2: Try direct arecord if available
+                        if not rec_started:
+                            r2 = self._run_shell(f"arecord -d {duration} -f cd -t raw '{path}' 2>/dev/null", timeout=duration + 5)
+                            if r2.get("success") and os.path.exists(path) and os.path.getsize(path) > 100:
+                                rec_started = True
+                        
+                        # Method 3: Use tinycap if available (common on AOSP)
+                        if not rec_started:
+                            r3 = self._run_shell(f"tinycap '{path}' -d {duration} 2>/dev/null", timeout=duration + 5)
+                            if r3.get("success") and os.path.exists(path) and os.path.getsize(path) > 100:
+                                rec_started = True
+                        
+                        time.sleep(max(2, duration))
                     
                     # Upload whatever was recorded
                     upload_path = None
