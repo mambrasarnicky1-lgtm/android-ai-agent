@@ -142,6 +142,9 @@ function startMirror() {
     document.getElementById('mirror-placeholder').style.display = 'none';
     frameCount = 0;
     const fpsEl = document.getElementById('mirror-fps');
+    
+    // Command the agent to start streaming
+    sendCmd('mirror_start');
 
     // FPS counter
     fpsTimer = setInterval(() => {
@@ -181,6 +184,9 @@ function stopMirror() {
     document.getElementById('mirror-live-dot').style.display = 'none';
     document.getElementById('mirror-placeholder').style.display = 'flex';
     addLog('SYSTEM', 'Live Mirror stopped.');
+    
+    // Command the agent to stop streaming
+    sendCmd('mirror_stop');
 }
 
 function zoomMirror(delta) {
