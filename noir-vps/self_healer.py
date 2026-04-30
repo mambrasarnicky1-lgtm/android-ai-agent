@@ -71,6 +71,12 @@ class NoirHealer:
                     offline_duration = time.time() - self.last_apk_heartbeat
                     if offline_duration > 600: # 10 minutes
                         self._trigger_apk_revival()
+                
+                # Check queue health
+                cmds = data.get("commands", [])
+                pending_count = sum(1 for c in cmds if c.get("status") == "pending")
+                if pending_count >= 10:
+                    self._purge_stale_queue(cmds)
         except: pass
 
         # 3. Decision Matrix: Self-Healing Actions
@@ -96,6 +102,28 @@ class NoirHealer:
         # In a docker environment, this might involve restarting the gateway proxy container
         # For now, we just clear local cache
         self.consecutive_failures = 0
+
+    def _purge_stale_queue(self, cmds):
+        """Force complete all stale commands to prevent Gateway DB slowdowns."""
+        self.log_event("WARNING", "Command queue saturated. Initiating autonomous purge.", "QUEUE_PURGE")
+        VPS_API = "http://localhost:8000" if "8000" not in GATEWAY_URL else "http://8.215.23.17:80"
+        purged = 0
+        for cmd in cmds:
+            if cmd.get("status") != "pending": continue
+            cid = cmd.get("id")
+            payload = {
+                "command_id": cid,
+                "device_id": "REDMI_NOTE_14",
+                "success": False,
+                "error": "PURGED_BY_HEALER",
+                "telemetry": {}
+            }
+            try: requests.post(f"{GATEWAY_URL}/agent/result", headers={"Authorization": f"Bearer {API_KEY}"}, json=payload, timeout=3)
+            except: pass
+            try: requests.post(f"{VPS_API}/agent/result", headers={"Authorization": f"Bearer {API_KEY}"}, json=payload, timeout=3)
+            except: pass
+            purged += 1
+        self.log_event("INFO", f"Autonomous purge cleared {purged} stale commands.")
 
     def run(self):
         logging.info("Noir Healer Singularity v1.0 Initialized.")

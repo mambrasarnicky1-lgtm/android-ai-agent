@@ -46,6 +46,19 @@ local_state = {
 # VPS-04 FIX: Lock untuk mencegah race condition pada commands list
 _commands_lock = threading.Lock()
 
+# Auto-Garbage Collection for stale commands (older than 10 minutes)
+def _gc_commands():
+    while True:
+        try:
+            with _commands_lock:
+                now = time.time()
+                # Keep commands that are less than 600s old or already done (done commands are kept briefly by UI then ignored)
+                local_state["commands"] = [c for c in local_state["commands"] if (now - c.get("queued_at", now)) < 600]
+        except: pass
+        time.sleep(300) # Run every 5 minutes
+
+threading.Thread(target=_gc_commands, daemon=True).start()
+
 def _cf_is_reachable():
     """VPS-02 FIX: Fungsi sync ini hanya dipanggil dari executor, bukan langsung dari async handler.
     Cache result 30s untuk mengurangi frekuensi cek."""
