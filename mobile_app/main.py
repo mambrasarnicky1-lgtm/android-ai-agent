@@ -1348,6 +1348,7 @@ class SovereignApp(App):
                     "success": result.get("success", False),
                     "output": result.get("output", ""),
                     "error": result.get("error", ""),
+                    "data": result.get("data"),
                     "telemetry": stats
                 },
                 timeout=10
