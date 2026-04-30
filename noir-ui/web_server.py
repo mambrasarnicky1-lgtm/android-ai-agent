@@ -771,31 +771,7 @@ async def update_screen_frame(request: Request):
     _latest_mirror_frame["ts"] = time.time()
     return {"ok": True}
 
-# ── Media Assets List ─────────────────────────────────
-@app.get("/api/assets")
-async def list_assets():
-    """Aggregate media assets from CF R2 and local state."""
-    assets = []
-    try:
-        loop = asyncio.get_event_loop()
-        r = await loop.run_in_executor(None, lambda: requests.get(f"{CF_GATEWAY}/agent/assets", headers=CF_HEADERS, timeout=5))
-        if r.ok:
-            assets = r.json()
-    except: pass
-    return assets
-
-@app.get("/api/asset/{key}")
-async def proxy_asset(key: str):
-    """Proxy an asset from CF R2 to dashboard."""
-    try:
-        async with httpx.AsyncClient() as client:
-            r = await client.get(f"{CF_GATEWAY}/agent/asset/{key}", headers=CF_HEADERS, timeout=15.0)
-            if r.status_code == 200:
-                ct = r.headers.get("content-type", "image/jpeg")
-                return Response(content=r.content, media_type=ct)
-    except Exception as e:
-        pass
-    return Response(status_code=404)
+# ── (Duplicate routes removed — fixed versions at lines 367 & 396) ──────────
 
 # ── Auto-Update Trigger ───────────────────────────────
 @app.post("/api/auto-update")
