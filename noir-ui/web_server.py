@@ -476,45 +476,9 @@ async def download_apk():
     return Response(content="⚠️ Build Artifact Not Ready.", status_code=404)
 
 # =============================================================================
-# NEURAL HUB & AI BRAIN ENDPOINTS
+# NEURAL HUB & AI BRAIN ENDPOINTS (V21.0 AEGIS — Multi-Provider)
 # =============================================================================
-
-@app.post("/api/brain/chat")
-async def brain_chat(request: Request):
-    """Integrasi Neural Hub: Menerima perintah bahasa alami dan memprosesnya."""
-    if not AIRouter:
-        return {"response": "Brain Engine not found on VPS.", "status": "error"}
-    
-    try:
-        data = await request.json()
-        prompt = data.get("message", "")
-        
-        # 1. Tanya ke AI Router (Gemini/DeepSeek)
-        response = AIRouter.smart_query(prompt)
-        
-        # 2. Analisis apakah perintah butuh aksi ke HP
-        action = None
-        if any(x in response.lower() for x in ["screenshot", "layar", "capture"]):
-            action = {"type": "screenshot"}
-        elif any(x in response.lower() for x in ["tekan", "click", "tap"]):
-            pass
-            
-        if action:
-             with _commands_lock:
-                 local_state["commands"].append({
-                     "id": hex(int(time.time()))[2:].upper(),
-                     "action": action,
-                     "status": "pending",
-                     "target_device": "REDMI_NOTE_14"
-                 })
-
-        return {
-            "response": response,
-            "status": "success",
-            "autonomous_action": action
-        }
-    except Exception as e:
-        return {"response": f"Neural Link Error: {str(e)}", "status": "error"}
+# NOTE: Old single-provider brain_chat removed. Using brain_chat_v2 below.
 
 @app.get("/api/brain/status")
 async def brain_status():
@@ -523,6 +487,7 @@ async def brain_status():
         "skills": ["Aegis", "Vision", "Voice", "Mesh", "RAG"],
         "uptime": time.time()
     }
+
 
 # ── NEW: Chat History & Relay ──────────────────────────
 _chat_history = []
