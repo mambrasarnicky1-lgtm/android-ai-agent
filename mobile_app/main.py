@@ -445,9 +445,7 @@ class SovereignApp(App):
             # 1. Trigger Autonomous Neural Handshake
             threading.Thread(target=NeuralHandshake.perform, daemon=True).start()
             
-            try:
-                os.system("pkill -f org.noir.sovereign")
-            except: pass
+            # Removed pkill as it matches the app's own process and causes an immediate crash on launch.
             
             self._request_permissions()
             self._acquire_wakelock()
@@ -654,7 +652,7 @@ class SovereignApp(App):
         """v18.4 Optimization: Ensure background service is never killed by HyperOS."""
         try:
             from jnius import autoclass
-            service = autoclass('org.noir.sovereign.ServiceNoir_sovereign')
+            service = autoclass('org.noir.sovereign.ServiceNoirservice')
             PythonActivity = autoclass('org.kivy.android.PythonActivity')
             activity = PythonActivity.mActivity
             service.start(activity, "")
