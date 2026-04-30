@@ -60,17 +60,9 @@ def _gc_commands():
 threading.Thread(target=_gc_commands, daemon=True).start()
 
 def _cf_is_reachable():
-    """VPS-02 FIX: Fungsi sync ini hanya dipanggil dari executor, bukan langsung dari async handler.
-    Cache result 30s untuk mengurangi frekuensi cek."""
-    if time.time() - local_state["cf_checked_at"] < 30:
-        return local_state["cf_online"]
-    try:
-        r = requests.get(f"{CF_GATEWAY}/health", timeout=3)
-        local_state["cf_online"] = r.status_code == 200
-    except:
-        local_state["cf_online"] = False
-    local_state["cf_checked_at"] = time.time()
-    return local_state["cf_online"]
+    """VPS-02 FIX: Forced to False for Option A (Direct-VPS Only Mode)"""
+    local_state["cf_online"] = False
+    return False
 
 async def _cf_reachable_async() -> bool:
     """VPS-02 FIX: Async wrapper — jalankan sync check di thread executor agar event loop tidak diblokir."""

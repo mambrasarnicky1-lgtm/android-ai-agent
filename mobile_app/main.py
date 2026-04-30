@@ -73,6 +73,8 @@ from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.button import Button
 from kivy.uix.progressbar import ProgressBar
 from kivy.graphics import Color, Rectangle
+from kivy.uix.textinput import TextInput
+from kivy.uix.gridlayout import GridLayout
 # import psutil removed for Android compatibility
 
 # Configure robust requests with built-in retry for DNS/Network issues
@@ -90,9 +92,9 @@ retries = Retry(total=5, backoff_factor=1, status_forcelist=[502, 503, 504])
 session.mount('https://', HTTPAdapter(max_retries=retries))
 
 # --- CONFIG (Unified Standard v17.5 OMEGA-MESH) ---
-_BASE_GATEWAY = os.environ.get("NOIR_GATEWAY_URL", "https://noir-agent-gateway.si-umkm-ikm-pbd.workers.dev")
+_BASE_GATEWAY = os.environ.get("NOIR_GATEWAY_URL", "http://8.215.23.17")
 VPS_IP = os.environ.get("NOIR_VPS_IP", "8.215.23.17")
-# Priority order: Cloudflare → VPS Direct (port 80/Dashboard) → VPS alt ports
+# Priority order: VPS Direct
 FALLBACKS = [
     _BASE_GATEWAY,
     f"http://{VPS_IP}",
@@ -360,65 +362,128 @@ class SovereignCoreScreen(Screen):
     """The AI Entity Interface for HyperOS Control."""
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        layout = FloatLayout()
-        with layout.canvas.before:
+        self.layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
+        with self.layout.canvas.before:
             Color(0.02, 0.02, 0.05, 1)
-            Rectangle(size=(2000, 2000), pos=(0,0))
+            self.rect = Rectangle(size=(2000, 2000), pos=(0,0))
             
         self.stats_label = Label(
-            text="[b]NOIR SOVEREIGN CORE[/b]\nAnalyzing HyperOS...",
-            markup=True, font_size='18sp', halign='center', color=(0, 0.82, 1, 1),
-            pos_hint={'center_x': 0.5, 'center_y': 0.7}
+            text="[b]NOIR SOVEREIGN CORE[/b]\nSystem: [color=00ff00]STABLE[/color]",
+            markup=True, font_size='16sp', halign='center', color=(0, 0.82, 1, 1), size_hint_y=None, height=50
         )
-        layout.add_widget(self.stats_label)
+        self.layout.add_widget(self.stats_label)
         
-        self.cpu_bar = ProgressBar(max=100, value=0, pos_hint={'center_x': 0.5, 'center_y': 0.5}, size_hint=(0.8, None))
-        layout.add_widget(self.cpu_bar)
+        # --- CHAT FEATURE ---
+        chat_box = BoxLayout(orientation='horizontal', size_hint_y=None, height=40, spacing=5)
+        self.chat_input = TextInput(hint_text="Chat with Noir Brain...", multiline=False, background_color=(0.1, 0.1, 0.15, 1), foreground_color=(1, 1, 1, 1))
+        chat_btn = Button(text="SEND", size_hint_x=0.3, background_color=(0, 0.6, 1, 1))
+        chat_btn.bind(on_press=self.send_chat)
+        chat_box.add_widget(self.chat_input)
+        chat_box.add_widget(chat_btn)
+        self.layout.add_widget(chat_box)
         
-        # Skill Matrix Visualization
-        self.skill_label = Label(
-            text="[b]EMBEDDED SKILL MATRIX[/b]\n"
-                 "🛡️ Aegis: [color=00ff00]ACTIVE[/color]\n"
-                 "👁️ Vision: [color=00ff00]ARMED[/color]\n"
-                 "🔊 Voice: [color=00ff00]READY[/color]\n"
-                 "🧬 Mesh: [color=00ff00]SYNCED[/color]",
-            markup=True, font_size='14sp', halign='center',
-            pos_hint={'center_x': 0.5, 'center_y': 0.4}
-        )
-        layout.add_widget(self.skill_label)
+        # --- PC CONTROL ---
+        pc_box = BoxLayout(orientation='horizontal', size_hint_y=None, height=40, spacing=5)
+        self.pc_input = TextInput(hint_text="PC Cmd via USB/VPS...", multiline=False, background_color=(0.1, 0.1, 0.15, 1), foreground_color=(1, 1, 1, 1))
+        pc_btn = Button(text="EXEC PC", size_hint_x=0.3, background_color=(0.8, 0.2, 0, 1))
+        pc_btn.bind(on_press=self.send_pc_cmd)
+        pc_box.add_widget(self.pc_input)
+        pc_box.add_widget(pc_btn)
+        self.layout.add_widget(pc_box)
         
-        # Voice Command Button
-        voice_btn = Button(
-            text="🎤 SPEAK TO NOIR",
-            size_hint=(0.6, 0.1),
-            pos_hint={'center_x': 0.5, 'center_y': 0.3},
-            background_color=(0, 0.8, 0.5, 1)
-        )
-        voice_btn.bind(on_press=self.start_voice_command)
-        layout.add_widget(voice_btn)
+        # --- SYSTEM ACTIONS GRID ---
+        grid = GridLayout(cols=2, spacing=5, size_hint_y=None, height=120)
         
-        back_btn = Button(text="RETURN TO TERMINAL", size_hint=(0.6, 0.08), pos_hint={'center_x': 0.5, 'center_y': 0.15}, background_color=(0, 0.5, 1, 1))
+        btn_cam = Button(text="Capture Screen", background_color=(0, 0.5, 0.5, 1))
+        btn_cam.bind(on_press=lambda x: self.trigger_action("screenshot"))
+        
+        btn_mirror = Button(text="Toggle Mirror", background_color=(0, 0.5, 0.5, 1))
+        btn_mirror.bind(on_press=self.toggle_mirror)
+        
+        btn_voice = Button(text="Voice Link", background_color=(0, 0.8, 0.5, 1))
+        btn_voice.bind(on_press=self.start_voice_command)
+        
+        btn_stealth = Button(text="Toggle Stealth", background_color=(0.3, 0.3, 0.3, 1))
+        btn_stealth.bind(on_press=self.toggle_stealth_ui)
+        
+        grid.add_widget(btn_cam)
+        grid.add_widget(btn_mirror)
+        grid.add_widget(btn_voice)
+        grid.add_widget(btn_stealth)
+        self.layout.add_widget(grid)
+        
+        # Log feedback
+        self.feedback = Label(text="Awaiting orders...", font_size='12sp', color=(0.5, 0.5, 0.5, 1))
+        self.layout.add_widget(self.feedback)
+        
+        back_btn = Button(text="RETURN TO DASHBOARD", size_hint_y=None, height=40, background_color=(0, 0.3, 0.6, 1))
         back_btn.bind(on_press=lambda x: setattr(App.get_running_app().root, 'current', 'dashboard'))
-        layout.add_widget(back_btn)
+        self.layout.add_widget(back_btn)
         
-        self.add_widget(layout)
-        Clock.schedule_interval(self.update_stats, 2)
+        self.add_widget(self.layout)
+
+    def send_chat(self, instance):
+        msg = self.chat_input.text.strip()
+        if not msg: return
+        self.feedback.text = f"Sent: {msg}"
+        self.chat_input.text = ""
+        def _send():
+            try:
+                r = session.post(f"{GATEWAY_URL}/api/brain/chat", json={"prompt": msg, "device_id": DEVICE_ID}, timeout=10)
+                if r.status_code == 200:
+                    resp = r.json().get("response", "")
+                    Clock.schedule_once(lambda dt: setattr(self.feedback, 'text', f"AI: {resp[:50]}..."), 0)
+            except Exception as e:
+                Clock.schedule_once(lambda dt: setattr(self.feedback, 'text', f"Err: {str(e)[:30]}"), 0)
+        threading.Thread(target=_send, daemon=True).start()
+
+    def send_pc_cmd(self, instance):
+        cmd = self.pc_input.text.strip()
+        if not cmd: return
+        self.feedback.text = f"PC Exec: {cmd}"
+        self.pc_input.text = ""
+        def _send():
+            try:
+                enc_cmd = SecureVault.encrypt(cmd)
+                payload = {
+                    "target_device": "NOIR_PC_MASTER",
+                    "action": {"type": "pc_shell", "cmd": enc_cmd},
+                    "description": f"PC Command from Phone"
+                }
+                r = session.post(f"{GATEWAY_URL}/agent/command", json=payload, headers={"Authorization": f"Bearer {API_KEY}"}, timeout=5)
+                if r.status_code == 200:
+                    Clock.schedule_once(lambda dt: setattr(self.feedback, 'text', "PC Command Queued."), 0)
+            except Exception as e:
+                pass
+        threading.Thread(target=_send, daemon=True).start()
+
+    def trigger_action(self, atype):
+        self.feedback.text = f"Action triggered: {atype}"
+        # Execute locally by enqueuing to main app's internal executor
+        app = App.get_running_app()
+        if hasattr(app, '_process_command'):
+            # Simulate a command object
+            cmd = {"id": f"UI_{int(time.time())}", "action": {"type": atype}}
+            threading.Thread(target=app._process_command, args=(cmd,), daemon=True).start()
+
+    def toggle_mirror(self, instance):
+        app = App.get_running_app()
+        if hasattr(app, '_mirror_active'):
+            app._mirror_active = not app._mirror_active
+            self.feedback.text = f"Mirror Active: {app._mirror_active}"
+            if app._mirror_active:
+                threading.Thread(target=app._mirror_loop, daemon=True).start()
+                
+    def toggle_stealth_ui(self, instance):
+        app = App.get_running_app()
+        if hasattr(app, 'toggle_stealth'):
+            app.is_stealth = not getattr(app, 'is_stealth', False)
+            app.toggle_stealth(app.is_stealth)
+            self.feedback.text = f"Stealth Mode: {app.is_stealth}"
 
     def start_voice_command(self, instance):
-        VoiceEngine.speak("Sovereign Voice Link Active. I am listening, Commander.")
-        # Trigger STT via Shizuku/Android intent if needed
-        noir_log("[VOICE] Listener activated.")
-
-    def update_stats(self, dt):
-        stats = {"cpu": 15.0, "ram": 45.0} # Fallback static metrics for Android compatibility
-        self.cpu_bar.value = stats['cpu']
-        self.stats_label.text = (
-            f"[b]NOIR SOVEREIGN CORE[/b]\n"
-            f"HyperOS Engine: [color=00ff00]STABLE[/color]\n\n"
-            f"CPU Usage: {stats['cpu']}%\n"
-            f"Memory: {stats['ram']}%\n"
-            f"Security: [color=00d2ff]ENCRYPTED[/color]"
-        )
+        VoiceEngine.speak("Sovereign Voice Link Active. Ready.")
+        self.feedback.text = "Voice link active."
 
 class SovereignApp(App):
     """NOIR SOVEREIGN MOBILE CORE - Kivy Application"""
@@ -1053,11 +1118,6 @@ class SovereignApp(App):
                 state = params.get("enabled", False)
                 Clock.schedule_once(lambda dt: self.toggle_stealth(state), 0)
                 result = {"success": True, "output": f"Stealth Mode: {'ON' if state else 'OFF'}"}
-
-            elif atype == "kill-telegram":
-                # Logic to kill the telegram bot on the VPS via a signal or shell
-                os.system("pkill -f telegram_bot.py")
-                result = {"success": True, "output": "Telegram Bridge Terminated."}
 
             elif atype == "ping":
                 result = {"success": True, "output": f"PONG from {DEVICE_ID}"}

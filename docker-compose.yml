@@ -55,44 +55,6 @@ services:
       retries: 3
       start_period: 60s
 
-  noir-telegram:
-    image: noir-agent-base:latest
-    container_name: noir-telegram
-    restart: always
-    depends_on:
-      - noir-base
-    volumes:
-      - ./.env:/app/.env
-      - ./noir-vps:/app/noir-vps
-    networks:
-      - noir-net
-    command: python noir-vps/telegram_bot.py
-
-  noir-researcher:
-    image: noir-agent-base:latest
-    container_name: noir-researcher
-    restart: always
-    depends_on:
-      - noir-base
-    volumes:
-      - ./.env:/app/.env
-      - ./noir-vps:/app/noir-vps
-    networks:
-      - noir-net
-    command: python noir-vps/autonomous_researcher.py
-
-  noir-healer:
-    image: noir-agent-base:latest
-    container_name: noir-healer
-    restart: always
-    depends_on:
-      - noir-base
-    volumes:
-      - ./.env:/app/.env
-      - ./noir-vps:/app/noir-vps
-    networks:
-      - noir-net
-    command: python noir-vps/self_healer.py
 
 networks:
   noir-net:

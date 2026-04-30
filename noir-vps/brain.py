@@ -505,71 +505,16 @@ class SelfEvolutionEngine:
         # Placeholder for manual trigger
 
 def run():
-    log.info("🧠 Noir Agent Brain v16.2 [ZEN-MODE] — Starting...")
+    log.info("🧠 Noir Agent Brain v21.0 [ON-DEMAND MODE] — Starting...")
     cycle = 0
     while True:
         cycle += 1
-        log.info(f"── Brain Prime v16.2 [ZEN-MODE] Cycle #{cycle} ──")
-        
-        # 0. Neural Context Retention (v17.5)
-        memory.record_interaction("SYSTEM_HEARTBEAT", f"Cycle #{cycle}", "Stable", {"readiness": "100%"})
-        
-        # 1. Connectivity & Sentinel Health Check
-        try:
-            if not SelfUpdateEngine.health_check_gateway():
-                log.warning("⚠️ Gateway Connection Latency Detected.")
-            
-            # Phase 2: Autonomous Vision Scan
-            VisionSentinel.run_sentinel_cycle()
-        except: pass
-        
-        # 3. Sovereign Evolution Cycle (v18.5 OMEGA)
-        if cycle % 60 == 0: # Every hour
-            log.info("🧬 Brain: Consulting Researcher for Evolution Proposals...")
-            try:
-                from evolution_bridge import EvolutionBridge
-                # Autonomous Code Improvement logic here
-                # Example: EvolutionBridge.trigger_dashboard_evolution()
-            except: pass
-        
-        # 4. Neural Activity Logging
-        log.info(f"🧠 Cycle #{cycle} Complete. Brain State: STABLE.")
-        
-        # 2. Automated Learning & Evolution (v17.2 OMEGA)
-        try:
-            # Refresh knowledge every 20 cycles (~20 mins)
-            if cycle % 20 == 0:
-                LearningEngine.knowledge_refresh()
-            
-            # Generate Evolution Report every 120 cycles (~2 hours) to save tokens
-            if cycle % 120 == 0:
-                SelfEvolutionEngine.generate_progress_report()
-        except Exception as e:
-            log.error(f"Evolution Loop Error: {e}")
+        # Brain now operates in pure on-demand mode.
+        # Autonomous background tasks, polling, and token-draining routines 
+        # have been permanently disabled to guarantee system stability.
+        log.info(f"── Brain Prime v21.0 [ON-DEMAND MODE] Cycle #{cycle} ──")
+        time.sleep(300)  # Wake up every 5 minutes just to log keep-alive
 
-        # 3. Proactive Scene Intelligence (v17.2)
-        try:
-            summary_resp = requests.get(f"{GATEWAY}/agent/summary", headers=HEADERS, timeout=10)
-            summary = summary_resp.json()
-            last_ss = summary.get("agent", {}).get("last_screenshot")
-            
-            # Using global storage for analyzed state
-            if not hasattr(run, "_last_analyzed_ss"): run._last_analyzed_ss = ""
-            
-            if last_ss and last_ss != run._last_analyzed_ss:
-                log.info(f"👁️ Proactive Vision: Analyzing scene {last_ss}...")
-                analysis = VisionEngine.analyze_screenshot(last_ss, "Analyze this Android screen. Is there any sensitive data, security risks, or important notifications? Respond briefly.")
-                
-                if analysis and any(word in analysis.lower() for word in ["risk", "warning", "important", "danger"]):
-                    msg = f"⚠️ **PROACTIVE ALERT**: {analysis}"
-                    PhasedLearning.send_telegram(msg, important=True)
-                    # Record risk detection to memory
-                    memory.record_interaction("VISION_ALERT", f"Scene {last_ss}", analysis, {"risk_level": "HIGH"})
-                
-                run._last_analyzed_ss = last_ss
-        except: pass
-
-        time.sleep(60)
 
 if __name__ == "__main__":
     run()

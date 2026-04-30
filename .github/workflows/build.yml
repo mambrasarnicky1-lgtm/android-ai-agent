@@ -58,9 +58,9 @@ jobs:
         env:
           JAVA_HOME: ${{ env.JAVA_HOME_17_X64 }}
           P4A_RELEASE_KEYSTORE: "${{ github.workspace }}/noir_sovereign.keystore"
-          P4A_RELEASE_KEYSTORE_PASSWD: "NoirSovereign#2026!"
-          P4A_RELEASE_KEYALIAS_PASSWD: "NoirSovereign#2026!"
-          P4A_RELEASE_KEYALIAS: "noir_smc"
+          P4A_RELEASE_KEYSTORE_PASSWD: "#Nicolay1992"
+          P4A_RELEASE_KEYALIAS_PASSWD: "#Nicolay1992"
+          P4A_RELEASE_KEYALIAS: "Nicolay_Noir_Sovereign"
 
       - name: Upload Release Artifacts
         uses: actions/upload-artifact@v4

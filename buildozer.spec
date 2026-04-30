@@ -24,6 +24,14 @@ android.release_artifact = apk
 android.gradle_args = --stacktrace --info -Dorg.gradle.jvmargs=-Xmx4096m
 android.meta_data = moe.shizuku.client.V3_SUPPORT=true
 
+# --- HYPEROS & RELEASE STABILITY FIXES ---
+# Wajib untuk mem-bypass blokir Android 14 terhadap URL HTTP (Direct-VPS)
+android.manifest.application_attributes = android:usesCleartextTraffic="true"
+android.allow_backup = False
+
+# Auto-Sign configuration (Jika menggunakan environment variables nanti)
+# P4A_RELEASE_KEYSTORE, P4A_RELEASE_KEYALIAS, P4A_RELEASE_KEYSTORE_PASSWD
+
 [buildozer]
 log_level = 2
 warn_on_root = 1
