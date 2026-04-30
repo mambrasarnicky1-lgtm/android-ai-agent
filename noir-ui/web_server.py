@@ -210,45 +210,63 @@ async def agent_result(request: Request):
         return {"status": "error", "error": str(e)}
 
 @app.post("/agent/upload")
-async def agent_upload(request: Request):
-    """VPS-03 FIX: Proxy to Cloudflare R2, with Content-Type forwarding for proper multipart parsing."""
+async def agent_upload(request: Request, file: UploadFile = File(None)):
+    """
+    FIXED v21.0.3:
+    - BUG#3 FIX: Use FastAPI UploadFile for correct multipart parsing (not raw body)
+    - BUG#1 FIX: Detect file type (image/audio/video) and save metadata properly
+    - BUG#4 FIX: Auto-update _latest_mirror_frame on every image upload
+    """
     device_id = request.query_params.get("device_id", "REDMI_NOTE_14")
-    body = await request.body()
-    # BUG-FIX: Must forward the original Content-Type (multipart/form-data; boundary=...)
-    # Without this, Cloudflare cannot parse the file from the multipart body.
-    content_type = request.headers.get("content-type", "application/octet-stream")
+    
+    ss_dir = os.path.join(BASE_DIR, "screenshots")
+    os.makedirs(ss_dir, exist_ok=True)
+    
     try:
-        if await _cf_reachable_async():
-            async with httpx.AsyncClient() as client:
-                r = await client.post(
-                    f"{CF_GATEWAY}/agent/upload?device_id={device_id}",
-                    headers={"Authorization": f"Bearer {CF_KEY}", "Content-Type": content_type},
-                    content=body, timeout=20.0)
-                result = r.json()
-                if result.get("key"):
-                    if device_id not in local_state["agents"]:
-                        local_state["agents"][device_id] = {}
-                    local_state["agents"][device_id]["last_screenshot"] = result["key"]
-                return result
-    except Exception as e:
-        pass  # Fallthrough to local storage
-
-    # VPS-03 FIX: Local fallback — simpan ke disk VPS
-    try:
-        ss_dir = os.path.join(BASE_DIR, "screenshots")
-        os.makedirs(ss_dir, exist_ok=True)
-        local_key = f"local_ss_{int(time.time())}.jpg"
+        # Parse multipart properly
+        form = await request.form()
+        upload = form.get("file")
+        if not upload:
+            return {"ok": False, "error": "No file field in request"}
+        
+        file_data = await upload.read()
+        original_name = upload.filename or "upload"
+        
+        # Detect type from filename extension
+        ext = original_name.rsplit(".", 1)[-1].lower() if "." in original_name else "jpg"
+        is_audio = ext in ("mp3", "m4a", "aac", "wav", "ogg", "mp4")
+        is_image = ext in ("jpg", "jpeg", "png", "webp")
+        
+        ts = int(time.time())
+        if is_audio:
+            local_key = f"audio_{ts}.{ext}"
+            media_type = "audio"
+        else:
+            local_key = f"shot_{ts}.jpg"
+            media_type = "image"
+        
         local_path = os.path.join(ss_dir, local_key)
         with open(local_path, "wb") as f:
-            f.write(body)
-        # Update agent state dengan local key
+            f.write(file_data)
+        
+        # Update agent state
         if device_id not in local_state["agents"]:
             local_state["agents"][device_id] = {}
-        local_state["agents"][device_id]["last_screenshot"] = f"local:{local_key}"
+        
+        if is_image:
+            # BUG#4 FIX: Auto-update mirror frame whenever an image is uploaded
+            local_state["agents"][device_id]["last_screenshot"] = local_key
+            _latest_mirror_frame["key"] = local_key
+            _latest_mirror_frame["ts"] = time.time()
+        
         local_state["agents"][device_id]["last_seen"] = time.time()
-        return {"ok": True, "key": f"local:{local_key}", "mode": "local_fallback"}
+        
+        print(f"[UPLOAD] {media_type} saved: {local_key} ({len(file_data)} bytes) from {device_id}")
+        return {"ok": True, "key": local_key, "type": media_type, "mode": "direct_vps"}
+    
     except Exception as e:
-        return {"ok": False, "error": f"CF unreachable + local fallback failed: {e}"}
+        print(f"[UPLOAD ERROR] {e}")
+        return {"ok": False, "error": str(e)}
 
 # =============================================================================
 # DASHBOARD API ENDPOINTS
@@ -348,70 +366,63 @@ async def api_command(request: Request):
 
 @app.get("/api/assets")
 async def api_assets():
+    """
+    FIXED v21.0.3:
+    - BUG#7 FIX: Detect type from file extension (image/audio/video)
+    - BUG#2 FIX: Return clean key (no 'local:' prefix) so URL /api/asset/{key} works directly
+    """
     all_assets = []
-    # 1. Get local assets
     ss_dir = os.path.join(BASE_DIR, "screenshots")
     if os.path.exists(ss_dir):
         import glob
-        local_files = [os.path.basename(f) for f in glob.glob(os.path.join(ss_dir, "*"))]
-        for f in local_files:
-            all_assets.append({"key": f"local:{f}", "type": "image", "ts": os.path.getmtime(os.path.join(ss_dir, f))})
-
-    # 2. Get Cloudflare assets
-    if await _cf_reachable_async():
-        try:
-            async with httpx.AsyncClient() as client:
-                r = await client.get(f"{CF_GATEWAY}/agent/assets", headers=CF_HEADERS, timeout=5.0)
-                cf_assets = r.json()
-                if isinstance(cf_assets, list):
-                    all_assets.extend(cf_assets)
-        except: pass
-    
-    # Sort by timestamp
+        for fpath in glob.glob(os.path.join(ss_dir, "*")):
+            fname = os.path.basename(fpath)
+            ext = fname.rsplit(".", 1)[-1].lower() if "." in fname else ""
+            if ext in ("mp3", "m4a", "aac", "wav", "ogg", "mp4"):
+                ftype = "audio"
+            elif ext in ("mp4", "webm"):
+                ftype = "video"
+            else:
+                ftype = "image"
+            all_assets.append({
+                "key": fname,  # BUG#2 FIX: clean key, no local: prefix
+                "type": ftype,
+                "ts": os.path.getmtime(fpath),
+                "size": os.path.getsize(fpath)
+            })
     all_assets.sort(key=lambda x: x.get("ts", 0), reverse=True)
     return all_assets
 
 @app.get("/api/asset/{key:path}")
 async def proxy_asset(key: str):
-    target_key = key
-    if key == "latest":
+    """
+    FIXED v21.0.3:
+    - BUG#2 FIX: Handle both clean key and 'local:' prefixed keys
+    - Always resolve to local screenshots dir first
+    """
+    # Strip local: prefix if present
+    clean_key = key.replace("local:", "").lstrip("/")
+    
+    if clean_key == "latest":
         agent = local_state["agents"].get("REDMI_NOTE_14", {})
-        target_key = agent.get("last_screenshot")
-        if not target_key:
-            if await _cf_reachable_async():
-                try:
-                    async with httpx.AsyncClient() as client:
-                        r = await client.get(f"{CF_GATEWAY}/agent/summary", headers=CF_HEADERS, timeout=5.0)
-                        target_key = r.json().get("agent", {}).get("last_screenshot")
-                except: pass
-        if not target_key:
+        clean_key = agent.get("last_screenshot", "")
+        clean_key = clean_key.replace("local:", "") if clean_key else ""
+        if not clean_key:
             return Response(status_code=404, content="No screenshot available")
     
-    # Handle local keys
-    if target_key.startswith("local:"):
-        local_filename = target_key.replace("local:", "")
-        local_path = os.path.join(BASE_DIR, "screenshots", local_filename)
-        if os.path.exists(local_path):
-            from fastapi.responses import FileResponse
-            return FileResponse(local_path)
-        return Response(status_code=404, content="Local asset not found")
-
-    # Handle remote keys
-    if await _cf_reachable_async():
-        try:
-            async with httpx.AsyncClient() as client:
-                r = await client.get(f"{CF_GATEWAY}/agent/asset/{target_key}", headers=CF_HEADERS, timeout=15.0)
-                if r.status_code == 200:
-                    return Response(content=r.content, media_type=r.headers.get("content-type", "image/png"))
-        except: pass
-    
-    # Final fallback: check if it's a local filename without prefix
-    local_path = os.path.join(BASE_DIR, "screenshots", target_key)
+    # Check local storage first (primary in Direct-VPS mode)
+    local_path = os.path.join(BASE_DIR, "screenshots", clean_key)
     if os.path.exists(local_path):
         from fastapi.responses import FileResponse
-        return FileResponse(local_path)
-
-    return Response(status_code=502, content="Asset unavailable")
+        ext = clean_key.rsplit(".", 1)[-1].lower()
+        media_type_map = {
+            "jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png",
+            "mp3": "audio/mpeg", "mp4": "audio/mp4", "m4a": "audio/mp4",
+            "wav": "audio/wav", "ogg": "audio/ogg"
+        }
+        return FileResponse(local_path, media_type=media_type_map.get(ext, "application/octet-stream"))
+    
+    return Response(status_code=404, content=f"Asset not found: {clean_key}")
 
 @app.get("/api/memory")
 async def get_memory():

