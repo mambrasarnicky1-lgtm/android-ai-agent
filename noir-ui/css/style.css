@@ -65,13 +65,28 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
 .tele-footer{display:flex;justify-content:space-between;margin-top:1rem}
 .mini-chip{font-size:.62rem;color:var(--accent);font-weight:700;letter-spacing:.5px}
 .mini-chip-dim{font-size:.62rem;color:var(--dim)}
-/* ── VISION BOX ── */
-.vision-box{position:relative;width:100%;aspect-ratio:16/9;background:#000;border-radius:10px;overflow:hidden}
-.vision-box img{width:100%;height:100%;object-fit:cover}
+/* ── VISION BOX (Mission Control Card) ── */
+.vision-box {
+    position: relative;
+    width: 220px !important; /* Fixed width for card portrait */
+    height: 480px !important;
+    margin: 0 auto;
+    background: #000;
+    border-radius: 12px;
+    border: 1px solid var(--bdr);
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+.vision-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain !important;
+}
 .vision-scan{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);box-shadow:0 0 8px var(--accent);top:0;animation:scan 4s linear infinite}
 @keyframes scan{from{top:0%}to{top:100%}}
 .vision-hud{position:absolute;bottom:0;left:0;right:0;padding:.6rem 1rem;background:linear-gradient(transparent,rgba(0,0,0,.7));display:flex;justify-content:space-between;font-size:.65rem;font-family:'JetBrains Mono';color:var(--accent)}
 .vision-status-badge{background:rgba(0,0,0,.5);padding:2px 8px;border-radius:4px}
+
 /* ── BUTTONS ── */
 .cmd-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;margin-bottom:.75rem}
 .cmd-btn{padding:.65rem .5rem;border-radius:10px;border:1px solid var(--bdr);background:var(--glass);color:var(--text);font-size:.7rem;font-weight:700;cursor:pointer;transition:all .2s;text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;justify-content:center;gap:5px}
@@ -88,18 +103,68 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
 .shell-row{display:flex;gap:.5rem}
 .shell-input{flex:1;padding:.65rem 1rem;background:rgba(0,0,0,.3);border:1px solid var(--bdr);border-radius:10px;color:#fff;font-size:.8rem;font-family:'JetBrains Mono';outline:none}
 .shell-input:focus{border-color:var(--accent)}
-/* ── LIVE MIRROR ── */
+
+/* ── LIVE MIRROR (Device Shell) ── */
 .mirror-workspace{display:flex;flex-direction:column;height:100%;overflow:hidden}
 .mirror-toolbar{display:flex;justify-content:space-between;align-items:center;padding:.75rem 0;flex-wrap:wrap;gap:.5rem;flex-shrink:0}
 .mirror-controls{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
 .mirror-info{display:flex;gap:.5rem;align-items:center}
-.mirror-stage{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
-.device-shell{position:relative;height:95%;aspect-ratio:20/9;background:linear-gradient(135deg,#1a1a2e,#0f0f1a);border-radius:28px;border:2px solid rgba(255,255,255,.12);box-shadow:0 0 40px rgba(0,0,0,.5),0 0 80px rgba(0,242,255,.05);display:flex;flex-direction:column;overflow:hidden;transition:transform .3s}
-.device-notch{height:20px;background:#000;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.device-notch::after{content:'';width:60px;height:4px;background:rgba(255,255,255,.08);border-radius:99px}
-.device-screen{flex:1;position:relative;background:#000;overflow:hidden}
-.device-screen img{width:100%;height:100%;object-fit:cover;display:block}
-.device-chin{height:16px;background:#000;flex-shrink:0}
+.mirror-stage {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(0,0,0,0.2);
+}
+.device-shell {
+    position: relative;
+    height: 85vh !important; /* Forced tall height */
+    width: calc(85vh * 9 / 19.5) !important; /* Forced narrow width */
+    max-width: 90vw;
+    background: #000;
+    border-radius: 36px;
+    border: 8px solid #1a1a1a;
+    box-shadow: 0 0 50px rgba(0,0,0,0.8), 0 0 20px var(--adim);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: transform 0.3s;
+}
+.device-notch {
+    height: 24px;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.device-notch::after {
+    content: '';
+    width: 50px;
+    height: 4px;
+    background: #222;
+    border-radius: 10px;
+}
+.device-screen {
+    flex: 1;
+    background: #000;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.device-screen img {
+    max-width: 100% !important;
+    max-height: 100% !important;
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain !important;
+}
+.device-chin {
+    height: 20px;
+    background: #000;
+}
 .mirror-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .mirror-overlay{position:absolute;inset:0;pointer-events:none}
 /* ── CAMERA PANEL ── */
