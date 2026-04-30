@@ -43,7 +43,7 @@ run("""docker run -d \
   -w /app/noir-ui \
   --env-file /root/noir-agent/.env \
   noir-agent-base:latest \
-  gunicorn --bind 0.0.0.0:80 --workers 2 -k uvicorn.workers.UvicornWorker --timeout 120 web_server:app""",
+  gunicorn --bind 0.0.0.0:80 --workers 1 -k uvicorn.workers.UvicornWorker --timeout 120 web_server:app""",
     "Starting noir-dashboard fresh...")
 
 time.sleep(8)
