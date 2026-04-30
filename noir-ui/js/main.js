@@ -280,7 +280,7 @@ async function sendCmd(type, extra = {}) {
         let attempts = 0;
         const pollResult = setInterval(async () => {
             attempts++;
-            if (attempts > 12) { // 36 seconds timeout
+            if (attempts > 20) { // 60 seconds timeout
                 clearInterval(pollResult);
                 addLog('ERROR', `Timeout waiting for ${type} result.`);
                 return;

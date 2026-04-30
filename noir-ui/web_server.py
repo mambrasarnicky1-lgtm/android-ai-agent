@@ -200,10 +200,12 @@ async def agent_result(request: Request):
         data = await request.json()
         # Store result locally
         cid = data.get("command_id", "unknown")
-        for c in local_state["commands"]:
-            if c.get("command_id") == cid:
-                c["status"] = "done"
-                c["result"] = data
+        with _commands_lock:
+            for c in local_state["commands"]:
+                if c.get("command_id") == cid:
+                    c["status"] = "done"
+                    c["result"] = data
+                    break
         # Forward to Cloudflare
         if await _cf_reachable_async():
             try:
@@ -383,6 +385,7 @@ async def api_command_result(cmd_id: str):
             if c.get("command_id") == cmd_id:
                 return c
     return {"status": "not_found"}
+
 
 
 @app.get("/api/assets")
