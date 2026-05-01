@@ -1,4 +1,4 @@
-name: Noir Sovereign V21.0 AEGIS Build
+name: Noir Sovereign V21.1 NATIVE Build
 
 on:
   push:
@@ -65,5 +65,5 @@ jobs:
       - name: Upload Release Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Noir-Sovereign-V21.0-AEGIS-APK
+          name: Noir-Sovereign-V21.1-NATIVE-APK
           path: bin/*.apk
