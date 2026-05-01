@@ -27,7 +27,7 @@ android.accept_sdk_license = True
 android.release_artifact = apk
 
 # ─── MANIFEST: path relatif dari root proyek (bukan source.dir) ──────────────
-android.extra_manifest_xml = %(source.dir)s/noir_manifest_extra.xml
+android.extra_manifest_application_xml = %(source.dir)s/noir_manifest_extra.xml
 
 # ─── JAVA SOURCE DIR (relatif dari source.dir) ───────────────────────────────
 android.java_dir = java
